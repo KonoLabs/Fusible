@@ -8,5 +8,5 @@
   { "type": "source_port", "port_id": "U1.2", "name": "VDD", "net_id": "n2" },
   { "type": "source_port", "port_id": "C1.2", "name": "2", "net_id": "n2" },
   { "type": "source_trace", "trace_id": "t1", "connected_port_ids": ["U1.2", "C1.2"] },
-  { "type": "silkscreen_text", "text": "type inconnu : ignoré par le parser" }
+  { "type": "silkscreen_text", "text": "unknown type: ignored by the parser" }
 ]

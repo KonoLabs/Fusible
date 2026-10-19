@@ -2,7 +2,7 @@
 name = "fusible"
 version = "0.1.0"
 edition = "2021"
-description = "Linter électronique : un fusible qui saute pour bloquer la génération firmware"
+description = "Electronic linter: a fuse that blows to block firmware code generation"
 license = "MIT"
 repository = "https://github.com/KonoLabs/Fusible"
 readme = "README.md"

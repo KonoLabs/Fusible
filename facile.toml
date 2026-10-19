@@ -1,0 +1,10 @@
+# facile discovers this file to install fusible from prebuilt releases or source.
+
+name = "fusible"
+summary = "Electronic linter: the fuse blows to block firmware code generation"
+repo = "KonoLabs/Fusible"
+branch = "main"
+build = "rust"
+srcSubdir = "."
+bin = "fusible"
+asset = "fusible"

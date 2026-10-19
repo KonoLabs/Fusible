@@ -56,7 +56,7 @@ Malformed JSON (exit code 2):
 ```
 
 Three examples ship in [`examples/`](examples/): `circuit.json` (fuse
-intact), `circuit-flottant.json` (fuse blown) and `circuit-broken.json`
+intact), `circuit-floating.json` (fuse blown) and `circuit-broken.json`
 (parse error).
 
 ## Exit codes

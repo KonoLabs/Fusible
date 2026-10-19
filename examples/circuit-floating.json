@@ -1,0 +1,8 @@
+[
+  { "type": "source_component", "component_id": "U1", "kind": "chip" },
+  { "type": "source_net", "net_id": "n1", "name": "GND" },
+  { "type": "source_net", "net_id": "n2", "name": "I2C_SDA" },
+  { "type": "source_port", "port_id": "U1.1", "name": "VSS", "net_id": "n1" },
+  { "type": "source_port", "port_id": "U1.2", "name": "VDD", "net_id": "n1" },
+  { "type": "source_port", "port_id": "U1.3", "name": "SDA", "net_id": "n2" }
+]
