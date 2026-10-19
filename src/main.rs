@@ -1,95 +1,90 @@
-//! Fusible — phase 1 (MVP).
+//! Fusible — electronic linter and tscircuit project manager.
 //!
-//! Flow: read the file → parse → lint → render diagnostics via miette, or
-//! print `✅ Circuit validated (fuse intact)` when there is nothing to
-//! report.
-//!
-//! Exit codes are part of the contract (they let CI distinguish *what*
-//! failed):
-//!
-//! * `0` — fuse intact, circuit validated;
+//! Exit codes are part of the contract (they let CI distinguish what failed):
+//! * `0` — fuse intact, command succeeded;
 //! * `1` — electrical violations: the fuse blew, generation is blocked;
-//! * `2` — tool error (unreadable/malformed input, bad CLI usage — clap
-//!   already exits 2 for usage errors).
-//!
-//! The remaining plan modules (`mcu::`, `codegen::`) are deliberately
-//! absent: they activate only after this phase is validated, and the fuse
-//! must blow *before* any code generation happens.
-mod cli;
-mod linter;
+//! * `2` — tool error (unreadable/malformed input, runner failure, usage error).
+
+pub mod cli;
+pub mod commands;
+pub mod config;
+pub mod linter;
 pub mod netlist;
-mod parser;
+pub mod parser;
+pub mod tscircuit;
 
-use clap::Parser;
-use thiserror::Error;
+use std::path::Path;
+use std::process::ExitCode;
 
-use crate::cli::Cli;
-use crate::linter::{FuseBlown, Linter};
+use clap::{CommandFactory, Parser};
+use miette::Diagnostic;
+
+use crate::cli::{Cli, Commands};
+use crate::commands::check::CheckError;
 
 /// Exit code: electrical violations (the fuse blew).
-const EXIT_VIOLATIONS: u8 = 1;
+pub const EXIT_VIOLATIONS: u8 = 1;
 /// Exit code: the tool itself could not do its job (aligns with clap's 2).
-const EXIT_TOOL_ERROR: u8 = 2;
+pub const EXIT_TOOL_ERROR: u8 = 2;
 
-/// The input file could not be read: rendered as a proper diagnostic rather
-/// than a bare `unwrap()` backtrace.
-#[derive(Debug, Error, miette::Diagnostic)]
-#[error("cannot read the Circuit JSON at \"{path}\"")]
-#[diagnostic(help("check that --input points to an existing, readable file"))]
-struct ReadError {
-    path: String,
-    #[source]
-    source: std::io::Error,
-}
-
-fn main() -> std::process::ExitCode {
+fn main() -> ExitCode {
     let cli = Cli::parse();
 
-    // 1. Read the file in one string: it doubles as the `source_code` of
-    //    every miette diagnostic (the parser needs the text to place its
-    //    labels, like a compiler pointing at the faulty line).
-    let source = match std::fs::read_to_string(&cli.input) {
-        Ok(source) => source,
-        Err(source) => {
-            let error = ReadError {
-                path: cli.input.display().to_string(),
-                source,
-            };
-            return fail(error, EXIT_TOOL_ERROR);
-        }
-    };
-
-    // 2. Parsing: a failure already renders a rustc-style diagnostic.
-    let circuit = match parser::parse(&source, &cli.input) {
-        Ok(circuit) => circuit,
-        Err(diagnostic) => return fail(diagnostic, EXIT_TOOL_ERROR),
-    };
-
-    // 3. Linter: every pass, every diagnostic.
-    let violations = Linter::default().run(&circuit);
-
-    // 4. Verdict of the fuse.
-    if violations.is_empty() {
-        println!("✅ Circuit validated (fuse intact)");
-        if let Some(mcu) = cli.mcu.as_deref() {
-            println!("   silicon target: {mcu} (pin-muxing: phase 2)");
-        }
-        return std::process::ExitCode::SUCCESS;
+    match cli.command {
+        Some(Commands::Dev { file, port }) => match commands::dev::run(file, port) {
+            Ok(code) => ExitCode::from(code as u8),
+            Err(err) => fail(err, EXIT_TOOL_ERROR),
+        },
+        Some(Commands::Check { file, mcu }) => dispatch_check(file, mcu),
+        Some(Commands::Build { file }) => match commands::build::run(file) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(commands::build::BuildError::Check(CheckError::FuseBlown(blown))) => {
+                fail(blown, EXIT_VIOLATIONS)
+            }
+            Err(err) => fail(err, EXIT_TOOL_ERROR),
+        },
+        Some(Commands::Export {
+            file,
+            format,
+            output,
+        }) => match commands::export::run(file, &format, output) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(err) => fail(err, EXIT_TOOL_ERROR),
+        },
+        Some(Commands::Init { name }) => match commands::init::run(name) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(err) => fail(err, EXIT_TOOL_ERROR),
+        },
+        None => handle_default_invocation(cli),
     }
+}
 
-    // The fuse blew: miette renders the aggregate error (each violation as a
-    // related error) and the process exits 1 — phase 2 will refuse to
-    // generate pins.rs on a non-zero exit.
-    fail(FuseBlown::new(violations), EXIT_VIOLATIONS)
+fn handle_default_invocation(cli: Cli) -> ExitCode {
+    let has_manifest = config::FusibleConfig::find_and_load(Path::new("."))
+        .ok()
+        .flatten()
+        .is_some();
+
+    if cli.input.is_some() || has_manifest {
+        dispatch_check(cli.input, cli.mcu)
+    } else {
+        let _ = Cli::command().print_help();
+        println!();
+        ExitCode::from(EXIT_TOOL_ERROR)
+    }
+}
+
+fn dispatch_check(file: Option<std::path::PathBuf>, mcu: Option<String>) -> ExitCode {
+    match commands::check::run(file, mcu) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(CheckError::FuseBlown(blown)) => fail(blown, EXIT_VIOLATIONS),
+        Err(err) => fail(err, EXIT_TOOL_ERROR),
+    }
 }
 
 /// Renders an error through miette's fancy handler on stderr, then returns
-/// the mapped exit code. The `Error: ` prefix matches what std's
-/// `Termination` would print for a `Result`-returning `main`.
-fn fail(
-    error: impl miette::Diagnostic + Send + Sync + 'static,
-    code: u8,
-) -> std::process::ExitCode {
+/// the mapped exit code.
+fn fail(error: impl Diagnostic + Send + Sync + 'static, code: u8) -> ExitCode {
     eprintln!("Error: {:?}", miette::Report::new(error));
-    std::process::ExitCode::from(code)
+    ExitCode::from(code)
 }

@@ -5,6 +5,19 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.2.0] - 2026-10-20
+
+### Added
+
+- `fusible.yml` / `fusible.yaml` manifest support with automatic ancestor discovery and smart defaults.
+- tscircuit command wrappers: `fusible dev` (aliases: `view`, `webview`) for launching interactive web previewers with hot reload.
+- `fusible export` subcommand for exporting Gerbers, SVGs, and 3D CAD models (GLB/STEP).
+- `fusible init` subcommand for scaffolding new hardware + firmware monorepos.
+- `fusible build` subcommand orchestrating circuit evaluation, electrical checks, and firmware compilation.
+- Runner auto-detection layer supporting local `node_modules/.bin/tsci`, global `tsci`, `bun x tscircuit`, and `npx tscircuit`.
+- On-the-fly compilation of `.tsx` / `.ts` source files directly through `fusible check`.
+- Architecture roadmap in `ROADMAP.md`.
+
 ## [0.1.1] - 2026-10-20
 
 ### Added
