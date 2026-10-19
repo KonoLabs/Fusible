@@ -1,0 +1,12 @@
+[
+  { "type": "source_component", "component_id": "U1", "kind": "chip" },
+  { "type": "source_component", "component_id": "C1", "kind": "capacitor" },
+  { "type": "source_net", "net_id": "n1", "name": "GND" },
+  { "type": "source_net", "net_id": "n2", "name": "+3V3" },
+  { "type": "source_port", "port_id": "U1.1", "name": "VSS", "net_id": "n1" },
+  { "type": "source_port", "port_id": "C1.1", "name": "1", "net_id": "n1" },
+  { "type": "source_port", "port_id": "U1.2", "name": "VDD", "net_id": "n2" },
+  { "type": "source_port", "port_id": "C1.2", "name": "2", "net_id": "n2" },
+  { "type": "source_trace", "trace_id": "t1", "connected_port_ids": ["U1.2", "C1.2"] },
+  { "type": "silkscreen_text", "text": "type inconnu : ignoré par le parser" }
+]

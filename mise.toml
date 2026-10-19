@@ -1,0 +1,6 @@
+# Même schéma que FacileStudio/facile : lefthook via mise, install auto.
+[tools]
+lefthook = "latest"
+
+[hooks]
+postinstall = "lefthook install"
