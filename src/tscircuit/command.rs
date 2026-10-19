@@ -40,14 +40,17 @@ pub fn build_command(kind: &RunnerKind, file: &Path) -> Command {
 /// Constructs a base `Command` with the binary and prefix arguments configured.
 pub fn base_command(kind: &RunnerKind) -> Command {
     let program: &Path = match kind {
-        RunnerKind::Local(p) | RunnerKind::Global(p) | RunnerKind::Bun(p) | RunnerKind::Npx(p) => {
-            p
-        }
+        RunnerKind::Local(p)
+        | RunnerKind::Global(p)
+        | RunnerKind::Bun(p)
+        | RunnerKind::Npx(p)
+        | RunnerKind::Npm(p) => p,
     };
     let prefix_args: &[&str] = match kind {
         RunnerKind::Local(_) | RunnerKind::Global(_) => &[],
         RunnerKind::Bun(_) => &["x", "tscircuit"],
         RunnerKind::Npx(_) => &["tscircuit"],
+        RunnerKind::Npm(_) => &["exec", "--", "tscircuit"],
     };
     let mut cmd = Command::new(program);
     cmd.args(prefix_args);

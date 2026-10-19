@@ -68,13 +68,21 @@ pub enum Commands {
         #[arg(value_name = "FILE")]
         file: Option<PathBuf>,
 
-        /// Output format (gerbers, pcb-svg, schematic-svg, glb, step, etc.)
+        /// Export preset batch: fab (gerbers + bom + pnp), cad (kicad + step), docs (svg + pdf), or all
+        #[arg(long, value_name = "PRESET")]
+        preset: Option<String>,
+
+        /// Output format (gerbers, pcb-svg, schematic-svg, glb, step, kicad_zip, etc.)
         #[arg(short = 'f', long, default_value = "gerbers")]
         format: String,
 
-        /// Output destination path
+        /// Output destination path or directory
         #[arg(short = 'o', long)]
         output: Option<PathBuf>,
+
+        /// Skip electrical rule verification before exporting
+        #[arg(long)]
+        skip_lint: bool,
     },
 
     /// Initialize a new fusible.yml project manifest in the current directory
@@ -82,5 +90,13 @@ pub enum Commands {
         /// Optional project name
         #[arg(long)]
         name: Option<String>,
+    },
+
+    /// Inspect toolchain health and available tscircuit runners
+    #[command(alias = "setup")]
+    Doctor {
+        /// Automatically install tscircuit runner if missing
+        #[arg(long)]
+        install: bool,
     },
 }

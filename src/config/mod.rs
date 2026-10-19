@@ -119,7 +119,6 @@ impl std::str::FromStr for FusibleConfig {
 }
 
 impl FusibleConfig {
-
     /// Returns an annotated, clean template string for `fusible init`.
     pub fn default_manifest() -> &'static str {
         r#"# Fusible project manifest

@@ -18,7 +18,10 @@ pub fn run(file: Option<PathBuf>, port: Option<u16>) -> Result<i32, RunnerError>
             .and_then(|(_, cfg)| cfg.hardware.and_then(|hw| hw.port))
     });
 
-    println!("⚡ Starting tscircuit dev viewer for \"{}\"...", entry.display());
+    println!(
+        "⚡ Starting tscircuit dev viewer for \"{}\"...",
+        entry.display()
+    );
     let status = runner.dev(&entry, resolved_port)?;
     Ok(status.code().unwrap_or(0))
 }

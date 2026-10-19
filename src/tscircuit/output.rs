@@ -17,7 +17,9 @@ pub fn resolve_circuit_json(file: &Path, stdout: &str) -> Result<PathBuf, Runner
         .map(|s| s.to_string_lossy())
         .unwrap_or_default();
     let candidates = [
-        Path::new("dist").join(file.with_extension("")).join("circuit.json"),
+        Path::new("dist")
+            .join(file.with_extension(""))
+            .join("circuit.json"),
         Path::new("dist").join(stem.as_ref()).join("circuit.json"),
         Path::new("dist").join("circuit.json"),
     ];

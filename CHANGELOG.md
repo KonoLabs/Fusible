@@ -5,6 +5,30 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.3.0] - 2026-10-20
+
+### Added
+
+- Fuse-gated export pipeline: electrical rules are verified before any artifacts are exported. If rules fail, the process exits with code 1 (`EXIT_VIOLATIONS`) and artifact generation is blocked.
+- Semantic export presets via `fusible export --preset <PRESET>`:
+  - `fab`: Bundles RS-274X Gerbers (`gerbers.zip`) and Circuit JSON (`dist/fab/`).
+  - `cad`: Bundles KiCad project archive (`kicad.zip`) and 3D STEP mechanical model (`dist/cad/`).
+  - `docs`: Generates schematic SVG, PCB layout SVG, and paginated schematic PDF (`dist/docs/`).
+  - `all`: Exports all preset bundles in one unified pass.
+- `--skip-lint` flag for `fusible export` to bypass fuse verification for early draft exports.
+- `fusible doctor` (alias `setup`) subcommand: diagnoses toolchain health (bun, node, npm, npx, tsci), reports manifest status, and provides `--install` to auto-provision tscircuit CLI.
+- Resilient runner detection & fallbacks:
+  - Added support for `npm exec -- tscircuit` execution.
+  - Added graceful fallback in `fusible check`: if `tscircuit` is not installed on the system, it automatically falls back to an existing `dist/circuit.json` or `<stem>/circuit.json` with an informative notice.
+- `bun = "latest"` added to `mise.toml` to automatically provision execution capabilities for mise users without global system pollution.
+- `AGENTS.md` guidelines for AI agents working within the Fusible codebase.
+- Fusible suite skill (`skills/fusible.md`) for AI agents combining tscircuit circuit primitives and the Fusible verification workflow.
+
+### Changed
+
+- Enhanced convention-based target discovery to recognize standalone `dist/circuit.json` and `circuit.json` files.
+- Modularized export and check commands to comply with strict cognitive complexity standards.
+
 ## [0.2.0] - 2026-10-20
 
 ### Added

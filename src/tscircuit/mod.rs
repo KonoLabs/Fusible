@@ -29,6 +29,21 @@ pub enum RunnerKind {
     Bun(PathBuf),
     /// NPX package executor (`npx tscircuit ...`).
     Npx(PathBuf),
+    /// NPM package executor (`npm exec -- tscircuit ...`).
+    Npm(PathBuf),
+}
+
+impl RunnerKind {
+    /// Human-friendly description of this runner backend.
+    pub fn description(&self) -> String {
+        match self {
+            Self::Local(p) => format!("local node_modules ({})", p.display()),
+            Self::Global(p) => format!("global tsci ({})", p.display()),
+            Self::Bun(p) => format!("bun executor ({})", p.display()),
+            Self::Npx(p) => format!("npx executor ({})", p.display()),
+            Self::Npm(p) => format!("npm executor ({})", p.display()),
+        }
+    }
 }
 
 /// Orchestrates tscircuit CLI commands (`dev`, `export`, `build`).

@@ -94,14 +94,36 @@ Evaluates the board, lints the circuit, and compiles firmware only if the fuse i
 fusible build
 ```
 
-### 4. Export Deliverables (`export`)
+### 4. Fuse-Gated Deliverables (`export`)
 
-Exports Gerbers, SVGs, 3D models (GLB/STEP), or netlists:
+Exports fabrication-ready Gerbers, KiCad projects, SVGs, 3D models (STEP/GLB), or documentation.
+All exports are **fuse-gated**: electrical rules are verified first. If a rule fails, the fuse blows and no artifacts are produced.
 
 ```sh
+# Presets:
+fusible export --preset fab       # Gerbers (.zip) + Circuit JSON
+fusible export --preset cad       # KiCad project (.zip) + 3D STEP (.step)
+fusible export --preset docs      # Schematic SVG + PCB SVG + Schematic PDF
+fusible export --preset all       # Generates all export bundles
+
+# Specific format exports:
 fusible export -f gerbers -o dist/gerbers.zip
 fusible export -f pcb-svg
-fusible export -f glb
+fusible export -f step
+fusible export -f kicad_zip
+
+# Bypass verification (for debugging/drafts):
+fusible export --preset fab --skip-lint
+```
+
+### 5. Toolchain Diagnostics (`doctor` / `setup`)
+
+Inspects local toolchain health (bun, node, npm, npx, tsci) and verifies tscircuit runner availability:
+
+```sh
+fusible doctor
+# Automatically provision tscircuit if missing:
+fusible doctor --install
 ```
 
 ## Exit codes

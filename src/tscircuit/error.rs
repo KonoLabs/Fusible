@@ -34,10 +34,7 @@ pub enum RunnerError {
 
     /// The tscircuit command executed but exited with a failure status.
     #[error("tscircuit command `{command}` failed with exit code {code:?}")]
-    #[diagnostic(
-        code(fusible::tscircuit::command_failed),
-        help("{help}")
-    )]
+    #[diagnostic(code(fusible::tscircuit::command_failed), help("{help}"))]
     CommandFailed {
         command: String,
         code: Option<i32>,
@@ -51,7 +48,5 @@ pub enum RunnerError {
         code(fusible::tscircuit::output_not_found),
         help("verify that tscircuit build completed and generated circuit.json in the output directory")
     )]
-    OutputNotFound {
-        path: PathBuf,
-    },
+    OutputNotFound { path: PathBuf },
 }

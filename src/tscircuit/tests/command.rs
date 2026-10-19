@@ -24,7 +24,10 @@ fn dev_command_construction_with_port_and_bun() {
 
     assert_eq!(cmd.get_program(), "/usr/bin/bun");
     let args: Vec<_> = cmd.get_args().collect();
-    assert_eq!(args, &["x", "tscircuit", "dev", "src/main.tsx", "-p", "3020"]);
+    assert_eq!(
+        args,
+        &["x", "tscircuit", "dev", "src/main.tsx", "-p", "3020"]
+    );
 }
 
 #[test]
@@ -47,7 +50,15 @@ fn export_command_construction_with_output_and_npx() {
     let args: Vec<_> = cmd.get_args().collect();
     assert_eq!(
         args,
-        &["tscircuit", "export", "circuit.tsx", "-f", "gerbers", "-o", "dist/export.json"]
+        &[
+            "tscircuit",
+            "export",
+            "circuit.tsx",
+            "-f",
+            "gerbers",
+            "-o",
+            "dist/export.json"
+        ]
     );
 }
 
@@ -59,6 +70,27 @@ fn build_command_construction() {
     assert_eq!(cmd.get_program(), "/usr/bin/bun");
     let args: Vec<_> = cmd.get_args().collect();
     assert_eq!(args, &["x", "tscircuit", "build", "circuit.tsx"]);
+}
+
+#[test]
+fn export_command_construction_with_npm() {
+    let kind = RunnerKind::Npm(PathBuf::from("/usr/bin/npm"));
+    let cmd = export_command(&kind, Path::new("circuit.tsx"), "step", None);
+
+    assert_eq!(cmd.get_program(), "/usr/bin/npm");
+    let args: Vec<_> = cmd.get_args().collect();
+    assert_eq!(
+        args,
+        &[
+            "exec",
+            "--",
+            "tscircuit",
+            "export",
+            "circuit.tsx",
+            "-f",
+            "step"
+        ]
+    );
 }
 
 #[test]

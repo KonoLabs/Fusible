@@ -13,6 +13,7 @@ use crate::tscircuit::{Runner, RunnerKind};
 /// 2. Global `tsci` on PATH
 /// 3. `bun` on PATH (`bun x tscircuit ...`)
 /// 4. `npx` on PATH (`npx tscircuit ...`)
+/// 5. `npm` on PATH (`npm exec -- tscircuit ...`)
 pub fn detect_runner(current_dir: &Path, path_var: Option<&OsStr>) -> Result<Runner, RunnerError> {
     if let Some(local_path) = find_local_tsci(current_dir) {
         return Ok(Runner::new(RunnerKind::Local(local_path)));
@@ -29,6 +30,10 @@ pub fn detect_runner(current_dir: &Path, path_var: Option<&OsStr>) -> Result<Run
 
         if let Some(npx_path) = find_binary_in_path("npx", path_var) {
             return Ok(Runner::new(RunnerKind::Npx(npx_path)));
+        }
+
+        if let Some(npm_path) = find_binary_in_path("npm", path_var) {
+            return Ok(Runner::new(RunnerKind::Npm(npm_path)));
         }
     }
 

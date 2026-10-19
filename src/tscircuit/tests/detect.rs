@@ -110,6 +110,19 @@ fn detects_npx_when_only_npx_present() {
 }
 
 #[test]
+fn detects_npm_when_only_npm_present() {
+    let temp = TempDirGuard::new("fusible_detect_npm");
+    let npm_dir = temp.path.join("npm_dir");
+    let npm_bin = npm_dir.join("npm");
+    create_executable(&npm_bin);
+
+    let path_os = std::env::join_paths([&npm_dir]).unwrap();
+    let runner = detect_runner(&temp.path, Some(&path_os)).expect("runner detected");
+
+    assert_eq!(runner.kind(), &RunnerKind::Npm(npm_bin));
+}
+
+#[test]
 fn detection_fails_with_not_found_when_no_runner() {
     let temp = TempDirGuard::new("fusible_detect_empty");
     let empty_path = OsString::new();

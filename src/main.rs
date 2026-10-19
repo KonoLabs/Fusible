@@ -27,6 +27,32 @@ pub const EXIT_VIOLATIONS: u8 = 1;
 /// Exit code: the tool itself could not do its job (aligns with clap's 2).
 pub const EXIT_TOOL_ERROR: u8 = 2;
 
+fn dispatch_build(file: Option<std::path::PathBuf>) -> ExitCode {
+    match commands::build::run(file) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(commands::build::BuildError::Check(CheckError::FuseBlown(blown))) => {
+            fail(blown, EXIT_VIOLATIONS)
+        }
+        Err(err) => fail(err, EXIT_TOOL_ERROR),
+    }
+}
+
+fn dispatch_export(
+    file: Option<std::path::PathBuf>,
+    preset: Option<String>,
+    format: String,
+    output: Option<std::path::PathBuf>,
+    skip_lint: bool,
+) -> ExitCode {
+    match commands::export::run(file, preset.as_deref(), &format, output, skip_lint) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(commands::export::ExportError::Check(CheckError::FuseBlown(blown))) => {
+            fail(blown, EXIT_VIOLATIONS)
+        }
+        Err(err) => fail(err, EXIT_TOOL_ERROR),
+    }
+}
+
 fn main() -> ExitCode {
     let cli = Cli::parse();
 
@@ -36,18 +62,15 @@ fn main() -> ExitCode {
             Err(err) => fail(err, EXIT_TOOL_ERROR),
         },
         Some(Commands::Check { file, mcu }) => dispatch_check(file, mcu),
-        Some(Commands::Build { file }) => match commands::build::run(file) {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(commands::build::BuildError::Check(CheckError::FuseBlown(blown))) => {
-                fail(blown, EXIT_VIOLATIONS)
-            }
-            Err(err) => fail(err, EXIT_TOOL_ERROR),
-        },
+        Some(Commands::Build { file }) => dispatch_build(file),
         Some(Commands::Export {
             file,
+            preset,
             format,
             output,
-        }) => match commands::export::run(file, &format, output) {
+            skip_lint,
+        }) => dispatch_export(file, preset, format, output, skip_lint),
+        Some(Commands::Doctor { install }) => match commands::doctor::run(install) {
             Ok(()) => ExitCode::SUCCESS,
             Err(err) => fail(err, EXIT_TOOL_ERROR),
         },

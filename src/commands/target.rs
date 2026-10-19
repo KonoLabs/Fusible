@@ -31,11 +31,14 @@ fn entry_from_config() -> Option<PathBuf> {
 }
 
 fn entry_from_conventions() -> Option<PathBuf> {
-    const CANDIDATES: &[&str] = &["hardware/index.tsx", "src/index.tsx", "index.tsx"];
-    CANDIDATES
-        .iter()
-        .map(PathBuf::from)
-        .find(|p| p.exists())
+    const CANDIDATES: &[&str] = &[
+        "hardware/index.tsx",
+        "src/index.tsx",
+        "index.tsx",
+        "dist/circuit.json",
+        "circuit.json",
+    ];
+    CANDIDATES.iter().map(PathBuf::from).find(|p| p.exists())
 }
 
 /// Checks if a path points to a TypeScript/TSX circuit source file.

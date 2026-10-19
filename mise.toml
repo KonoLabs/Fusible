@@ -3,3 +3,4 @@
 # preventing untrusted-config prompts during automated builds (e.g. facile install).
 [tools]
 lefthook = "latest"
+bun = "latest"

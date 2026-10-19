@@ -91,6 +91,50 @@ hardware:
 
     let stderr = String::from_utf8_lossy(&out.stderr);
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert_eq!(out.status.code(), Some(0), "stdout: {stdout}, stderr: {stderr}");
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "stdout: {stdout}, stderr: {stderr}"
+    );
     assert!(stdout.contains("fuse intact"));
+}
+
+#[test]
+fn subcommand_doctor_reports_health() {
+    let out = fusible().arg("doctor").output().expect("binary should run");
+
+    assert_eq!(out.status.code(), Some(0));
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains("Fusible Toolchain Doctor"));
+    assert!(stdout.contains("Runtime prerequisites"));
+}
+
+#[test]
+fn subcommand_export_fuse_blown_blocks_export() {
+    let out = fusible()
+        .args(["export", "examples/circuit-floating.json"])
+        .output()
+        .expect("binary should run");
+
+    assert_eq!(out.status.code(), Some(1));
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(stderr.contains("the fuse blew"));
+}
+
+#[test]
+fn subcommand_export_rejects_unknown_preset() {
+    let out = fusible()
+        .args([
+            "export",
+            "examples/circuit.json",
+            "--preset",
+            "nonexistent",
+            "--skip-lint",
+        ])
+        .output()
+        .expect("binary should run");
+
+    assert_eq!(out.status.code(), Some(2));
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(stderr.contains("unknown export preset"));
 }
