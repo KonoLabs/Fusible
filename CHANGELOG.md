@@ -5,21 +5,26 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
-## [Unreleased]
+## [0.1.1] - 2026-10-20
 
 ### Added
 
+- Deepened `Netlist` connectivity graph module (`src/netlist/`) with zero-boilerplate queries (`endpoints`, `is_floating`, `ghost_nets`, `floating_nets`).
 - Fail-closed rules engine with `MalformedElementRule` and `GhostNetRule` alongside `UnconnectedNetRule`.
 - Trace net connectivity: support for `connected_source_net_ids` linking traces to named nets.
 - Defensive snake_case and camelCase aliases for all circuit identifiers and trace connections.
 - Integration test suite `tests/exit_code.rs` asserting exit codes 0 (clean), 1 (blown fuse), and 2 (tool/syntax error).
 - Reference broken circuit example `examples/circuit-broken.json`.
+- `facile.toml` manifest for installation via the Facile Studio tool suite.
 
 ### Changed
 
+- Refactored `UnconnectedNetRule` and `GhostNetRule` to consume the indexed electrical netlist.
+- Removed untrusted `[hooks]` from `mise.toml` to prevent interactive `mise trust` prompts during automated builds (such as `facile install`).
 - Modularized parser and linter architecture into dedicated single-responsibility submodules under `src/linter/rules/`.
 - Hardened Serde diagnostic span calculation to accurately handle CRLF and multi-byte UTF-8 boundaries.
 - Streamlined all functions and file structures to achieve full compliance with `filet` complexity standards.
+- Translated repository metadata, Cargo description, and README documentation to English.
 
 ## [0.1.0] - 2026-10-19
 

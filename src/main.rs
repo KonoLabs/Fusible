@@ -17,6 +17,7 @@
 //! must blow *before* any code generation happens.
 mod cli;
 mod linter;
+pub mod netlist;
 mod parser;
 
 use clap::Parser;

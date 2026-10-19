@@ -1,6 +1,5 @@
-# Même schéma que FacileStudio/facile : lefthook via mise, install auto.
+# mise configuration for Fusible
+# Only plain tool versions are declared here so mise treats this as a safe config,
+# preventing untrusted-config prompts during automated builds (e.g. facile install).
 [tools]
 lefthook = "latest"
-
-[hooks]
-postinstall = "lefthook install"
