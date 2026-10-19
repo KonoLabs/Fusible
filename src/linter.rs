@@ -1,59 +1,61 @@
-//! Étape 3 — Moteur de règles (rules engine) du linter.
+//! Step 3 — rules engine (the linter core).
 //!
-//! Le linter est une liste de passes indépendantes : chaque `Rule` regarde
-//! l'AST complet et renvoie ses violations. Ajouter une règle électrique
-//! (découplage, pull-ups, tensions) = ajouter un type + l'enregistrer dans
-//! `Linter::default()`, sans toucher au reste du pipeline.
+//! The linter is a list of independent passes: each [`Rule`] inspects the
+//! whole AST and returns its violations. Adding an electrical rule
+//! (decoupling cap distance, pull-ups, voltage compatibility) = one new type
+//! + one line in `Linter::default()`; nothing else in the pipeline moves.
 //!
-//! Les types de diagnostic et leur rendu miette sont isolés dans le
-//! sous-module `diagnostics` : ici ne vit que le moteur.
+//! **Fail-closed contract**: a rule may only skip an element when another
+//! registered rule is responsible for flagging it — see how
+//! `UnconnectedNetRule` leans on `MalformedElementRule`. Silence is never
+//! the default of this engine.
+//!
+//! Diagnostics and their miette rendering live in the `diagnostics`
+//! submodule: only the engine stays here.
 mod diagnostics;
+mod rules;
+#[cfg(test)]
+mod tests;
 
 pub use diagnostics::{Diagnostic, FuseBlown};
+pub use rules::{GhostNetRule, MalformedElementRule, UnconnectedNetRule};
 
 use crate::parser::Circuit;
 
 // ---------------------------------------------------------------------------
-// Trait Rule + Linter
+// Rule trait + Linter
 // ---------------------------------------------------------------------------
 
-/// Une passe de vérification.
+/// One verification pass.
 pub trait Rule {
-    /// Nom court de la règle, réutilisé comme `code` du diagnostic.
+    /// Short rule name, reused as the diagnostic's error code.
     fn name(&self) -> &'static str;
 
-    /// Exécute la règle sur l'AST. Un vecteur vide = règle passée.
+    /// Runs the rule against the AST. An empty vector = rule passed.
     fn check(&self, circuit: &Circuit) -> Vec<Diagnostic>;
 }
 
-/// Le fusible : exécute toutes les passes et agrège leurs violations.
+/// The fuse: runs every pass and aggregates their violations.
 pub struct Linter {
     rules: Vec<Box<dyn Rule>>,
 }
 
-impl Default for Linter {
-    fn default() -> Self {
-        Self {
-            // Phase 1 : une seule règle, pour valider l'architecture.
-            // Les suivantes (découplage, pull-ups, tensions) viendront en
-            // phase 2 au même endroit.
-            rules: vec![Box::new(UnconnectedNetRule)],
-        }
-    }
-}
-
 impl Linter {
-    /// Ajoute une règle (utile pour les tests et les phases suivantes).
-    // Consommé en phase 2 (mcu::, codegen::) : inutilisé hors tests aujourd'hui.
-    #[cfg_attr(not(test), allow(dead_code))]
+    /// An empty linter — rules are added explicitly with [`Self::with_rule`].
+    /// Tests use this to exercise one rule in isolation.
+    pub fn new() -> Self {
+        Self { rules: Vec::new() }
+    }
+
+    /// Appends a rule. Registration order is display order: `run` is
+    /// deterministic, so diagnostics never shuffle between runs.
     pub fn with_rule(mut self, rule: impl Rule + 'static) -> Self {
         self.rules.push(Box::new(rule));
         self
     }
 
-    /// Exécute les passes dans l'ordre d'enregistrement et fusionne leurs
-    /// diagnostics : l'ordre est stable, donc les erreurs s'affichent dans
-    /// un ordre déterministe d'une exécution à l'autre.
+    /// Runs every pass in registration order and concatenates their
+    /// diagnostics.
     pub fn run(&self, circuit: &Circuit) -> Vec<Diagnostic> {
         self.rules
             .iter()
@@ -62,65 +64,14 @@ impl Linter {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Règle Phase 1
-// ---------------------------------------------------------------------------
-
-/// Aucun net ne doit être « flottant ».
-///
-/// Un net relié à moins de deux pads/ports est un oubli de routage : sur le
-/// PCB réel, ce signal n'ira nulle part. Le fusible saute avant que le bug
-/// n'atteigne le firmware.
-pub struct UnconnectedNetRule;
-
-/// Nombre minimum de connexions pour qu'un net soit considéré comme routé.
-const MIN_CONNECTIONS: usize = 2;
-
-impl Rule for UnconnectedNetRule {
-    fn name(&self) -> &'static str {
-        "unconnected_net"
-    }
-
-    fn check(&self, circuit: &Circuit) -> Vec<Diagnostic> {
-        circuit
-            .nets()
-            .filter_map(|net| {
-                // Sans identifiant on ne peut pas relier le net à ses ports :
-                // modèle partiel, on n'invente pas de violation.
-                let net_id = net.net_id.as_deref()?;
-
-                let connections = circuit
-                    .ports()
-                    .filter(|port| port.net_id.as_deref() == Some(net_id))
-                    .count()
-                    + circuit
-                        .pads()
-                        .filter(|pad| pad.net_id.as_deref() == Some(net_id))
-                        .count();
-
-                if connections >= MIN_CONNECTIONS {
-                    return None;
-                }
-
-                let label = net.name.as_deref().unwrap_or(net_id);
-                Some(Diagnostic {
-                    rule: self.name().to_string(),
-                    message: format!(
-                        "le net « {label} » n'a que {connections} connexion(s) \
-                         (minimum {MIN_CONNECTIONS}) : il est flottant"
-                    ),
-                    help: Some(
-                        "chaque net doit relier au moins deux pads/ports — \
-                         complète le routage dans tscircuit"
-                            .to_string(),
-                    ),
-                })
-            })
-            .collect()
+impl Default for Linter {
+    fn default() -> Self {
+        // Phase 1: three rules proving the architecture. The rest of the
+        // electrical playbook (decoupling, pull-ups, voltage domains) joins
+        // here in phase 2.
+        Self::new()
+            .with_rule(UnconnectedNetRule)
+            .with_rule(MalformedElementRule)
+            .with_rule(GhostNetRule)
     }
 }
-
-// Les tests vivent dans `src/linter/tests.rs` : en comptant les helpers,
-// ce module dépasserait la limite de fonctions par fichier de filet.
-#[cfg(test)]
-mod tests;

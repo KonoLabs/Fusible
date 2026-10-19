@@ -7,6 +7,20 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+### Added
+
+- Fail-closed rules engine with `MalformedElementRule` and `GhostNetRule` alongside `UnconnectedNetRule`.
+- Trace net connectivity: support for `connected_source_net_ids` linking traces to named nets.
+- Defensive snake_case and camelCase aliases for all circuit identifiers and trace connections.
+- Integration test suite `tests/exit_code.rs` asserting exit codes 0 (clean), 1 (blown fuse), and 2 (tool/syntax error).
+- Reference broken circuit example `examples/circuit-broken.json`.
+
+### Changed
+
+- Modularized parser and linter architecture into dedicated single-responsibility submodules under `src/linter/rules/`.
+- Hardened Serde diagnostic span calculation to accurately handle CRLF and multi-byte UTF-8 boundaries.
+- Streamlined all functions and file structures to achieve full compliance with `filet` complexity standards.
+
 ## [0.1.0] - 2026-10-19
 
 ### Added

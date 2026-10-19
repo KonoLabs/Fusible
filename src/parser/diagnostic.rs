@@ -1,46 +1,42 @@
-//! Diagnostic de parsing : miette affiche le fichier source et un label sur
-//! la position exacte de l'erreur Serde, comme un `error[E0308]` de rustc :
+//! Parse diagnostic: miette prints the source file with a label on the
+//! position Serde reported, the way rustc prints an `error[E0308]`:
 //!
 //! ```text
-//! error: Circuit JSON invalide : expected `,` or `}` at line 4 column 1
+//! error: invalid Circuit JSON: expected `,` or `}` at line 4 column 1
 //!    ╭─[circuit.json:4:1]
 //!  3 │   { "type": "source_net"
 //!  4 │ ]
 //!    · ┬
-//!    · ╰── la désérialisation a échoué ici
+//!    · ╰── deserialization failed here
 //! ```
 //!
-//! C'est tout l'objectif « beaux diagnostics » du cahier des charges : le
-//! message dit *où* dans le fichier, pas seulement *quoi*.
+//! That is the whole "pretty diagnostics" requirement of the spec: the
+//! message says *where* in the file, not only *what*.
 
 use std::path::Path;
 
 use miette::{NamedSource, SourceSpan};
 use thiserror::Error;
 
-/// Échec de désérialisation du Circuit JSON, contextualisé par le fichier.
+/// A Circuit JSON deserialization failure, anchored to its file.
 #[derive(Debug, Error, miette::Diagnostic)]
-#[error("Circuit JSON invalide : {message}")]
+#[error("invalid Circuit JSON: {message}")]
 pub struct JsonDiagnostic {
-    message: String,
+    pub message: String,
     #[source_code]
-    src: NamedSource<String>,
-    #[label("la désérialisation a échoué ici")]
-    span: SourceSpan,
+    pub src: NamedSource<String>,
+    #[label("deserialization failed here")]
+    pub span: SourceSpan,
 }
 
 impl JsonDiagnostic {
     pub(super) fn new(err: serde_json::Error, source: &str, path: &Path) -> Self {
-        // serde_json rapporte une position 1-based (ligne, colonne) ; miette
-        // veut un offset en octets dans la source. On reconstitue l'offset en
-        // parcourant les lignes. Approximation assumée : serde_json compte
-        // les colonnes en octets, donc juste pour de l'ASCII — assez pour un
-        // label de diagnostic, et l'offset est borné à la taille du fichier.
-        let offset = if err.line() == 0 {
-            0
-        } else {
-            byte_offset_at(source, err.line(), err.column())
-        };
+        // serde_json reports a (line, column) position; miette wants a byte
+        // offset into the source — `byte_offset_at` does the mapping. The
+        // offset is always clamped inside the file, so a degenerate position
+        // (empty input, `line == 0` never observed in practice but guarded
+        // anyway) renders a zero-length label instead of panicking.
+        let offset = byte_offset_at(source, err.line(), err.column());
         let len = if offset < source.len() { 1 } else { 0 };
 
         Self {
@@ -51,21 +47,37 @@ impl JsonDiagnostic {
     }
 }
 
-/// Offset en octets d'une position (ligne, colonne) 1-based.
-fn byte_offset_at(source: &str, line: usize, column: usize) -> usize {
+/// Byte offset of a serde_json (line, column) position.
+///
+/// serde_json counts the column in **bytes** since the start of the line
+/// (1-based for syntax errors; bytes-consumed for EOF errors — both land
+/// sensibly once clamped). Two traps this handles:
+///
+/// * CRLF: `str::lines()` strips the `\r`, so a naive `len + 1` walk loses
+///   one byte per preceding line and the label drifts left. We walk
+///   `split_inclusive('\n')` segments instead, `\r` included.
+/// * Multi-byte characters: a byte column can land *inside* a character; the
+///   offset walks back to a `char` boundary so miette never gets a position
+///   that splits UTF-8.
+///
+/// Returns `source.len()` when the line does not exist (label at EOF).
+pub(super) fn byte_offset_at(source: &str, line: usize, column: usize) -> usize {
+    let mut remaining = line.max(1);
     let mut offset = 0usize;
-    for (index, text) in source.lines().enumerate() {
-        if index + 1 == line {
-            let rel = text
-                .char_indices()
-                .nth(column.saturating_sub(1))
-                .map(|(b, _)| b)
-                .unwrap_or(text.len());
+
+    for segment in source.split_inclusive('\n') {
+        if remaining == 1 {
+            let text = segment.strip_suffix('\n').unwrap_or(segment);
+            let mut rel = column.saturating_sub(1).min(text.len());
+            while rel > 0 && !text.is_char_boundary(rel) {
+                rel -= 1;
+            }
             return (offset + rel).min(source.len());
         }
-        // + le '\n' séparateur (approximation : CRLF traité comme LF)
-        offset += text.len() + 1;
+        offset += segment.len();
+        remaining -= 1;
     }
+
     source.len()
 }
 
@@ -75,18 +87,35 @@ mod tests {
     use crate::parser::parse;
 
     #[test]
-    fn erreur_de_syntaxe_produit_un_diagnostic_avec_la_source() {
+    fn rejected_input_carries_the_named_source() {
+        // `{"type": ` at the root is rejected as "map, expected a
+        // sequence" — the object-root case, the most common user error.
         let err = parse("{\"type\": ", Path::new("circuit.json"))
-            .expect_err("le JSON tronqué doit échouer");
+            .expect_err("an object root must not parse");
         assert!(!err.message.is_empty());
-        // Le diagnostic embarque bien le fichier nommé (affiché par miette).
+        // The diagnostic embeds the named file miette renders.
         assert!(err.src.inner().contains("type"));
     }
 
     #[test]
-    fn offset_pointe_en_debut_de_ligne_fautive() {
-        let source = "{\"a\": 1,\n\"b\": }";
-        let offset = byte_offset_at(source, 2, 1);
-        assert_eq!(&source[offset..], "\"b\": }");
+    fn span_reaches_the_failing_line_of_a_multiline_file() {
+        let source = "[\n  {\"type\": \"source_net\"},\n  {,}\n]";
+        let line3_start = source.find("\n  {,}").expect("line 3") + 1;
+        let line3_end = line3_start + source[line3_start..].find('\n').expect("line 3 end");
+
+        let err = parse(source, Path::new("circuit.json")).expect_err("bad element");
+        let offset = err.span.offset();
+        assert!(
+            (line3_start..line3_end).contains(&offset),
+            "span {offset} not on line 3 ({line3_start}..{line3_end})"
+        );
+    }
+
+    #[test]
+    fn empty_input_renders_a_zero_length_span_at_the_start() {
+        let err = parse("", Path::new("circuit.json")).expect_err("empty input");
+        assert!(err.message.contains("EOF"));
+        assert_eq!(err.span.offset(), 0);
+        assert_eq!(err.span.len(), 0);
     }
 }

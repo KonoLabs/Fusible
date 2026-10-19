@@ -1,34 +1,35 @@
-//! Diagnostics du linter et leur rendu miette.
+//! Linter diagnostics and their miette rendering.
 //!
-//! Deux niveaux :
-//! * [`Diagnostic`] — une violation individuelle (le « où et pourquoi ») ;
-//! * [`FuseBlown`] — l'erreur agrégée rendue par `main` quand le linter a
-//!   trouvé au moins une violation : titre + violations en *erreurs liées*,
-//!   puis exit code ≠ 0 pour bloquer la génération.
+//! Two levels:
+//! * [`Diagnostic`] — one individual violation (the *where* and *why*);
+//! * [`FuseBlown`] — the aggregate error `main` renders when the linter
+//!   found at least one violation: a title with the violations as *related
+//!   errors*, then exit code 1 so codegen never runs.
 
 use std::fmt;
 
 use thiserror::Error;
 
 // ---------------------------------------------------------------------------
-// Une violation
+// One violation
 // ---------------------------------------------------------------------------
 
-/// Une violation détectée par une règle.
+/// A violation detected by a rule.
 ///
-/// On implémente `miette::Diagnostic` **à la main** plutôt que par la macro
-/// dérivée : le `code` (affiché `error[unconnected_net]`) et le `help`
-/// dépendent de la règle qui a échoué — ce sont des données d'instance, et
-/// le dérivateur de miette ne sait produire que des littéraux fixes au
-/// niveau de la structure.
+/// `miette::Diagnostic` is implemented **by hand** instead of derived: the
+/// `code` (rendered as `error[unconnected_net]`) and the `help` depend on
+/// which rule fired — they are instance data, and the derive macro only
+/// produces fixed literals at the struct level. The `code` also replaces the
+/// rule prefix the `Display` used to carry, so miette no longer prints the
+/// rule name twice.
 #[derive(Debug, Error)]
-#[error("[{rule}] {message}")]
+#[error("{message}")]
 pub struct Diagnostic {
-    /// Identifiant stable de la règle, ex. `unconnected_net`.
+    /// Stable rule identifier, e.g. `unconnected_net`.
     pub rule: String,
-    /// Message façon compilateur Rust : où ça pète et pourquoi.
+    /// Compiler-style message: what broke and why.
     pub message: String,
-    /// Aide contextuelle affichée en `help: ...` sous le diagnostic.
+    /// Contextual help rendered as `help: ...` under the diagnostic.
     pub help: Option<String>,
 }
 
@@ -49,17 +50,17 @@ impl miette::Diagnostic for Diagnostic {
 }
 
 // ---------------------------------------------------------------------------
-// Le fusible saute
+// The fuse blows
 // ---------------------------------------------------------------------------
 
-/// Agrège toutes les violations en un seul rapport d'erreur.
+/// Aggregates every violation into a single error report.
 ///
-/// Retourné par `main` quand le linter a trouvé quelque chose : miette
-/// affiche ce titre, puis chaque `Diagnostic` en erreur liée, et le
-/// processus sort avec un code ≠ 0 — ce qui bloquera la chaîne de
-/// génération (`codegen::` n'est jamais appelé).
+/// Returned by `main` when the linter found something: miette renders this
+/// title, then each `Diagnostic` as a related error, and the process exits
+/// with code 1 — which is what blocks the generation chain (`codegen::` is
+/// never called).
 #[derive(Debug, Error)]
-#[error("le fusible a sauté : {} violation(s) électrique(s)", .violations.len())]
+#[error("the fuse blew: {} electrical violation(s)", .violations.len())]
 pub struct FuseBlown {
     pub violations: Vec<Diagnostic>,
 }
@@ -81,8 +82,8 @@ impl miette::Diagnostic for FuseBlown {
 
     fn help(&self) -> Option<Box<dyn fmt::Display + '_>> {
         Some(Box::new(
-            "corrige les violations ci-dessus : tant que le fusible saute, \
-             pins.rs n'est pas généré",
+            "fix the violations above: generation stays blocked while the \
+             fuse is blown",
         ))
     }
 }

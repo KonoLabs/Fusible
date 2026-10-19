@@ -1,9 +1,9 @@
-//! Étape 2 — Parser « Circuit JSON » (modèle partiel).
+//! Step 2 — Circuit JSON parser (partial model).
 //!
-//! # Choix d'architecture : Serde et le JSON hétérogène
+//! # Architecture choice: Serde and heterogeneous JSON
 //!
-//! Le Circuit JSON de tscircuit est un **tableau d'objets hétérogènes** :
-//! chaque élément porte un champ `"type"` discriminant (`source_component`,
+//! tscircuit's Circuit JSON is an **array of heterogeneous objects**: every
+//! element carries a discriminating `"type"` field (`source_component`,
 //! `source_net`, `source_port`, `source_pad`, `source_trace`, ...).
 //!
 //! ```json
@@ -13,44 +13,62 @@
 //! ]
 //! ```
 //!
-//! C'est canoniquement le format *internally tagged enum* de Serde :
+//! This is the canonical *internally tagged enum* format for Serde:
 //!
-//! * `#[serde(tag = "type")]` désigne le champ discriminant : Serde lit
-//!   d'abord `type`, puis délègue la désérialisation du **reste** de l'objet
-//!   à la variante correspondante. Aucun « lis `type`, puis `match`, puis
-//!   `from_value` » à la main — Serde le fait en une passe.
-//! * Les variantes sont des **newtype variants** (`Component(Component)`) :
-//!   chaque variante embarque sa structure fortement typée. Serde accepte un
-//!   struct derrière une variante à tag interne (les champs sont lus comme
-//!   s'ils étaient aplatis dans l'objet d'origine).
-//! * `#[serde(rename = "...")]` mappe l'identifiant JSON littéral vers un nom
-//!   Rust sémantique (`Component`, `Net`, `Pad`, ...). Le tag du JSON bouge
-//!   rarement ; le nom Rust, lui, doit rester lisible dans le reste du code.
-//! * `#[serde(other)]` sur la variante `Unknown` : les types que la Phase 1
-//!   ne modélise pas (`silkscreen_text`, `footprint`, `schematic_box`, ...)
-//!   sont **ignorés au lieu de faire échouer tout le parsing**. C'est le choix
-//!   central de robustesse : le linter doit se plaindre de règles
-//!   électriques, jamais du fait que notre modèle est partiel. (Contrainte
-//!   Serde : `other` n'existe que pour les enums à tag interne/adjacent, sur
-//!   une variante unitaire — c'est exactement notre cas.)
-//! * Serde ignore silencieusement les champs inconnus **au sein** d'une
-//!   variante : le modèle partiel peut grandir (géométrie, pin-muxing de
-//!   phase 2, ...) sans casser les fichiers existants.
-//! * Les `alias = "..."` tolèrent les deux conventions de nommage de
-//!   l'écosystème tscircuit (camelCase `sourceComponentId` vs snake_case
-//!   `source_component_id`). Un alias ne coûte rien et évite un « fusible »
-//!   qui saute pour une faute de frappe de nommage : un faux positif tue la
-//!   confiance dans l'outil.
+//! * `#[serde(tag = "type")]` names the discriminator: Serde reads `type`
+//!   first, then delegates deserialization of the **rest** of the object to
+//!   the matching variant. No hand-rolled "read `type`, `match`, then
+//!   `from_value`" — Serde does it in one pass.
+//! * Variants are **newtype variants** (`Component(Component)`): each one
+//!   wraps its strongly typed struct. Serde accepts a struct behind an
+//!   internally tagged variant (its fields are read as if flattened into the
+//!   original object).
+//! * `#[serde(rename = "...")]` maps the JSON literal to a readable Rust
+//!   name (`Component`, `Net`, `Pad`, ...). The JSON tag rarely moves; the
+//!   Rust name has to stay legible everywhere else in the code.
+//! * `#[serde(other)]` on the `Unknown` variant: element types Phase 1 does
+//!   not model (`silkscreen_text`, `footprint`, `schematic_box`, ...) are
+//!   **skipped instead of failing the whole parse**. This is the central
+//!   robustness choice: the linter must complain about electrical rules, not
+//!   about our model being partial. (Serde constraint: `other` only exists
+//!   for internally/adjacent tagged enums, on a unit variant — exactly our
+//!   case. A `rename` on `Unknown` would only affect serialization, which
+//!   never happens here.)
+//! * Serde silently ignores unknown fields **inside** a variant: the partial
+//!   model can grow (geometry, phase-2 pin-muxing, ...) without breaking
+//!   existing files.
 //!
-//! Le diagnostic de parsing (label façon rustc sur la position Serde) vit
-//! dans le sous-module `diagnostic` : ici ne reste que le modèle de données.
+//! # Field names: snake_case is the source of truth
 //!
-// Le modèle est volontairement *partiel* : Pad/Trace et certains champs ne
-// sont consommés qu'en phase 2 (pin-muxing, codegen). On ne les code pas
-// pour rien, et on ne les supprime pas non plus.
+//! circuit-json is snake_case, enforced by tscircuit's own
+//! `check-snake-case` CI. Every identifier field therefore accepts the
+//! canonical snake_case key (`source_component_id`, `source_net_id`,
+//! `connected_source_port_ids`, ...), and the camelCase aliases
+//! (`sourceComponentId`, `connectedSourcePortIds`) are kept purely as
+//! defensive tolerance for older files or alternative generators — they cost
+//! nothing. Passing *both* spellings for one field is a hard
+//! `duplicate field` error: ambiguous input must not parse quietly.
+//!
+//! # `None` never means "not applicable"
+//!
+//! Every identifier field is `Option`, because the model is deliberately
+//! *partial* at the deserialization level. But canonical circuit-json always
+//! carries these identifiers, so `None` marks input that deviates from the
+//! format — and a linter that silently skips what it cannot read would
+//! validate malformed input. The linter's `malformed_element` rule surfaces
+//! exactly that case, which is what keeps the whole pipeline fail-closed.
+//!
+//! The parse diagnostic (rustc-style label on the Serde position) lives in
+//! the `diagnostic` submodule: only the data model stays here.
+//!
+// The model is deliberately *partial*: Pad/Trace fields and a few others are
+// only consumed in phase 2 (pin-muxing, codegen). We neither dead-code them
+// away nor delete them early.
 #![allow(dead_code)]
 
 mod diagnostic;
+#[cfg(test)]
+mod tests;
 
 pub use diagnostic::JsonDiagnostic;
 
@@ -59,101 +77,118 @@ use std::path::Path;
 use serde::Deserialize;
 
 // ---------------------------------------------------------------------------
-// Enum taggé : la racine du parsing
+// Internally tagged enum: the parsing root
 // ---------------------------------------------------------------------------
 
-/// Un élément du tableau Circuit JSON.
+/// One element of the Circuit JSON array.
 ///
-/// Chaque variante correspond à une valeur possible du champ `"type"`.
+/// Each variant maps to one possible value of the `"type"` field.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "type")]
 pub enum CircuitElement {
-    /// Un composant posé sur le circuit (résistance, MCU, condensateur...).
+    /// A component placed on the board (resistor, MCU, capacitor, ...).
     #[serde(rename = "source_component")]
     Component(Component),
-    /// Une connexion logique (le « net » : GND, +3V3, I2C_SDA...).
+    /// A logical connection (the "net": GND, +3V3, I2C_SDA, ...).
     #[serde(rename = "source_net")]
     Net(Net),
-    /// Une broche / un port d'un composant.
+    /// A pin / port of a component.
     #[serde(rename = "source_port")]
     Port(Port),
-    /// Un pad de montage (surface d'accroche physique sur le PCB).
+    /// A mount pad (physical solder surface on the PCB).
     #[serde(rename = "source_pad")]
     Pad(Pad),
-    /// Une piste de cuivre reliant deux ports.
+    /// A copper trace joining two ports.
     #[serde(rename = "source_trace")]
     Trace(Trace),
-    /// Type non modélisé en Phase 1 : ignoré plutôt que rejeté.
+    /// Type not modeled in phase 1: ignored rather than rejected.
     #[serde(other)]
     Unknown,
 }
 
 // ---------------------------------------------------------------------------
-// Structures fortement typées
+// Strongly typed structs
 // ---------------------------------------------------------------------------
 
-/// Un composant.
+/// A component.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Component {
-    /// Identifiant stable, ex. `U1`.
-    #[serde(alias = "sourceComponentId", alias = "source_component_id")]
+    /// Stable identifier, e.g. `U1`.
+    #[serde(alias = "source_component_id", alias = "sourceComponentId")]
     pub component_id: Option<String>,
-    /// Nature du composant : `chip`, `resistor`, `capacitor`, ...
+    /// Component kind: `chip`, `resistor`, `capacitor`, ...
     #[serde(alias = "ftype")]
     pub kind: Option<String>,
 }
 
-/// Un net : la connexion logique entre broches.
+/// A net: the logical connection between pins.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Net {
-    #[serde(alias = "sourceNetId", alias = "source_net_id")]
+    #[serde(alias = "source_net_id", alias = "sourceNetId", alias = "netId")]
     pub net_id: Option<String>,
-    /// Nom lisible affiché dans les diagnostics, ex. `GND`.
+    /// Human-readable name shown in diagnostics, e.g. `GND`.
     #[serde(alias = "netName")]
     pub name: Option<String>,
 }
 
-/// Une broche / un port de composant.
+/// A pin / port of a component.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Port {
-    #[serde(alias = "sourcePortId", alias = "source_port_id")]
+    #[serde(alias = "source_port_id", alias = "sourcePortId")]
     pub port_id: Option<String>,
     #[serde(alias = "portName")]
     pub name: Option<String>,
-    /// Net logique rattaché à ce port — la donnée que la règle
-    /// `UnconnectedNetRule` vient compter.
-    #[serde(alias = "sourceNetId", alias = "source_net_id", alias = "netId")]
+    /// The net attached to this port — the datum `UnconnectedNetRule`
+    /// counts. Ports legitimately without a net stay `None` (an unconnected
+    /// pin is fine for this field; a missing `port_id` is not, see the
+    /// `malformed_element` rule).
+    #[serde(alias = "source_net_id", alias = "sourceNetId", alias = "netId")]
     pub net_id: Option<String>,
 }
 
-/// Un pad de montage (l'analogue physique d'un port).
+/// A mount pad (the physical analogue of a port).
 #[derive(Debug, Clone, Deserialize)]
 pub struct Pad {
-    #[serde(alias = "sourcePadId", alias = "source_pad_id")]
+    #[serde(alias = "source_pad_id", alias = "sourcePadId")]
     pub pad_id: Option<String>,
-    #[serde(alias = "sourceNetId", alias = "source_net_id", alias = "netId")]
+    #[serde(alias = "source_net_id", alias = "sourceNetId", alias = "netId")]
     pub net_id: Option<String>,
 }
 
-/// Une piste de cuivre.
+/// A copper trace.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Trace {
-    #[serde(alias = "sourceTraceId", alias = "source_trace_id")]
+    #[serde(alias = "source_trace_id", alias = "sourceTraceId")]
     pub trace_id: Option<String>,
-    /// Ports reliés par cette piste.
-    #[serde(default, alias = "connectedSourcePortIds")]
-    pub connected_port_ids: Vec<String>,
+    /// Ports joined by this trace. The canonical circuit-json field is
+    /// `connected_source_port_ids` (snake_case, required by the schema);
+    /// the camelCase spelling is kept as a defensive alias.
+    #[serde(
+        default,
+        alias = "connectedSourcePortIds",
+        alias = "connected_port_ids",
+        alias = "connectedPortIds"
+    )]
+    pub connected_source_port_ids: Vec<String>,
+    /// Nets joined by this trace.
+    #[serde(
+        default,
+        alias = "connectedSourceNetIds",
+        alias = "connected_net_ids",
+        alias = "connectedNetIds"
+    )]
+    pub connected_source_net_ids: Vec<String>,
 }
 
 // ---------------------------------------------------------------------------
-// AST : vue d'ensemble indexée par type
+// AST: a typed view over the whole document
 // ---------------------------------------------------------------------------
 
-/// L'AST du circuit : le tableau d'éléments brut plus des accès typés.
+/// The circuit AST: the raw element array plus typed accessors.
 ///
-/// Plutôt que de faire `match` sur `elements` partout dans le code, on
-/// centralise ici les « vues » par type. Le linter et (plus tard) le module
-/// `mcu::` consomment ces itérateurs sans connaître la forme du JSON.
+/// Instead of `match`ing over `elements` everywhere, the per-type *views*
+/// live here. The linter — and later the `mcu::` module — consume these
+/// iterators without knowing anything about the JSON shape.
 #[derive(Debug, Clone)]
 pub struct Circuit {
     pub elements: Vec<CircuitElement>,
@@ -197,52 +232,14 @@ impl Circuit {
 }
 
 // ---------------------------------------------------------------------------
-// Point d'entrée du parsing
+// Parsing entry point
 // ---------------------------------------------------------------------------
 
-/// Désérialise le tableau Circuit JSON.
+/// Deserializes the Circuit JSON array.
 ///
-/// `path` sert uniquement à nommer le fichier dans le diagnostic.
+/// `path` only names the file inside the diagnostic.
 pub fn parse(source: &str, path: &Path) -> Result<Circuit, JsonDiagnostic> {
     let elements: Vec<CircuitElement> =
         serde_json::from_str(source).map_err(|err| JsonDiagnostic::new(err, source, path))?;
     Ok(Circuit { elements })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parse_un_tableau_heterogene() {
-        let json = r#"[
-            {"type": "source_component", "component_id": "U1", "kind": "chip"},
-            {"type": "source_net", "net_id": "n1", "name": "GND"},
-            {"type": "source_port", "port_id": "U1.1", "name": "VSS", "net_id": "n1"},
-            {"type": "source_pad", "pad_id": "p1", "net_id": "n1"},
-            {"type": "source_trace", "trace_id": "t1", "connected_port_ids": ["U1.1", "U1.2"]},
-            {"type": "silkscreen_text", "text": "non modélisé en phase 1"}
-        ]"#;
-
-        let circuit = parse(json, Path::new("circuit.json")).expect("le tableau doit parser");
-
-        assert_eq!(circuit.elements.len(), 6);
-        assert_eq!(circuit.components().count(), 1);
-        assert_eq!(circuit.nets().count(), 1);
-        assert_eq!(circuit.ports().count(), 1);
-        assert_eq!(circuit.pads().count(), 1);
-        assert_eq!(circuit.traces().count(), 1);
-        // Le type inconnu est ignoré, pas rejeté.
-        assert!(matches!(circuit.elements[5], CircuitElement::Unknown));
-    }
-
-    #[test]
-    fn accepte_le_camelcase_tscircuit() {
-        let json =
-            r#"[{"type": "source_component", "sourceComponentId": "R1", "ftype": "resistor"}]"#;
-        let circuit = parse(json, Path::new("circuit.json")).expect("alias camelCase acceptés");
-        let component = circuit.components().next().expect("un composant");
-        assert_eq!(component.component_id.as_deref(), Some("R1"));
-        assert_eq!(component.kind.as_deref(), Some("resistor"));
-    }
 }

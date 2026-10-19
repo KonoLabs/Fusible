@@ -1,90 +1,127 @@
-//! Tests du moteur de règles : construction d'ASTs à la main + assertions
-//! sur les violations rendues.
+//! Engine tests: construction, registration order, and the miette rendering
+//! contract of `Diagnostic` / `FuseBlown`.
 //!
-//! Fichier frère de `linter.rs` (déclaration `#[cfg(test)] mod tests`) :
-//! isoler les tests garde le module principal sous la limite de fonctions
-//! par fichier de filet.
+//! Sibling file of `linter.rs` (declared `#[cfg(test)] mod tests`): keeping
+//! tests out of the module file is what holds `linter.rs` under filet's
+//! functions-per-file budget. Rule behavior lives in `rules/tests.rs`.
+
+use miette::Diagnostic as _;
 
 use super::*;
-use crate::parser::{CircuitElement, Net, Port};
+use crate::parser::{Circuit, CircuitElement, Net, Port};
 
-fn net(id: &str, name: &str) -> CircuitElement {
-    CircuitElement::Net(Net {
-        net_id: Some(id.to_string()),
-        name: Some(name.to_string()),
-    })
-}
-
-fn port(id: &str, net_id: &str) -> CircuitElement {
-    CircuitElement::Port(Port {
-        port_id: Some(id.to_string()),
-        name: None,
-        net_id: Some(net_id.to_string()),
-    })
+/// One net wired to a single port: `unconnected_net` must fire on it.
+fn floating_net() -> Circuit {
+    Circuit {
+        elements: vec![
+            CircuitElement::Net(Net {
+                net_id: Some("n1".to_string()),
+                name: Some("GND".to_string()),
+            }),
+            CircuitElement::Port(Port {
+                port_id: Some("U1.1".to_string()),
+                name: None,
+                net_id: Some("n1".to_string()),
+            }),
+        ],
+    }
 }
 
 #[test]
-fn un_net_sans_connexion_saut() {
-    let circuit = Circuit {
-        elements: vec![net("n1", "GND"), port("U1.1", "n1")],
-    };
+fn new_starts_with_no_rules() {
+    // `new()` is the isolation hatch: nothing runs unless it was added.
+    let violations = Linter::new().run(&floating_net());
+    assert!(
+        violations.is_empty(),
+        "expected no rules, got {violations:?}"
+    );
+}
 
-    let violations = Linter::default().run(&circuit);
+#[test]
+fn default_registers_every_phase_1_rule() {
+    let violations = Linter::default().run(&floating_net());
+    assert!(
+        violations.iter().any(|v| v.rule == "unconnected_net"),
+        "default must register UnconnectedNetRule, got {violations:?}"
+    );
+}
 
+#[test]
+fn with_rule_appends_to_an_empty_linter() {
+    let violations = Linter::new()
+        .with_rule(UnconnectedNetRule)
+        .run(&floating_net());
     assert_eq!(violations.len(), 1);
     assert_eq!(violations[0].rule, "unconnected_net");
-    assert!(violations[0].message.contains("GND"));
-    assert!(violations[0].message.contains("flottant"));
 }
 
 #[test]
-fn un_net_correctement_route_passe() {
-    let circuit = Circuit {
-        elements: vec![net("n1", "+3V3"), port("U1.1", "n1"), port("C1.1", "n1")],
-    };
-
-    assert!(Linter::default().run(&circuit).is_empty());
-}
-
-#[test]
-fn les_regles_s_accumulent() {
-    // Deux nets flottants = deux diagnostics, pas seulement le premier.
+fn rules_run_in_registration_order() {
+    // One violation per rule, in the order `default()` registers them:
+    // unconnected (identified floating net), malformed (net with no id),
+    // ghost (port pointing at an undefined net).
     let circuit = Circuit {
         elements: vec![
-            net("n1", "GND"),
-            port("U1.1", "n1"),
-            net("n2", "SDA"),
-            port("U1.2", "n2"),
+            CircuitElement::Net(Net {
+                net_id: Some("n1".to_string()),
+                name: Some("GND".to_string()),
+            }),
+            CircuitElement::Port(Port {
+                port_id: Some("U1.1".to_string()),
+                name: None,
+                net_id: Some("n1".to_string()),
+            }),
+            CircuitElement::Net(Net {
+                net_id: None,
+                name: Some("nameless".to_string()),
+            }),
+            CircuitElement::Port(Port {
+                port_id: Some("U1.2".to_string()),
+                name: None,
+                net_id: Some("undefined".to_string()),
+            }),
         ],
     };
 
     let violations = Linter::default().run(&circuit);
-    assert_eq!(violations.len(), 2);
-}
+    let rules: Vec<&str> = violations.iter().map(|v| v.rule.as_str()).collect();
 
-/// Règle de test : échoue toujours, pour vérifier le point d'extension.
-struct AlwaysFails;
-
-impl Rule for AlwaysFails {
-    fn name(&self) -> &'static str {
-        "always_fails"
-    }
-
-    fn check(&self, _circuit: &Circuit) -> Vec<Diagnostic> {
-        vec![Diagnostic {
-            rule: self.name().to_string(),
-            message: "toujours en échec".to_string(),
-            help: None,
-        }]
-    }
+    assert_eq!(rules, ["unconnected_net", "malformed_element", "ghost_net"]);
 }
 
 #[test]
-fn with_rule_ajoute_une_passe_supplementaire() {
-    let circuit = Circuit { elements: vec![] };
+fn diagnostic_exposes_code_severity_and_help() {
+    let diagnostic = Diagnostic {
+        rule: "unconnected_net".to_string(),
+        message: "net is floating".to_string(),
+        help: Some("route it".to_string()),
+    };
 
-    let violations = Linter::default().with_rule(AlwaysFails).run(&circuit);
+    assert_eq!(
+        diagnostic.code().expect("code").to_string(),
+        "unconnected_net"
+    );
+    assert_eq!(diagnostic.severity(), Some(miette::Severity::Error));
+    assert_eq!(diagnostic.help().expect("help").to_string(), "route it");
 
-    assert_eq!(violations.len(), 1);
-    assert_eq!(violations[0].rule, "always_fails");
+    let silent = Diagnostic {
+        rule: "r".to_string(),
+        message: "m".to_string(),
+        help: None,
+    };
+    assert!(silent.help().is_none());
+}
+
+#[test]
+fn fuse_blown_renders_its_violations_as_related_errors() {
+    let report = miette::Report::new(FuseBlown::new(vec![Diagnostic {
+        rule: "unconnected_net".to_string(),
+        message: "net \"I2C_SDA\" is floating".to_string(),
+        help: None,
+    }]));
+    let rendered = format!("{report:?}");
+
+    assert!(rendered.contains("the fuse blew"), "got:\n{rendered}");
+    assert!(rendered.contains("unconnected_net"), "got:\n{rendered}");
+    assert!(rendered.contains("I2C_SDA"), "got:\n{rendered}");
 }
