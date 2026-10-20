@@ -82,6 +82,25 @@ pub struct PcbSilkscreenPathElm {
     pub route: Vec<PcbPoint>,
 }
 
+#[derive(Debug, Deserialize, Default)]
+pub struct PcbSilkscreenTextElm {
+    pub text: Option<String>,
+    pub anchor_position: Option<PcbPoint>,
+    pub center: Option<PcbPoint>,
+    pub font_size: Option<f64>,
+    pub layer: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct PcbComponentElm {
+    pub pcb_component_id: Option<String>,
+    pub source_component_id: Option<String>,
+    pub center: Option<PcbPoint>,
+    pub width: Option<f64>,
+    pub height: Option<f64>,
+    pub layer: Option<String>,
+}
+
 /// Generic container collecting all parsed PCB elements.
 #[derive(Debug, Default)]
 pub struct PcbModel {
@@ -91,6 +110,8 @@ pub struct PcbModel {
     pub plated_holes: Vec<PcbPlatedHoleElm>,
     pub vias: Vec<PcbViaElm>,
     pub silkscreen_paths: Vec<PcbSilkscreenPathElm>,
+    pub silkscreen_texts: Vec<PcbSilkscreenTextElm>,
+    pub components: Vec<PcbComponentElm>,
 }
 
 impl PcbModel {
@@ -132,6 +153,16 @@ impl PcbModel {
                 "pcb_silkscreen_path" => {
                     if let Ok(s) = serde_json::from_value(val) {
                         model.silkscreen_paths.push(s);
+                    }
+                }
+                "pcb_silkscreen_text" => {
+                    if let Ok(st) = serde_json::from_value(val) {
+                        model.silkscreen_texts.push(st);
+                    }
+                }
+                "pcb_component" => {
+                    if let Ok(c) = serde_json::from_value(val) {
+                        model.components.push(c);
                     }
                 }
                 _ => {}

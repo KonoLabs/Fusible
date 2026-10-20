@@ -5,6 +5,20 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.8.2] - 2026-10-20
+
+### Added
+
+- Interactive Component Inspector and Netlist Explorer sidebar tabs in Dev Studio.
+- Floating hover HUD tooltips across 2D PCB layout, schematic, and 3D views showing RefDes, part numbers, coordinates, nets, and pins.
+- 3D raycasting element selection with emissive glow highlights and crisp 3D text sprites on chip packages.
+- Component outlines and silkscreen text labels rendered into PCB vector SVGs.
+- Elapsed time benchmarks printed on initial compile and live reload updates.
+
+### Changed
+
+- Removed emojis across the Dev Studio interface in favor of clean monospace badges.
+
 ## [0.8.1] - 2026-10-20
 
 ### Fixed

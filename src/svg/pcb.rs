@@ -248,6 +248,17 @@ fn render_holes_and_vias(writer: &mut SvgWriter, model: &PcbModel) {
 }
 
 fn render_silkscreen(writer: &mut SvgWriter, model: &PcbModel) {
+    for c in &model.components {
+        if let (Some(ref center), Some(w), Some(h)) = (&c.center, c.width, c.height) {
+            writer.rounded_rect(
+                [center.x - w / 2.0, -center.y - h / 2.0, w, h],
+                0.2,
+                "none",
+                Some(("rgba(247, 250, 252, 0.4)", 0.1)),
+            );
+        }
+    }
+
     for s in &model.silkscreen_paths {
         if s.route.len() < 2 {
             continue;
@@ -259,5 +270,22 @@ fn render_silkscreen(writer: &mut SvgWriter, model: &PcbModel) {
             d.push_str(&format!("{cmd} {:.3} {:.3} ", pt.x, -pt.y));
         }
         writer.path(&d, "none", Some((DEFAULT_PALETTE.silkscreen, stroke_w)));
+    }
+
+    for t in &model.silkscreen_texts {
+        if let Some(ref text) = t.text {
+            let pt = t.anchor_position.as_ref().or(t.center.as_ref());
+            if let Some(pos) = pt {
+                let size = t.font_size.unwrap_or(0.6);
+                writer.text(
+                    pos.x,
+                    -pos.y,
+                    text,
+                    size,
+                    DEFAULT_PALETTE.silkscreen,
+                    "middle",
+                );
+            }
+        }
     }
 }

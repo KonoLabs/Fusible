@@ -71,8 +71,13 @@ fn compile_tsx(entry: &Path) -> Result<(PathBuf, String), CheckError> {
     match Runner::detect() {
         Ok(runner) => {
             println!("⚙️  Compiling \"{}\" via tscircuit...", entry.display());
+            let start = std::time::Instant::now();
             match runner.build(entry, None) {
                 Ok(built_json) => {
+                    println!(
+                        "✓ Circuit compiled in {:.1}s — preview ready",
+                        start.elapsed().as_secs_f32()
+                    );
                     let content =
                         std::fs::read_to_string(&built_json).map_err(|source| ReadError {
                             path: built_json.display().to_string(),

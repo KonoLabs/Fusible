@@ -18,11 +18,11 @@ pub fn run_dev_server(entry: PathBuf, port: u16) -> Result<(), Box<dyn std::erro
     let server =
         Server::http(&addr).map_err(|e| format!("cannot bind dev server to {addr}: {e}"))?;
 
-    println!("⚡ Fusible Dev Server running at http://localhost:{port} (press Ctrl+C to quit)");
-
     let hub = ClientHub::new();
     let initial_payload = execute_pipeline(&entry);
     let cached_payload = Arc::new(Mutex::new(serde_json::to_string(&initial_payload)?));
+
+    println!("⚡ Fusible Dev Server running at http://localhost:{port} (press Ctrl+C to quit)");
 
     let watch_dir = if entry.is_dir() {
         entry.clone()
@@ -49,12 +49,14 @@ pub fn run_dev_server(entry: PathBuf, port: u16) -> Result<(), Box<dyn std::erro
         let flag = is_rebuilding_clone.clone();
         thread::spawn(move || {
             println!("🔄 File change detected — rebuilding circuit preview...");
+            let start = std::time::Instant::now();
             let payload = execute_pipeline(&entry);
             if let Ok(json_str) = serde_json::to_string(&payload) {
                 if let Ok(mut lock) = cache.lock() {
                     *lock = json_str.clone();
                 }
                 hub.broadcast(&json_str);
+                println!("✓ Circuit updated in {:.1}s", start.elapsed().as_secs_f32());
             }
             flag.store(false, Ordering::SeqCst);
         });

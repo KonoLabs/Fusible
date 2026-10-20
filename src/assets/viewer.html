@@ -23,7 +23,7 @@
       --surface: #131313;
       --surface-hover: #1a1a1a;
       --border: #353535;
-      --border-subtle: #131313;
+      --border-subtle: #222222;
       --green: #86A881;
       --green-dark: #229147;
       --olive: #A8B365;
@@ -199,12 +199,51 @@
       cursor: default;
     }
     #sidebar {
-      width: 320px;
+      width: 340px;
       background: var(--surface);
       border-left: 1px solid var(--border);
       display: flex;
       flex-direction: column;
       z-index: 10;
+    }
+    .sidebar-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .sidebar-tab-btn {
+      flex: 1;
+      padding: 8px 4px;
+      background: transparent;
+      border: none;
+      color: var(--text-subtle);
+      font-family: 'Undefined', monospace;
+      font-size: 10px;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      border-right: 1px solid var(--border);
+      transition: color 0.15s, background 0.15s;
+    }
+    .sidebar-tab-btn:last-child {
+      border-right: none;
+    }
+    .sidebar-tab-btn:hover {
+      color: var(--text);
+      background: var(--surface-hover);
+    }
+    .sidebar-tab-btn.active {
+      color: var(--green);
+      background: var(--surface);
+      border-bottom: 2px solid var(--green);
+    }
+    .sidebar-pane {
+      display: none;
+      flex: 1;
+      overflow-y: auto;
+      flex-direction: column;
+    }
+    .sidebar-pane.active {
+      display: flex;
     }
     .sidebar-section {
       padding: 12px 16px;
@@ -239,16 +278,113 @@
       accent-color: var(--green);
       cursor: pointer;
     }
-    #diagnostics-panel {
-      flex: 1;
-      overflow-y: auto;
+    .inspector-card {
       padding: 14px 16px;
+    }
+    .inspector-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .inspector-name {
+      font-size: 14px;
+      font-weight: bold;
+      color: var(--green);
+      letter-spacing: 0.05em;
+    }
+    .inspector-type {
+      font-size: 10px;
+      color: var(--olive);
+      text-transform: uppercase;
+    }
+    .prop-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 11px;
+      border-bottom: 1px solid rgba(53, 53, 53, 0.3);
+    }
+    .prop-key {
+      color: var(--text-subtle);
+    }
+    .prop-val {
+      color: var(--text-body);
+      font-family: monospace;
+    }
+    .pins-list {
+      margin-top: 12px;
+    }
+    .pins-title {
+      font-size: 10px;
+      color: var(--olive);
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+    .pin-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 6px;
+      font-size: 10px;
+      background: var(--surface-hover);
+      border: 1px solid var(--border-subtle);
+      margin-bottom: 3px;
+      cursor: pointer;
+    }
+    .pin-item:hover {
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+    .pin-net {
+      color: var(--blue);
+    }
+    .comp-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 11px;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .comp-item:hover {
+      background: var(--surface-hover);
+      color: var(--green);
+    }
+    .comp-item.selected {
+      background: rgba(134, 168, 129, 0.12);
+      border-left: 3px solid var(--green);
+    }
+    .comp-sub {
+      color: var(--text-subtle);
+      font-size: 10px;
+    }
+    .net-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 11px;
+      cursor: pointer;
+      color: var(--text-body);
+    }
+    .net-item:hover {
+      background: var(--surface-hover);
+      color: var(--blue);
+    }
+    .net-item.selected {
+      background: rgba(56, 189, 248, 0.12);
+      border-left: 3px solid var(--blue);
     }
     .diag-card {
       background: rgba(244, 63, 94, 0.06);
       border: 1px solid rgba(244, 63, 94, 0.3);
       padding: 10px;
-      margin-bottom: 10px;
+      margin: 12px 16px;
       font-size: 11px;
     }
     .diag-title {
@@ -300,17 +436,54 @@
       height: 6px;
       background: var(--green);
     }
+    .hover-tooltip {
+      position: fixed;
+      z-index: 1000;
+      pointer-events: none;
+      background: rgba(19, 19, 19, 0.95);
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      font-size: 11px;
+      line-height: 1.4;
+      color: var(--text);
+      max-width: 280px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      display: none;
+    }
+    .tooltip-title {
+      font-weight: bold;
+      color: var(--green);
+      margin-bottom: 2px;
+      letter-spacing: 0.05em;
+    }
+    .tooltip-meta {
+      color: var(--olive);
+      font-size: 10px;
+      margin-bottom: 4px;
+    }
+    .tooltip-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--text-subtle);
+      font-size: 10px;
+      margin-top: 2px;
+    }
+    .tooltip-val {
+      color: var(--text-body);
+      font-family: monospace;
+    }
   </style>
 </head>
 <body>
   <header>
     <div class="brand">
       <span class="brand-title">FUSIBLE</span>
-      <span class="brand-sub">// DEV</span>
+      <span class="brand-sub">// STUDIO</span>
       <span class="board-name" id="board-name">BOARD PREVIEW</span>
       <div id="fuse-status" class="fuse-badge fuse-intact">
-        <span id="fuse-icon">⚡</span>
-        <span id="fuse-text">FUSE INTACT</span>
+        <span id="fuse-text">[OK] FUSE INTACT</span>
       </div>
     </div>
 
@@ -341,49 +514,86 @@
       <div id="three-container"></div>
       <div class="hud-toast">
         <div class="status-dot" id="live-dot"></div>
-        <span id="live-status">SSE // LIVE RELOAD CONNECTED</span>
+        <span id="live-status">[LIVE] SSE CONNECTED</span>
       </div>
+      <div id="hover-tooltip" class="hover-tooltip"></div>
     </div>
 
     <aside id="sidebar">
-      <div class="sidebar-section" id="layers-section">
-        <div class="section-title">00 // PCB LAYERS</div>
-        <div class="layer-item">
-          <div class="layer-label">
-            <span class="layer-color-dot" style="background: var(--copper);"></span>
-            <span>TOP COPPER</span>
+      <div class="sidebar-tabs">
+        <button class="sidebar-tab-btn active" onclick="switchSidebarTab('inspector')">INSPECT</button>
+        <button class="sidebar-tab-btn" onclick="switchSidebarTab('components')">PARTS</button>
+        <button class="sidebar-tab-btn" onclick="switchSidebarTab('nets')">NETS</button>
+        <button class="sidebar-tab-btn" onclick="switchSidebarTab('layers')">LAYERS</button>
+        <button class="sidebar-tab-btn" onclick="switchSidebarTab('checks')">CHECKS</button>
+      </div>
+
+      <div class="sidebar-pane active" id="pane-inspector">
+        <div id="inspector-content" class="inspector-card">
+          <div class="empty-state">
+            <span>SELECT OR HOVER A COMPONENT OR PAD TO INSPECT</span>
           </div>
-          <input type="checkbox" class="toggle-checkbox" checked onchange="toggleLayer('top_copper', this.checked)">
-        </div>
-        <div class="layer-item">
-          <div class="layer-label">
-            <span class="layer-color-dot" style="background: var(--blue);"></span>
-            <span>BOTTOM COPPER</span>
-          </div>
-          <input type="checkbox" class="toggle-checkbox" checked onchange="toggleLayer('bottom_copper', this.checked)">
-        </div>
-        <div class="layer-item">
-          <div class="layer-label">
-            <span class="layer-color-dot" style="background: var(--gold);"></span>
-            <span>PADS (ENIG GOLD)</span>
-          </div>
-          <input type="checkbox" class="toggle-checkbox" checked onchange="toggleLayer('pads', this.checked)">
-        </div>
-        <div class="layer-item">
-          <div class="layer-label">
-            <span class="layer-color-dot" style="background: #ffffff;"></span>
-            <span>SILKSCREEN</span>
-          </div>
-          <input type="checkbox" class="toggle-checkbox" checked onchange="toggleLayer('silkscreen', this.checked)">
         </div>
       </div>
 
-      <div class="sidebar-section">
-        <div class="section-title">04 // DIAGNOSTICS</div>
+      <div class="sidebar-pane" id="pane-components">
+        <div id="components-list">
+          <div class="empty-state"><span>NO COMPONENTS PARSED</span></div>
+        </div>
       </div>
-      <div id="diagnostics-panel">
-        <div class="empty-state">
-          <span>NO ELECTRICAL VIOLATIONS DETECTED.</span>
+
+      <div class="sidebar-pane" id="pane-nets">
+        <div id="nets-list">
+          <div class="empty-state"><span>NO NETS DETECTED</span></div>
+        </div>
+      </div>
+
+      <div class="sidebar-pane" id="pane-layers">
+        <div class="sidebar-section">
+          <div class="section-title">PCB COPPER & MASKS</div>
+          <div class="layer-item">
+            <div class="layer-label">
+              <span class="layer-color-dot" style="background: var(--copper);"></span>
+              <span>TOP COPPER</span>
+            </div>
+            <input type="checkbox" class="toggle-checkbox" checked onchange="toggleLayer('top_copper', this.checked)">
+          </div>
+          <div class="layer-item">
+            <div class="layer-label">
+              <span class="layer-color-dot" style="background: var(--blue);"></span>
+              <span>BOTTOM COPPER</span>
+            </div>
+            <input type="checkbox" class="toggle-checkbox" checked onchange="toggleLayer('bottom_copper', this.checked)">
+          </div>
+          <div class="layer-item">
+            <div class="layer-label">
+              <span class="layer-color-dot" style="background: var(--gold);"></span>
+              <span>PADS (ENIG GOLD)</span>
+            </div>
+            <input type="checkbox" class="toggle-checkbox" checked onchange="toggleLayer('pads', this.checked)">
+          </div>
+          <div class="layer-item">
+            <div class="layer-label">
+              <span class="layer-color-dot" style="background: #ffffff;"></span>
+              <span>SILKSCREEN</span>
+            </div>
+            <input type="checkbox" class="toggle-checkbox" checked onchange="toggleLayer('silkscreen', this.checked)">
+          </div>
+          <div class="layer-item">
+            <div class="layer-label">
+              <span class="layer-color-dot" style="background: var(--border);"></span>
+              <span>HOLES & VIAS</span>
+            </div>
+            <input type="checkbox" class="toggle-checkbox" checked onchange="toggleLayer('holes_and_vias', this.checked)">
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-pane" id="pane-checks">
+        <div id="diagnostics-panel">
+          <div class="empty-state">
+            <span>NO ELECTRICAL VIOLATIONS DETECTED.</span>
+          </div>
         </div>
       </div>
     </aside>
@@ -404,6 +614,7 @@
 
     const viewport = document.getElementById('viewport-container');
     const canvas = document.getElementById('canvas-content');
+    const tooltip = document.getElementById('hover-tooltip');
 
     let scene = null;
     let camera = null;
@@ -416,6 +627,10 @@
     let boardHeight = 40;
     let boardCenterX = 0;
     let boardCenterZ = 0;
+
+    let componentsMap = {};
+    let netsMap = {};
+    let selectedComponent = null;
 
     function applyTransform() {
       canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomLevel})`;
@@ -479,7 +694,8 @@
       document.getElementById('three-container').style.display = is3d ? 'block' : 'none';
       document.getElementById('controls-2d').style.display = is3d ? 'none' : 'flex';
       document.getElementById('controls-3d').style.display = is3d ? 'flex' : 'none';
-      document.getElementById('layers-section').style.display = view === 'pcb' ? 'block' : 'none';
+
+      hideTooltip();
 
       if (is3d) {
         initThree();
@@ -491,11 +707,22 @@
       }
     }
 
+    function switchSidebarTab(tabId) {
+      document.querySelectorAll('.sidebar-tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('onclick').includes(tabId));
+      });
+      document.querySelectorAll('.sidebar-pane').forEach(p => p.classList.remove('active'));
+      const activePane = document.getElementById(`pane-${tabId}`);
+      if (activePane) activePane.classList.add('active');
+    }
+
     function renderCurrentView() {
       if (currentView === 'pcb') {
         canvas.innerHTML = pcbSvg || '<div class="empty-state">NO PCB LAYOUT AVAILABLE</div>';
+        setup2DInteractivity();
       } else if (currentView === 'schematic') {
         canvas.innerHTML = schematicSvg || '<div class="empty-state">NO SCHEMATIC AVAILABLE</div>';
+        setup2DInteractivity();
       }
     }
 
@@ -506,16 +733,305 @@
       });
     }
 
+    function showTooltip(x, y, data) {
+      if (!data) return;
+      let html = `<div class="tooltip-title">${escapeHtml(data.name || data.ref || 'ELEMENT')}</div>`;
+      if (data.type) html += `<div class="tooltip-meta">${escapeHtml(data.type.toUpperCase())}</div>`;
+      if (data.part) html += `<div class="tooltip-row"><span>MPN:</span><span class="tooltip-val">${escapeHtml(data.part)}</span></div>`;
+      if (data.net) html += `<div class="tooltip-row"><span>NET:</span><span class="tooltip-val" style="color:var(--blue)">${escapeHtml(data.net)}</span></div>`;
+      if (data.pos) html += `<div class="tooltip-row"><span>POS:</span><span class="tooltip-val">${data.pos}</span></div>`;
+      if (data.layer) html += `<div class="tooltip-row"><span>LAYER:</span><span class="tooltip-val">${escapeHtml(data.layer)}</span></div>`;
+      if (data.extra) html += `<div class="tooltip-row"><span>PINS:</span><span class="tooltip-val">${data.extra}</span></div>`;
+
+      tooltip.innerHTML = html;
+      tooltip.style.left = `${x + 14}px`;
+      tooltip.style.top = `${y + 14}px`;
+      tooltip.style.display = 'block';
+    }
+
+    function hideTooltip() {
+      tooltip.style.display = 'none';
+    }
+
+    function setup2DInteractivity() {
+      const svg = canvas.querySelector('svg');
+      if (!svg) return;
+
+      svg.addEventListener('mousemove', (e) => {
+        if (isDragging) {
+          hideTooltip();
+          return;
+        }
+
+        const rect = svg.getBoundingClientRect();
+        const pt = svg.createSVGPoint();
+        pt.x = e.clientX;
+        pt.y = e.clientY;
+        const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+        const circX = svgP.x;
+        const circY = -svgP.y;
+
+        const comp = findClosestComponent(circX, circY);
+        if (comp) {
+          showTooltip(e.clientX, e.clientY, {
+            name: comp.name,
+            type: comp.ftype || 'component',
+            part: comp.mpn,
+            pos: `(${comp.x.toFixed(2)}, ${comp.y.toFixed(2)}) mm`,
+            layer: comp.layer || 'top',
+            extra: `${comp.pins.length} pins`
+          });
+          return;
+        }
+
+        const pad = findClosestPad(circX, circY);
+        if (pad) {
+          showTooltip(e.clientX, e.clientY, {
+            name: `PAD ${pad.id}`,
+            type: 'smtpad',
+            net: pad.net,
+            pos: `(${pad.x.toFixed(2)}, ${pad.y.toFixed(2)}) mm`,
+            layer: pad.layer
+          });
+          return;
+        }
+
+        hideTooltip();
+      });
+
+      svg.addEventListener('mouseleave', hideTooltip);
+
+      svg.addEventListener('click', (e) => {
+        const pt = svg.createSVGPoint();
+        pt.x = e.clientX;
+        pt.y = e.clientY;
+        const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+        const comp = findClosestComponent(svgP.x, -svgP.y);
+        if (comp) {
+          selectComponent(comp.name);
+        }
+      });
+    }
+
+    function findClosestComponent(x, y) {
+      for (const name in componentsMap) {
+        const c = componentsMap[name];
+        const halfW = (c.w || 4) / 2;
+        const halfH = (c.h || 4) / 2;
+        if (x >= c.x - halfW && x <= c.x + halfW && y >= c.y - halfH && y <= c.y + halfH) {
+          return c;
+        }
+      }
+      return null;
+    }
+
+    function findClosestPad(x, y) {
+      const elements = getElementsArray();
+      for (const e of elements) {
+        if (e.type === 'pcb_smtpad') {
+          const px = e.x ?? e.center?.x ?? 0;
+          const py = e.y ?? e.center?.y ?? 0;
+          const pw = e.width || 1.0;
+          const ph = e.height || 1.0;
+          if (Math.abs(x - px) <= pw / 2 && Math.abs(y - py) <= ph / 2) {
+            return {
+              id: e.pcb_smtpad_id || e.port_hints?.[0] || '1',
+              x: px,
+              y: py,
+              layer: e.layer || 'top',
+              net: e.net || e.subcircuit_id || 'SIGNAL'
+            };
+          }
+        }
+      }
+      return null;
+    }
+
+    function getElementsArray() {
+      if (!lastCircuitJson) return [];
+      if (Array.isArray(lastCircuitJson)) return lastCircuitJson;
+      return Array.isArray(lastCircuitJson.elements) ? lastCircuitJson.elements : [];
+    }
+
+    function parseCircuitGraph() {
+      componentsMap = {};
+      netsMap = {};
+
+      const elements = getElementsArray();
+
+      const sourceCompMap = {};
+      elements.filter(e => e.type === 'source_component').forEach(sc => {
+        sourceCompMap[sc.source_component_id] = {
+          name: sc.name || 'U',
+          mpn: sc.manufacturer_part_number || '',
+          ftype: sc.ftype || ''
+        };
+      });
+
+      const portNetMap = {};
+      elements.filter(e => e.type === 'source_port').forEach(sp => {
+        portNetMap[sp.source_port_id] = {
+          name: sp.name || '',
+          pin: sp.pin_number || ''
+        };
+      });
+
+      elements.filter(e => e.type === 'source_net').forEach(sn => {
+        netsMap[sn.name] = {
+          name: sn.name,
+          count: 0
+        };
+      });
+
+      elements.filter(e => e.type === 'pcb_trace').forEach(t => {
+        const netName = t.connection_name;
+        if (netName) {
+          if (!netsMap[netName]) netsMap[netName] = { name: netName, count: 0 };
+          netsMap[netName].count++;
+        }
+      });
+
+      elements.filter(e => e.type === 'pcb_component').forEach(pc => {
+        const src = sourceCompMap[pc.source_component_id] || {};
+        const name = src.name || pc.pcb_component_id || 'COMP';
+        const cx = pc.center?.x ?? pc.x ?? 0;
+        const cy = pc.center?.y ?? pc.y ?? 0;
+        const cw = pc.width || 4;
+        const ch = pc.height || 4;
+
+        componentsMap[name] = {
+          name,
+          mpn: src.mpn,
+          ftype: src.ftype,
+          x: cx,
+          y: cy,
+          w: cw,
+          h: ch,
+          layer: pc.layer || 'top',
+          id: pc.pcb_component_id,
+          pins: []
+        };
+      });
+
+      elements.filter(e => e.type === 'schematic_component').forEach(sc => {
+        const src = sourceCompMap[sc.source_component_id] || {};
+        const name = src.name;
+        if (name && componentsMap[name] && sc.port_labels) {
+          for (const pin in sc.port_labels) {
+            componentsMap[name].pins.push({
+              pin,
+              net: sc.port_labels[pin]
+            });
+          }
+        }
+      });
+
+      renderComponentsList();
+      renderNetsList();
+    }
+
+    function renderComponentsList() {
+      const container = document.getElementById('components-list');
+      const names = Object.keys(componentsMap).sort();
+      if (names.length === 0) {
+        container.innerHTML = '<div class="empty-state"><span>NO COMPONENTS PARSED</span></div>';
+        return;
+      }
+      container.innerHTML = names.map(name => {
+        const c = componentsMap[name];
+        return `
+          <div class="comp-item ${selectedComponent === name ? 'selected' : ''}" onclick="selectComponent('${escapeHtml(name)}')">
+            <div>
+              <div style="font-weight:bold">${escapeHtml(name)}</div>
+              <div class="comp-sub">${escapeHtml(c.mpn || c.ftype || '')}</div>
+            </div>
+            <div class="comp-sub">(${c.x.toFixed(1)}, ${c.y.toFixed(1)})</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderNetsList() {
+      const container = document.getElementById('nets-list');
+      const names = Object.keys(netsMap).sort();
+      if (names.length === 0) {
+        container.innerHTML = '<div class="empty-state"><span>NO NETS DETECTED</span></div>';
+        return;
+      }
+      container.innerHTML = names.map(name => `
+        <div class="net-item" onclick="selectNet('${escapeHtml(name)}')">
+          <span style="font-weight:bold">${escapeHtml(name)}</span>
+          <span style="color:var(--text-subtle);font-size:10px">${netsMap[name].count} segments</span>
+        </div>
+      `).join('');
+    }
+
+    function selectComponent(name) {
+      selectedComponent = name;
+      renderComponentsList();
+      const comp = componentsMap[name];
+      if (!comp) return;
+
+      switchSidebarTab('inspector');
+      const panel = document.getElementById('inspector-content');
+
+      let pinsHtml = '';
+      if (comp.pins && comp.pins.length > 0) {
+        pinsHtml = `
+          <div class="pins-list">
+            <div class="pins-title">CONNECTED PINS & SIGNALS</div>
+            ${comp.pins.map(p => `
+              <div class="pin-item" onclick="selectNet('${escapeHtml(p.net)}')">
+                <span>${escapeHtml(p.pin)}</span>
+                <span class="pin-net">${escapeHtml(p.net)}</span>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      panel.innerHTML = `
+        <div class="inspector-header">
+          <span class="inspector-name">${escapeHtml(comp.name)}</span>
+          <span class="inspector-type">${escapeHtml(comp.ftype || 'COMPONENT')}</span>
+        </div>
+        ${comp.mpn ? `<div class="prop-row"><span class="prop-key">MPN</span><span class="prop-val">${escapeHtml(comp.mpn)}</span></div>` : ''}
+        <div class="prop-row"><span class="prop-key">CENTER</span><span class="prop-val">(${comp.x.toFixed(2)}, ${comp.y.toFixed(2)}) mm</span></div>
+        <div class="prop-row"><span class="prop-key">FOOTPRINT</span><span class="prop-val">${comp.w.toFixed(1)} x ${comp.h.toFixed(1)} mm</span></div>
+        <div class="prop-row"><span class="prop-key">LAYER</span><span class="prop-val">${escapeHtml(comp.layer.toUpperCase())}</span></div>
+        ${pinsHtml}
+      `;
+
+      if (currentView === '3d' && boardGroup) {
+        boardGroup.children.forEach(obj => {
+          if (obj.userData && obj.userData.name === name && obj.material) {
+            obj.material.emissive = new THREE.Color(0x86A881);
+            obj.material.emissiveIntensity = 0.8;
+          }
+        });
+      }
+    }
+
+    function selectNet(netName) {
+      document.querySelectorAll('.net-item').forEach(el => {
+        el.classList.toggle('selected', el.textContent.includes(netName));
+      });
+      showTooltip(window.innerWidth / 2, 80, {
+        name: `NET: ${netName}`,
+        type: 'SIGNAL TRACE HIGHLIGHT',
+        net: netName
+      });
+      setTimeout(hideTooltip, 2000);
+    }
+
     function updateDiagnostics(fuseBlown, diagnostics) {
       const statusEl = document.getElementById('fuse-status');
       const textEl = document.getElementById('fuse-text');
-      const iconEl = document.getElementById('fuse-icon');
       const diagPanel = document.getElementById('diagnostics-panel');
 
       if (fuseBlown) {
         statusEl.className = 'fuse-badge fuse-blown';
-        textEl.textContent = `FUSE BLOWN (${diagnostics.length})`;
-        iconEl.textContent = '💥';
+        textEl.textContent = `[BLOWN] FUSE BLOWN (${diagnostics.length})`;
 
         if (diagnostics.length > 0) {
           diagPanel.innerHTML = diagnostics.map(d => `
@@ -528,8 +1044,7 @@
         }
       } else {
         statusEl.className = 'fuse-badge fuse-intact';
-        textEl.textContent = 'FUSE INTACT';
-        iconEl.textContent = '⚡';
+        textEl.textContent = '[OK] FUSE INTACT';
         diagPanel.innerHTML = '<div class="empty-state"><span>NO ELECTRICAL VIOLATIONS DETECTED.</span></div>';
       }
     }
@@ -548,6 +1063,11 @@
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
     }
+
+    let raycaster = null;
+    let mouseVector = null;
+    let hoveredObject = null;
+    let originalColor = null;
 
     function initThree() {
       if (threeInitialized) return;
@@ -588,6 +1108,12 @@
       boardGroup = new THREE.Group();
       scene.add(boardGroup);
 
+      raycaster = new THREE.Raycaster();
+      mouseVector = new THREE.Vector2();
+
+      container.addEventListener('mousemove', onThreeMouseMove);
+      container.addEventListener('click', onThreeClick);
+
       function animate() {
         requestAnimationFrame(animate);
         controls.update();
@@ -597,6 +1123,50 @@
 
       window.addEventListener('resize', onThreeResize);
       threeInitialized = true;
+    }
+
+    function onThreeMouseMove(e) {
+      if (currentView !== '3d' || !renderer || !camera || !boardGroup) return;
+      const container = document.getElementById('three-container');
+      const rect = container.getBoundingClientRect();
+      mouseVector.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouseVector.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouseVector, camera);
+      const intersects = raycaster.intersectObjects(boardGroup.children, true);
+      const hit = intersects.find(i => i.object.userData && i.object.userData.type);
+
+      if (hit) {
+        if (hoveredObject !== hit.object) {
+          clearThreeHighlight();
+          hoveredObject = hit.object;
+          if (hoveredObject.material && hoveredObject.material.emissive) {
+            originalColor = hoveredObject.material.emissive.getHex();
+            hoveredObject.material.emissive.setHex(0x38bdf8);
+            hoveredObject.material.emissiveIntensity = 0.8;
+          }
+        }
+        showTooltip(e.clientX, e.clientY, hoveredObject.userData);
+        container.style.cursor = 'pointer';
+      } else {
+        clearThreeHighlight();
+        hideTooltip();
+        container.style.cursor = 'default';
+      }
+    }
+
+    function onThreeClick() {
+      if (hoveredObject && hoveredObject.userData && hoveredObject.userData.name) {
+        selectComponent(hoveredObject.userData.name);
+      }
+    }
+
+    function clearThreeHighlight() {
+      if (hoveredObject && hoveredObject.material && hoveredObject.material.emissive) {
+        hoveredObject.material.emissive.setHex(originalColor || 0x000000);
+        hoveredObject.material.emissiveIntensity = 0.0;
+      }
+      hoveredObject = null;
     }
 
     function setCameraPreset(preset) {
@@ -619,6 +1189,26 @@
       controls.update();
     }
 
+    function makeTextSprite(message) {
+      const c = document.createElement('canvas');
+      c.width = 256;
+      c.height = 64;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 32px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(message, 128, 32);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.minFilter = THREE.LinearFilter;
+      const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+      const sprite = new THREE.Sprite(mat);
+      const aspect = c.width / c.height;
+      sprite.scale.set(1.5 * aspect, 1.5, 1);
+      return sprite;
+    }
+
     function build3DScene() {
       if (!boardGroup) return;
 
@@ -628,9 +1218,7 @@
         if (obj.geometry) obj.geometry.dispose();
       }
 
-      const elements = Array.isArray(lastCircuitJson)
-        ? lastCircuitJson
-        : (lastCircuitJson && Array.isArray(lastCircuitJson.elements) ? lastCircuitJson.elements : []);
+      const elements = getElementsArray();
 
       const boards = elements.filter(e => e.type === 'pcb_board');
       boardWidth = 60;
@@ -691,14 +1279,20 @@
         if (shape === 'circle') {
           const r = pad.radius || ((pad.width || 1.0) / 2);
           const geo = new THREE.CylinderGeometry(r, r, 0.04, 24);
-          padMesh = new THREE.Mesh(geo, padMat);
+          padMesh = new THREE.Mesh(geo, padMat.clone());
         } else {
           const pw = pad.width || 1.2;
           const ph = pad.height || 1.2;
           const geo = new THREE.BoxGeometry(pw, 0.04, ph);
-          padMesh = new THREE.Mesh(geo, padMat);
+          padMesh = new THREE.Mesh(geo, padMat.clone());
         }
         padMesh.position.set(px, py, pz);
+        padMesh.userData = {
+          type: 'smtpad',
+          name: pad.port_hints?.[0] ? `PAD ${pad.port_hints[0]}` : 'PAD',
+          pos: `(${px.toFixed(2)}, ${pz.toFixed(2)}) mm`,
+          layer: pad.layer || 'top'
+        };
         boardGroup.add(padMesh);
       });
 
@@ -716,8 +1310,13 @@
         const holeR = ((via.hole_diameter || 0.3) / 2);
 
         const viaGeo = new THREE.CylinderGeometry(outerR, outerR, substrateThickness + 0.06, 24);
-        const viaMesh = new THREE.Mesh(viaGeo, viaMat);
+        const viaMesh = new THREE.Mesh(viaGeo, viaMat.clone());
         viaMesh.position.set(vx, 0, vz);
+        viaMesh.userData = {
+          type: 'via',
+          name: via.type === 'pcb_via' ? 'VIA' : 'PLATED HOLE',
+          pos: `(${vx.toFixed(2)}, ${vz.toFixed(2)}) mm`
+        };
         boardGroup.add(viaMesh);
 
         const holeGeo = new THREE.CylinderGeometry(holeR, holeR, substrateThickness + 0.08, 16);
@@ -755,6 +1354,10 @@
 
           const mesh = new THREE.Mesh(geo, traceMat);
           mesh.position.set((p1.x + p2.x) / 2, py, (p1.y + p2.y) / 2);
+          mesh.userData = {
+            type: 'trace',
+            net: trace.connection_name || 'SIGNAL'
+          };
           boardGroup.add(mesh);
         }
       });
@@ -779,10 +1382,25 @@
         const isBottom = comp.layer === 'bottom';
         const cy = isBottom ? -(substrateThickness / 2 + cThick / 2 + 0.05) : (substrateThickness / 2 + cThick / 2 + 0.05);
 
+        const compName = Object.keys(componentsMap).find(k => componentsMap[k].id === comp.pcb_component_id) || comp.pcb_component_id || 'U';
+        const compData = componentsMap[compName] || {};
+
         const chipGeo = new THREE.BoxGeometry(cw, cThick, ch);
-        const chipMesh = new THREE.Mesh(chipGeo, chipMat);
+        const chipMesh = new THREE.Mesh(chipGeo, chipMat.clone());
         chipMesh.position.set(cx, cy, cz);
+        chipMesh.userData = {
+          type: 'component',
+          name: compName,
+          part: compData.mpn || compData.ftype || 'IC',
+          pos: `(${cx.toFixed(2)}, ${cz.toFixed(2)}) mm`,
+          layer: comp.layer || 'top',
+          extra: `${compData.pins?.length || 0} pins`
+        };
         boardGroup.add(chipMesh);
+
+        const sprite = makeTextSprite(compName);
+        sprite.position.set(cx, cy + (isBottom ? -cThick / 2 - 0.4 : cThick / 2 + 0.4), cz);
+        boardGroup.add(sprite);
 
         const pinW = 0.6;
         const pinLen = 1.0;
@@ -810,7 +1428,7 @@
 
       eventSource.onopen = () => {
         liveDot.style.background = 'var(--green)';
-        liveStatus.textContent = 'SSE // LIVE RELOAD CONNECTED';
+        liveStatus.textContent = '[LIVE] SSE CONNECTED';
       };
 
       eventSource.onmessage = (event) => {
@@ -823,6 +1441,7 @@
           if (data.schematic_svg) schematicSvg = data.schematic_svg;
           if (data.circuit_json) {
             lastCircuitJson = data.circuit_json;
+            parseCircuitGraph();
             if (currentView === '3d') {
               build3DScene();
             }
@@ -838,7 +1457,7 @@
 
       eventSource.onerror = () => {
         liveDot.style.background = 'var(--alert)';
-        liveStatus.textContent = 'SSE // RECONNECTING...';
+        liveStatus.textContent = '[WAIT] RECONNECTING...';
       };
     }
 
