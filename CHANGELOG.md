@@ -5,6 +5,31 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.8.0] - 2026-10-20
+
+### Added
+
+- Parallel multi-core topological autorouter (`fusible route` in `src/router/`):
+  - Spatial clearance index using `rstar` AABB R-trees for sub-microsecond obstacle queries.
+  - Multi-layer 3D A* pathfinder supporting 45-degree and 90-degree routing, turn costs, and layer vias.
+  - Multi-threaded parallel routing engine using `rayon` with Circuit JSON `pcb_trace` and `pcb_via` emission.
+  - Fuse Contract integration: blows the fuse (exit 1) on unrouted nets and blocks artifact exports.
+- Bidirectional KiCad syncer (`fusible diff` and `fusible sync` in `src/kicad/`):
+  - Zero-dependency recursive-descent S-expression parser for `.kicad_pcb` files.
+  - Layout drift detection comparing KiCad component coordinates against Circuit JSON.
+  - Automatic coordinate translation (KiCad Y-down to tscircuit Y-up) and relative centering.
+  - Synchronization pipeline writing component placement overrides into `manual-edits.json`.
+- Vitrine-styled Dev Studio with interactive 3D PCB viewer (`src/assets/viewer.html`):
+  - Redesigned interface following Vitrine brutalist dark aesthetics and `#000000`, `#131313`, `#353535`, `#86A881`, `#A8B365` palette.
+  - Embedded `Undefined` monospace font served natively at `/undefined-medium.otf`.
+  - Added Three.js 3D board viewer tab (`03 // 3D VIEW`) rendering substrate, ENIG gold pads, copper vias, traces, and chip packages with OrbitControls.
+  - Added camera preset controls (`TOP`, `ISO`, `FRONT`, `RESET`).
+- Integrated tests for `route`, `diff`, and `sync` subcommands in `tests/subcommands.rs`.
+
+### Fixed
+
+- Prevented dev server compilation hangs by running `tscircuit build` inside `hardware/` context with `stdin(null)` and fallback timeout.
+
 ## [0.7.0] - 2026-10-20
 
 ### Added

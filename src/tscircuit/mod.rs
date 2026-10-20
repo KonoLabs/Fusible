@@ -129,11 +129,45 @@ impl Runner {
 
     /// Runs the tscircuit build command to produce circuit json.
     pub fn build(&self, file: &Path, out_file: Option<&Path>) -> Result<PathBuf, RunnerError> {
-        let mut cmd = build_command(&self.kind, file);
-        let out = cmd.output().map_err(|source| RunnerError::Io {
-            command: command::format_command(&cmd),
+        let (working_dir, target_file) = resolve_hardware_context(file);
+        let mut cmd = build_command(&self.kind, &target_file);
+        if let Some(ref dir) = working_dir {
+            cmd.current_dir(dir);
+        }
+        cmd.stdin(Stdio::null());
+        cmd.env("CI", "1");
+        cmd.stdout(Stdio::piped());
+        cmd.stderr(Stdio::piped());
+
+        let cmd_str = command::format_command(&cmd);
+        let (tx, rx) = std::sync::mpsc::channel();
+        let child = cmd.spawn().map_err(|source| RunnerError::Io {
+            command: cmd_str.clone(),
             source,
         })?;
+
+        std::thread::spawn(move || {
+            let res = child.wait_with_output();
+            let _ = tx.send(res);
+        });
+
+        let out = match rx.recv_timeout(std::time::Duration::from_secs(15)) {
+            Ok(Ok(output)) => output,
+            Ok(Err(source)) => {
+                return Err(RunnerError::Io {
+                    command: cmd_str,
+                    source,
+                })
+            }
+            Err(_) => {
+                return Err(RunnerError::CommandFailed {
+                    command: cmd_str,
+                    code: None,
+                    stderr: "compilation timed out after 15 seconds".to_string(),
+                    help: "compilation took too long; falling back to cached circuit.json if available".to_string(),
+                });
+            }
+        };
 
         if !out.status.success() {
             let details = command::extract_output_details(&out);

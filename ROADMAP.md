@@ -76,12 +76,13 @@ Fusible unifies the hardware development workflow by wrapping tscircuit commands
   - Debounced filesystem watcher (`notify-debouncer-mini`) reacting to code updates in 150ms.
   - Standalone dark-theme engineering web dashboard with interactive pan-zoom PCB and schematic layout viewers.
   - Live electrical fuse status indicator and miette-style diagnostics inspector.
+- [x] **Milestone 12: Parallel Autorouter, Bidirectional KiCad Sync, and 3D Studio** (`v0.8.0`):
+  - Parallel multi-core topological autorouter (`fusible route`) with `rstar` AABB spatial trees and `rayon` thread pool.
+  - Multi-layer 3D A* pathfinder supporting 45-degree and 90-degree traces and via transitions.
+  - Bidirectional KiCad syncer (`fusible diff` and `fusible sync`) with pure Rust S-expression parser and `manual-edits.json` synchronization.
+  - Vitrine brutalist dark UI redesign and Three.js 3D PCB board previewer embedded in `fusible dev` (`03 // 3D VIEW`).
 
-## 5. Phase 2: Autorouting, Sync & Automation
+## 5. Phase 2: Turnkey Automation
 
-- [ ] **Parallel Multi-Core Autorouter (`fusible route`)**:
-  - Gridless topological pathfinder using spatial R-trees (`rstar`) and parallel route negotiation (`rayon`).
-- [ ] **Bidirectional Syncer (`fusible diff` / `fusible sync`)**:
-  - Detecting visual layout edits made in KiCad and reconciling them back into `hardware/index.tsx`.
 - [ ] **Turnkey CI GitHub Action (`fusible-action`)**:
   - Automated PR checking in CI to prevent defective hardware or breaking pin drifts from reaching main.

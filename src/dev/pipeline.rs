@@ -23,6 +23,7 @@ pub struct DevPayload {
     pub diagnostics: Vec<DevDiagnostic>,
     pub pcb_svg: String,
     pub schematic_svg: String,
+    pub circuit_json: Option<serde_json::Value>,
 }
 
 pub fn execute_pipeline(entry: &Path) -> DevPayload {
@@ -52,10 +53,12 @@ pub fn execute_pipeline(entry: &Path) -> DevPayload {
                 }],
                 pcb_svg: String::new(),
                 schematic_svg: String::new(),
+                circuit_json: None,
             };
         }
     };
 
+    let circuit_json = serde_json::from_str::<serde_json::Value>(&source).ok();
     let pcb_svg = render_pcb_svg(&source);
 
     let circuit = match parser::parse(&source, &json_path) {
@@ -71,6 +74,7 @@ pub fn execute_pipeline(entry: &Path) -> DevPayload {
                 }],
                 pcb_svg,
                 schematic_svg: String::new(),
+                circuit_json,
             };
         }
     };
@@ -98,5 +102,6 @@ pub fn execute_pipeline(entry: &Path) -> DevPayload {
         diagnostics,
         pcb_svg,
         schematic_svg,
+        circuit_json,
     }
 }

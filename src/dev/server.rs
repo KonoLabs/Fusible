@@ -10,6 +10,7 @@ use super::pipeline::execute_pipeline;
 use super::watcher::start_file_watcher;
 
 const VIEWER_HTML: &str = include_str!("../assets/viewer.html");
+const FONT_DATA: &[u8] = include_bytes!("../assets/undefined-medium.otf");
 
 pub fn run_dev_server(entry: PathBuf, port: u16) -> Result<(), Box<dyn std::error::Error>> {
     let addr = format!("127.0.0.1:{port}");
@@ -53,6 +54,11 @@ pub fn run_dev_server(entry: PathBuf, port: u16) -> Result<(), Box<dyn std::erro
                     Header::from_bytes(&b"Content-Type"[..], &b"text/html; charset=utf-8"[..])
                         .unwrap();
                 let response = Response::from_string(VIEWER_HTML).with_header(header);
+                let _ = request.respond(response);
+            }
+            "/undefined-medium.otf" => {
+                let header = Header::from_bytes(&b"Content-Type"[..], &b"font/otf"[..]).unwrap();
+                let response = Response::from_data(FONT_DATA).with_header(header);
                 let _ = request.respond(response);
             }
             "/events" => {

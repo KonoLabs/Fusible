@@ -52,7 +52,10 @@ fn find_fallback_circuit_json(entry: &Path) -> Option<PathBuf> {
         .file_stem()
         .map(|s| s.to_string_lossy())
         .unwrap_or_default();
+    let parent = entry.parent().unwrap_or_else(|| Path::new(""));
     let candidates = [
+        parent.join("dist").join("circuit.json"),
+        parent.join("dist").join(stem.as_ref()).join("circuit.json"),
         PathBuf::from("dist").join("circuit.json"),
         PathBuf::from("dist")
             .join(stem.as_ref())
@@ -68,12 +71,32 @@ fn compile_tsx(entry: &Path) -> Result<(PathBuf, String), CheckError> {
     match Runner::detect() {
         Ok(runner) => {
             println!("⚙️  Compiling \"{}\" via tscircuit...", entry.display());
-            let built_json = runner.build(entry, None)?;
-            let content = std::fs::read_to_string(&built_json).map_err(|source| ReadError {
-                path: built_json.display().to_string(),
-                source,
-            })?;
-            Ok((built_json, content))
+            match runner.build(entry, None) {
+                Ok(built_json) => {
+                    let content =
+                        std::fs::read_to_string(&built_json).map_err(|source| ReadError {
+                            path: built_json.display().to_string(),
+                            source,
+                        })?;
+                    Ok((built_json, content))
+                }
+                Err(runner_err) => {
+                    if let Some(fallback) = find_fallback_circuit_json(entry) {
+                        println!(
+                            "⚠️  tscircuit compilation failed; falling back to existing \"{}\"...",
+                            fallback.display()
+                        );
+                        let content =
+                            std::fs::read_to_string(&fallback).map_err(|source| ReadError {
+                                path: fallback.display().to_string(),
+                                source,
+                            })?;
+                        Ok((fallback, content))
+                    } else {
+                        Err(CheckError::Runner(runner_err))
+                    }
+                }
+            }
         }
         Err(runner_err) => {
             if let Some(fallback) = find_fallback_circuit_json(entry) {

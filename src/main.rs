@@ -11,9 +11,11 @@ pub mod commands;
 pub mod config;
 pub mod dev;
 pub mod gerber;
+pub mod kicad;
 pub mod linter;
 pub mod netlist;
 pub mod parser;
+pub mod router;
 pub mod silicon;
 pub mod svg;
 pub mod tscircuit;
@@ -58,6 +60,44 @@ fn dispatch_export(
     }
 }
 
+fn dispatch_route(
+    file: Option<std::path::PathBuf>,
+    output: Option<std::path::PathBuf>,
+    clearance: f64,
+    trace_width: f64,
+    layers: u8,
+    dry_run: bool,
+) -> ExitCode {
+    match commands::route::run(file, output, clearance, trace_width, layers, dry_run) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(err @ commands::route::RouteCommandError::UnroutedNets { .. }) => {
+            fail(err, EXIT_VIOLATIONS)
+        }
+        Err(err) => fail(err, EXIT_TOOL_ERROR),
+    }
+}
+
+fn dispatch_diff(kicad_pcb: std::path::PathBuf, file: Option<std::path::PathBuf>) -> ExitCode {
+    match commands::diff::run(kicad_pcb, file) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(err @ commands::diff::DiffCommandError::DriftDetected) => fail(err, EXIT_VIOLATIONS),
+        Err(err) => fail(err, EXIT_TOOL_ERROR),
+    }
+}
+
+fn dispatch_sync(
+    kicad_pcb: std::path::PathBuf,
+    file: Option<std::path::PathBuf>,
+    target: Option<std::path::PathBuf>,
+    write: bool,
+    dry_run: bool,
+) -> ExitCode {
+    match commands::sync::run(kicad_pcb, file, target, write, dry_run) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(err) => fail(err, EXIT_TOOL_ERROR),
+    }
+}
+
 fn main() -> ExitCode {
     let cli = Cli::parse();
 
@@ -77,6 +117,22 @@ fn main() -> ExitCode {
             output,
             skip_lint,
         }) => dispatch_export(file, preset, format, output, skip_lint),
+        Some(Commands::Route {
+            file,
+            output,
+            clearance,
+            trace_width,
+            layers,
+            dry_run,
+        }) => dispatch_route(file, output, clearance, trace_width, layers, dry_run),
+        Some(Commands::Diff { kicad_pcb, file }) => dispatch_diff(kicad_pcb, file),
+        Some(Commands::Sync {
+            kicad_pcb,
+            file,
+            target,
+            write,
+            dry_run,
+        }) => dispatch_sync(kicad_pcb, file, target, write, dry_run),
         Some(Commands::Doctor { install }) => match commands::doctor::run(install) {
             Ok(()) => ExitCode::SUCCESS,
             Err(err) => fail(err, EXIT_TOOL_ERROR),

@@ -29,7 +29,7 @@ pub struct Cli {
 }
 
 /// Available subcommands for managing tscircuit monorepo projects.
-#[derive(Debug, Subcommand, PartialEq, Eq)]
+#[derive(Debug, Subcommand, PartialEq)]
 pub enum Commands {
     /// Start the interactive development server and web viewer
     #[command(alias = "view", alias = "webview")]
@@ -91,6 +91,67 @@ pub enum Commands {
         /// Skip electrical rule verification before exporting
         #[arg(long)]
         skip_lint: bool,
+    },
+
+    /// Run the parallel autorouter to solve circuit traces
+    Route {
+        /// Path to Circuit JSON or TSX file
+        #[arg(value_name = "FILE")]
+        file: Option<PathBuf>,
+
+        /// Destination path for routed output
+        #[arg(short = 'o', long)]
+        output: Option<PathBuf>,
+
+        /// Clearance distance in millimeters
+        #[arg(long, default_value = "0.2")]
+        clearance: f64,
+
+        /// Trace width in millimeters
+        #[arg(long, default_value = "0.25")]
+        trace_width: f64,
+
+        /// Number of copper layers available for routing
+        #[arg(long, default_value = "2")]
+        layers: u8,
+
+        /// Validate routability without writing changes to disk
+        #[arg(long)]
+        dry_run: bool,
+    },
+
+    /// Compare PCB footprint placement between KiCad and tscircuit
+    Diff {
+        /// Path to KiCad PCB file (.kicad_pcb)
+        #[arg(value_name = "KICAD_PCB", required = true)]
+        kicad_pcb: PathBuf,
+
+        /// Path to Circuit JSON or TSX entry file
+        #[arg(value_name = "FILE")]
+        file: Option<PathBuf>,
+    },
+
+    /// Synchronize layout adjustments from KiCad back into tscircuit
+    Sync {
+        /// Path to KiCad PCB file (.kicad_pcb)
+        #[arg(value_name = "KICAD_PCB", required = true)]
+        kicad_pcb: PathBuf,
+
+        /// Path to Circuit JSON or TSX entry file
+        #[arg(value_name = "FILE")]
+        file: Option<PathBuf>,
+
+        /// Target manual-edits.json file path
+        #[arg(long, value_name = "TARGET")]
+        target: Option<PathBuf>,
+
+        /// Write layout changes to target file
+        #[arg(long)]
+        write: bool,
+
+        /// Run without modifying manual-edits.json
+        #[arg(long)]
+        dry_run: bool,
     },
 
     /// Initialize a new Fusible project and tscircuit hardware workspace

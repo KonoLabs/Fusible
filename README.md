@@ -20,6 +20,7 @@ wrapping development servers, dark-theme web previewers, artifact exports, and f
 | 2.1 | Pure-Rust RS-274X Extended Gerber & Excellon drill generator | shipped |
 | 2.2 | Pure-Rust vector documentation exporter (PCB & schematic SVGs) | shipped |
 | 2.3 | Native Fusible Studio dev server with dark theme and live SSE reload | shipped |
+| 2.4 | Parallel multi-core autorouter and bidirectional KiCad syncer | shipped |
 
 ## Prerequisites
 
@@ -109,12 +110,42 @@ fusible dev --legacy              # fallback to legacy tsci dev server
 Features:
 - Instant startup with zero Node runtime required for Circuit JSON.
 - Live-reload streaming via Server-Sent Events (SSE) with 150ms debounced filesystem watching.
-- Interactive pan and zoom vector canvas for multi-layer PCB layout and schematic diagrams.
+- Vitrine brutalist dark UI palette (`#000000`, `#131313`, `#353535`, `#86A881`, `#A8B365`) and embedded `Undefined` monospace typography.
+- Interactive pan and zoom vector canvas for multi-layer PCB layout (`01 // PCB LAYOUT`) and schematic diagrams (`02 // SCHEMATIC`).
+- Interactive Three.js 3D board viewer (`03 // 3D VIEW`) rendering substrate, ENIG gold pads, copper vias, traces, and components with OrbitControls and view presets.
 - Real-time fuse status badge (glowing green when intact, pulsing red on blown fuse).
 - Diagnostics inspector showing rule violations, severity, and remediation advice.
 - PCB layer visibility toggles (top copper, bottom copper, ENIG pads, silkscreen).
 
-### 3. Build (`build`)
+### 3. Parallel multi-core autorouter (`route`)
+
+Topological multi-layer autorouter powered by pure Rust spatial R-trees (`rstar`) and parallel path negotiation (`rayon`):
+
+```sh
+fusible route                             # routes entry circuit and writes dist/circuit.routed.json
+fusible route --dry-run                   # verifies all nets can be routed without writing files
+fusible route -o dist/routed.json         # custom destination
+fusible route --clearance 0.2 --layers 2  # custom clearance and layer count
+```
+
+When routing congestion prevents a trace from completing, **the fuse blows** (exit code 1) and lists unrouted nets to protect physical fabrication.
+
+### 4. Bidirectional KiCad syncer (`diff` and `sync`)
+
+Bi-directional layout reconciliation between graphical CAD tools (KiCad PCB) and declarative code (`tscircuit`):
+
+```sh
+# Compare component placement and report layout drift:
+fusible diff path/to/board.kicad_pcb
+
+# Synchronize physical moves and rotations back into manual-edits.json:
+fusible sync path/to/board.kicad_pcb --write
+
+# Dry run sync without modifying disk:
+fusible sync path/to/board.kicad_pcb --dry-run
+```
+
+### 5. Build (`build`)
 
 Evaluates the board, lints electrical rules, generates typed firmware pin bindings (`pins.rs`), and compiles firmware only if the fuse is intact:
 
@@ -122,7 +153,7 @@ Evaluates the board, lints electrical rules, generates typed firmware pin bindin
 fusible build
 ```
 
-### 4. Fuse-gated deliverables (`export`)
+### 6. Fuse-gated deliverables (`export`)
 
 Exports fabrication-ready Gerbers, KiCad projects, SVGs, 3D models (STEP/GLB), or documentation.
 All exports are **fuse-gated**: electrical rules are verified first. If a rule fails, the fuse blows and no artifacts are produced.
@@ -144,7 +175,7 @@ fusible export -f kicad_zip
 fusible export --preset fab --skip-lint
 ```
 
-### 5. Hardware package management (`add`, `install`, `search`)
+### 7. Hardware package management (`add`, `install`, `search`)
 
 Manage tscircuit packages, community footprints, and components without touching npm or tsci directly:
 
@@ -159,7 +190,7 @@ fusible add @tsci/seveibar.smd-resistor
 fusible install
 ```
 
-### 6. Toolchain diagnostics (`doctor`)
+### 8. Toolchain diagnostics (`doctor`)
 
 Inspects local toolchain health (`bun`, `node`, `npm`, `npx`, `tsci`) and verifies tscircuit runner availability:
 
@@ -184,9 +215,11 @@ The codes are part of the contract, so CI can tell failures apart:
 src/
 ├── main.rs                 # CLI entry point, exit code mapping
 ├── cli.rs                  # Clap command definitions
-├── assets/                 # Embedded dark-theme web dashboard (viewer.html)
+├── assets/                 # Embedded dark-theme web dashboard & Undefined font
 ├── dev/                    # Native Fusible Studio dev server (tiny_http, SSE, notify)
-├── commands/               # Subcommand execution pipelines (check, dev, export, build)
+├── router/                 # Parallel multi-core topological autorouter (rstar, rayon, A*)
+├── kicad/                  # S-expression parser & bidirectional layout drift syncer
+├── commands/               # Subcommand execution pipelines (check, dev, route, diff, sync, export, build)
 ├── config/                 # fusible.yml manifest loader and path resolution
 ├── gerber/                 # Pure-Rust RS-274X Gerber and Excellon drill generator
 ├── svg/                    # Pure-Rust vector renderers for PCB layout and schematics
@@ -202,7 +235,7 @@ src/
 
 ```sh
 mise install        # installs lefthook
-cargo test          # test suite (75+ unit and integration tests)
+cargo test          # test suite (85+ unit and integration tests)
 cargo clippy --all-targets -- -D warnings
 cargo fmt --all -- --check
 ```

@@ -218,3 +218,72 @@ fn subcommand_export_rejects_unknown_preset() {
     let stderr = String::from_utf8_lossy(&out.stderr);
     assert!(stderr.contains("unknown export preset"));
 }
+
+#[test]
+fn subcommand_route_dry_run_on_routable_circuit() {
+    let fixture = TestDir::new("subcmd_route");
+    let circuit = r#"[
+        { "type": "pcb_smtpad", "x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0, "layer": "top", "net_id": "GND" },
+        { "type": "pcb_smtpad", "x": 10.0, "y": 0.0, "width": 1.0, "height": 1.0, "layer": "top", "net_id": "GND" }
+    ]"#;
+    let json_file = fixture.path.join("circuit.json");
+    std::fs::write(&json_file, circuit).unwrap();
+
+    let out = fusible()
+        .args(["route", json_file.to_str().unwrap(), "--dry-run"])
+        .output()
+        .expect("binary should run");
+
+    assert_eq!(out.status.code(), Some(0));
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains("Autorouting complete: 1/1 net(s) routed"));
+    assert!(stdout.contains("Dry run complete"));
+}
+
+#[test]
+fn subcommand_diff_and_sync_kicad() {
+    let fixture = TestDir::new("subcmd_diff_sync");
+    let kicad_pcb = fixture.path.join("board.kicad_pcb");
+    let sexpr = r#"(kicad_pcb
+        (footprint "R" (layer "F.Cu") (at 10.0 20.0 90) (property "Reference" "R1"))
+    )"#;
+    std::fs::write(&kicad_pcb, sexpr).unwrap();
+
+    let circuit_file = fixture.path.join("circuit.json");
+    let circuit = r#"[
+        { "type": "source_component", "name": "R1", "x": 0.0, "y": 0.0, "rotation": 0.0, "layer": "top" }
+    ]"#;
+    std::fs::write(&circuit_file, circuit).unwrap();
+
+    let diff_out = fusible()
+        .args([
+            "diff",
+            kicad_pcb.to_str().unwrap(),
+            circuit_file.to_str().unwrap(),
+        ])
+        .output()
+        .expect("binary should run");
+
+    assert_eq!(diff_out.status.code(), Some(1));
+    let diff_stdout = String::from_utf8_lossy(&diff_out.stdout);
+    assert!(diff_stdout.contains("R1"));
+    assert!(diff_stdout.contains("Rotated"));
+
+    let manual_edits = fixture.path.join("manual-edits.json");
+    let sync_out = fusible()
+        .args([
+            "sync",
+            kicad_pcb.to_str().unwrap(),
+            circuit_file.to_str().unwrap(),
+            "--target",
+            manual_edits.to_str().unwrap(),
+            "--write",
+        ])
+        .output()
+        .expect("binary should run");
+
+    assert_eq!(sync_out.status.code(), Some(0));
+    assert!(manual_edits.is_file());
+    let edits_content = std::fs::read_to_string(&manual_edits).unwrap();
+    assert!(edits_content.contains("\"selector\": \"R1\""));
+}
