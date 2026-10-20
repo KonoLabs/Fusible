@@ -70,7 +70,11 @@ impl Runner {
 
     /// Executes `dev [file] -p [port]`, inheriting standard I/O for interactive hot-reloading.
     pub fn dev(&self, file: &Path, port: Option<u16>) -> Result<ExitStatus, RunnerError> {
-        let mut cmd = dev_command(&self.kind, file, port);
+        let (working_dir, target_file) = resolve_hardware_context(file);
+        let mut cmd = dev_command(&self.kind, &target_file, port);
+        if let Some(ref dir) = working_dir {
+            cmd.current_dir(dir);
+        }
         cmd.stdin(Stdio::inherit())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit());
@@ -224,4 +228,22 @@ impl Runner {
         }
         Ok(())
     }
+}
+
+fn resolve_hardware_context(file: &Path) -> (Option<PathBuf>, PathBuf) {
+    if let Some(parent) = file.parent() {
+        if !parent.as_os_str().is_empty() && parent.join("package.json").is_file() {
+            let filename = file
+                .file_name()
+                .map(PathBuf::from)
+                .unwrap_or_else(|| file.to_path_buf());
+            return (Some(parent.to_path_buf()), filename);
+        }
+    }
+    if Path::new("hardware").join("package.json").is_file() {
+        if let Ok(rel) = file.strip_prefix("hardware") {
+            return (Some(PathBuf::from("hardware")), rel.to_path_buf());
+        }
+    }
+    (None, file.to_path_buf())
 }
