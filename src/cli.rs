@@ -34,13 +34,17 @@ pub enum Commands {
     /// Start the interactive development server and web viewer
     #[command(alias = "view", alias = "webview")]
     Dev {
-        /// Entry file (.tsx) or directory
+        /// Entry file (.tsx, .json) or directory
         #[arg(value_name = "FILE")]
         file: Option<PathBuf>,
 
         /// Port to run dev server on (default: 3020)
         #[arg(short = 'p', long)]
         port: Option<u16>,
+
+        /// Use legacy tsci dev server instead of native Fusible Studio
+        #[arg(long)]
+        legacy: bool,
     },
 
     /// Run the electronic linter on a circuit file or monorepo project

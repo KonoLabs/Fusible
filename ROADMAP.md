@@ -71,6 +71,11 @@ Fusible unifies the hardware development workflow by wrapping tscircuit commands
   - Pure-Rust vector rendering engine for multi-layer PCB layout (`pcb.svg`) and schematic symbol graphs (`schematic.svg`).
   - Decoupling capacitor proximity rule (`decoupling_capacitor`): verifies power supply rails on ICs have bypass capacitors.
   - Physical copper clearance rule (`trace_clearance`): detects copper short-circuits and spacing violations (< 0.15mm).
+- [x] **Milestone 11: Native Fusible Studio Dev Server & Dark Theme UI** (`v0.7.0`):
+  - Embedded HTTP server and live-reload event streamer using `tiny_http` and Server-Sent Events (SSE).
+  - Debounced filesystem watcher (`notify-debouncer-mini`) reacting to code updates in 150ms.
+  - Standalone dark-theme engineering web dashboard with interactive pan-zoom PCB and schematic layout viewers.
+  - Live electrical fuse status indicator and miette-style diagnostics inspector.
 
 ## 5. Phase 2: Autorouting, Sync & Automation
 

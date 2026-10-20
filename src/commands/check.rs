@@ -102,7 +102,7 @@ fn convert_kicad(entry: &Path) -> Result<(PathBuf, String), CheckError> {
     })
 }
 
-fn load_circuit_source(entry: &Path) -> Result<(PathBuf, String), CheckError> {
+pub fn load_circuit_source(entry: &Path) -> Result<(PathBuf, String), CheckError> {
     if is_kicad_target(entry) {
         convert_kicad(entry)
     } else if is_tsx_target(entry) {
@@ -163,7 +163,7 @@ pub fn run(
     Err(CheckError::FuseBlown(FuseBlown::new(violations)))
 }
 
-fn resolve_mcu(explicit: Option<String>) -> Option<String> {
+pub fn resolve_mcu(explicit: Option<String>) -> Option<String> {
     explicit.or_else(|| {
         FusibleConfig::find_and_load(Path::new("."))
             .ok()

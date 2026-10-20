@@ -9,6 +9,7 @@ pub mod cli;
 pub mod codegen;
 pub mod commands;
 pub mod config;
+pub mod dev;
 pub mod gerber;
 pub mod linter;
 pub mod netlist;
@@ -61,10 +62,12 @@ fn main() -> ExitCode {
     let cli = Cli::parse();
 
     match cli.command {
-        Some(Commands::Dev { file, port }) => match commands::dev::run(file, port) {
-            Ok(code) => ExitCode::from(code as u8),
-            Err(err) => fail(err, EXIT_TOOL_ERROR),
-        },
+        Some(Commands::Dev { file, port, legacy }) => {
+            match commands::dev::run(file, port, legacy) {
+                Ok(code) => ExitCode::from(code as u8),
+                Err(err) => fail(err, EXIT_TOOL_ERROR),
+            }
+        }
         Some(Commands::Check { file, mcu, pins_rs }) => dispatch_check(file, mcu, pins_rs),
         Some(Commands::Build { file }) => dispatch_build(file),
         Some(Commands::Export {

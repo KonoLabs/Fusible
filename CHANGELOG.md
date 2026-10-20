@@ -5,6 +5,26 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.7.0] - 2026-10-20
+
+### Added
+
+- Native Fusible Studio development server (`src/dev/`):
+  - Built-in HTTP server using `tiny_http` with real-time Server-Sent Events (SSE) streaming on `/events`.
+  - Debounced filesystem watcher using `notify-debouncer-mini` (150ms window) for automatic live reload on `.tsx`, `.ts`, `.json`, and `fusible.yml` changes.
+  - Interactive dark-theme web dashboard (`src/assets/viewer.html`):
+    - Real-time fuse status badge (glowing green for intact, pulsing red on blown fuse with diagnostic details).
+    - Pan and zoom canvas for multi-layer PCB layouts and schematic diagrams.
+    - PCB layer visibility toggles (top copper, bottom copper, ENIG pads, silkscreen).
+    - Diagnostics drawer displaying electrical rule violations and repair advice.
+  - Added `--legacy` flag to `fusible dev` to fall back to the external `tsci dev` runner if desired.
+- Unit and integration tests for dev server pipeline, client hub broadcast, and event streaming.
+
+### Fixed
+
+- Fixed `fusible export` crashing when external runner was absent during native documentation and fabrication exports.
+
+
 ## [0.6.0] - 2026-10-20
 
 ### Added

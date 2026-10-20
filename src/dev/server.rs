@@ -1,0 +1,93 @@
+use std::path::{Path, PathBuf};
+use std::sync::mpsc;
+use std::sync::{Arc, Mutex};
+use std::thread;
+
+use tiny_http::{Header, Response, Server, StatusCode};
+
+use super::hub::{ClientHub, SseReader};
+use super::pipeline::execute_pipeline;
+use super::watcher::start_file_watcher;
+
+const VIEWER_HTML: &str = include_str!("../assets/viewer.html");
+
+pub fn run_dev_server(entry: PathBuf, port: u16) -> Result<(), Box<dyn std::error::Error>> {
+    let addr = format!("127.0.0.1:{port}");
+    let server =
+        Server::http(&addr).map_err(|e| format!("cannot bind dev server to {addr}: {e}"))?;
+
+    println!("⚡ Fusible Dev Server running at http://localhost:{port} (press Ctrl+C to quit)");
+
+    let hub = ClientHub::new();
+    let initial_payload = execute_pipeline(&entry);
+    let cached_payload = Arc::new(Mutex::new(serde_json::to_string(&initial_payload)?));
+
+    let watch_dir = if entry.is_dir() {
+        entry.clone()
+    } else {
+        entry
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .to_path_buf()
+    };
+
+    let hub_clone = hub.clone();
+    let entry_clone = entry.clone();
+    let cache_clone = cached_payload.clone();
+
+    let _watcher = start_file_watcher(&watch_dir, move || {
+        println!("🔄 File change detected — rebuilding circuit preview...");
+        let payload = execute_pipeline(&entry_clone);
+        if let Ok(json_str) = serde_json::to_string(&payload) {
+            if let Ok(mut lock) = cache_clone.lock() {
+                *lock = json_str.clone();
+            }
+            hub_clone.broadcast(&json_str);
+        }
+    })?;
+
+    for request in server.incoming_requests() {
+        match request.url() {
+            "/" | "/index.html" => {
+                let header =
+                    Header::from_bytes(&b"Content-Type"[..], &b"text/html; charset=utf-8"[..])
+                        .unwrap();
+                let response = Response::from_string(VIEWER_HTML).with_header(header);
+                let _ = request.respond(response);
+            }
+            "/events" => {
+                let (tx, rx) = mpsc::channel();
+                if let Ok(lock) = cached_payload.lock() {
+                    let initial_msg = format!("data: {}\n\n", *lock).into_bytes();
+                    let _ = tx.send(initial_msg);
+                }
+                hub.add_client(tx);
+
+                thread::spawn(move || {
+                    let sse_stream = SseReader::new(rx);
+                    let response = Response::new(
+                        StatusCode(200),
+                        vec![
+                            Header::from_bytes(&b"Content-Type"[..], &b"text/event-stream"[..])
+                                .unwrap(),
+                            Header::from_bytes(&b"Cache-Control"[..], &b"no-cache"[..]).unwrap(),
+                            Header::from_bytes(&b"Connection"[..], &b"keep-alive"[..]).unwrap(),
+                            Header::from_bytes(&b"Access-Control-Allow-Origin"[..], &b"*"[..])
+                                .unwrap(),
+                        ],
+                        sse_stream,
+                        None,
+                        None,
+                    );
+                    let _ = request.respond(response);
+                });
+            }
+            _ => {
+                let response = Response::from_string("Not Found").with_status_code(404);
+                let _ = request.respond(response);
+            }
+        }
+    }
+
+    Ok(())
+}
