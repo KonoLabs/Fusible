@@ -111,18 +111,21 @@ pub enum CircuitElement {
 // ---------------------------------------------------------------------------
 
 /// A component.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Default)]
 pub struct Component {
-    /// Stable identifier, e.g. `U1`.
+    /// Stable identifier, e.g. `U1` or `source_component_0`.
     #[serde(alias = "source_component_id", alias = "sourceComponentId")]
     pub component_id: Option<String>,
     /// Component kind: `chip`, `resistor`, `capacitor`, ...
     #[serde(alias = "ftype")]
     pub kind: Option<String>,
+    /// Human-readable designator, e.g. `U1` or `ESP32`.
+    #[serde(default)]
+    pub name: Option<String>,
 }
 
 /// A net: the logical connection between pins.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Default)]
 pub struct Net {
     #[serde(alias = "source_net_id", alias = "sourceNetId", alias = "netId")]
     pub net_id: Option<String>,
@@ -132,7 +135,7 @@ pub struct Net {
 }
 
 /// A pin / port of a component.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Default)]
 pub struct Port {
     #[serde(alias = "source_port_id", alias = "sourcePortId")]
     pub port_id: Option<String>,
@@ -144,10 +147,19 @@ pub struct Port {
     /// `malformed_element` rule).
     #[serde(alias = "source_net_id", alias = "sourceNetId", alias = "netId")]
     pub net_id: Option<String>,
+    /// Parent component identifier, e.g. `source_component_0`.
+    #[serde(default, alias = "source_component_id", alias = "sourceComponentId")]
+    pub source_component_id: Option<String>,
+    /// Pin number on footprint or package.
+    #[serde(default, alias = "pin_number", alias = "pinNumber")]
+    pub pin_number: Option<u32>,
+    /// Alternative pin hints or labels.
+    #[serde(default, alias = "port_hints", alias = "portHints")]
+    pub port_hints: Option<Vec<String>>,
 }
 
 /// A mount pad (the physical analogue of a port).
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Default)]
 pub struct Pad {
     #[serde(alias = "source_pad_id", alias = "sourcePadId")]
     pub pad_id: Option<String>,
@@ -156,7 +168,7 @@ pub struct Pad {
 }
 
 /// A copper trace.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Default)]
 pub struct Trace {
     #[serde(alias = "source_trace_id", alias = "sourceTraceId")]
     pub trace_id: Option<String>,
@@ -178,6 +190,12 @@ pub struct Trace {
         alias = "connectedNetIds"
     )]
     pub connected_source_net_ids: Vec<String>,
+    /// Optional display or trace name.
+    #[serde(default, alias = "display_name", alias = "displayName")]
+    pub name: Option<String>,
+    /// Optional subcircuit connectivity map key.
+    #[serde(default, alias = "subcircuit_connectivity_map_key")]
+    pub connectivity_key: Option<String>,
 }
 
 // ---------------------------------------------------------------------------

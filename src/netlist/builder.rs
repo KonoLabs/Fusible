@@ -24,19 +24,40 @@ fn index_defined_nets(netlist: &mut Netlist, circuit: &Circuit) {
 }
 
 fn index_ports_and_pads(netlist: &mut Netlist, circuit: &Circuit) {
+    let comp_map: std::collections::HashMap<_, _> = circuit
+        .components()
+        .filter_map(|c| {
+            c.component_id
+                .as_deref()
+                .map(|id| (id, c.name.as_deref().unwrap_or(id)))
+        })
+        .collect();
+
     for port in circuit.ports() {
-        let Some(net_id) = port.net_id.as_deref() else {
-            continue;
-        };
-        let idx = register_net(netlist, net_id, None, false);
-        netlist.nets[idx].reference_count += 1;
-        attach_endpoint(
-            netlist,
-            idx,
-            Endpoint::port(port.port_id.clone(), port.name.clone()),
-        );
-        if let Some(id) = port.port_id.as_deref() {
-            netlist.port_to_net.insert(id.to_string(), idx);
+        let comp = port
+            .source_component_id
+            .as_deref()
+            .and_then(|cid| comp_map.get(cid).copied())
+            .map(str::to_string)
+            .or_else(|| port.source_component_id.clone());
+
+        if let Some(net_id) = port.net_id.as_deref() {
+            let idx = register_net(netlist, net_id, None, false);
+            netlist.nets[idx].reference_count += 1;
+            attach_endpoint(
+                netlist,
+                idx,
+                Endpoint::with_details(
+                    port.port_id.clone(),
+                    comp,
+                    port.name.clone(),
+                    port.pin_number,
+                    port.port_hints.clone().unwrap_or_default(),
+                ),
+            );
+            if let Some(id) = port.port_id.as_deref() {
+                netlist.port_to_net.insert(id.to_string(), idx);
+            }
         }
     }
     for pad in circuit.pads() {
@@ -53,17 +74,91 @@ fn index_ports_and_pads(netlist: &mut Netlist, circuit: &Circuit) {
 }
 
 fn index_traces(netlist: &mut Netlist, circuit: &Circuit) {
-    for trace in circuit.traces() {
-        for net_id in &trace.connected_source_net_ids {
-            let idx = register_net(netlist, net_id, None, false);
-            netlist.nets[idx].reference_count += 1;
+    let comp_map: std::collections::HashMap<_, _> = circuit
+        .components()
+        .filter_map(|c| {
+            c.component_id
+                .as_deref()
+                .map(|id| (id, c.name.as_deref().unwrap_or(id)))
+        })
+        .collect();
 
+    for trace in circuit.traces() {
+        if !trace.connected_source_net_ids.is_empty() {
+            for net_id in &trace.connected_source_net_ids {
+                let idx = register_net(netlist, net_id, None, false);
+                netlist.nets[idx].reference_count += 1;
+
+                if let Some(trace_id) = trace.trace_id.as_deref() {
+                    netlist.nets[idx].trace_ids.push(trace_id.to_string());
+                }
+
+                for port_id in &trace.connected_source_port_ids {
+                    let port_opt = circuit
+                        .ports()
+                        .find(|p| p.port_id.as_deref() == Some(port_id));
+                    let comp = port_opt
+                        .and_then(|p| p.source_component_id.as_deref())
+                        .and_then(|cid| comp_map.get(cid).copied())
+                        .map(str::to_string)
+                        .or_else(|| port_opt.and_then(|p| p.source_component_id.clone()));
+
+                    let endpoint = if let Some(p) = port_opt {
+                        Endpoint::with_details(
+                            Some(port_id.clone()),
+                            comp,
+                            p.name.clone(),
+                            p.pin_number,
+                            p.port_hints.clone().unwrap_or_default(),
+                        )
+                    } else {
+                        Endpoint::port(Some(port_id.clone()), None)
+                    };
+                    attach_endpoint(netlist, idx, endpoint);
+                    netlist.port_to_net.insert(port_id.clone(), idx);
+                }
+            }
+        } else if !trace.connected_source_port_ids.is_empty() {
+            let existing_net_idx = trace
+                .connected_source_port_ids
+                .iter()
+                .find_map(|pid| netlist.port_to_net.get(pid).copied());
+
+            let idx = existing_net_idx.unwrap_or_else(|| {
+                let synthetic_id = trace
+                    .connectivity_key
+                    .as_deref()
+                    .or(trace.trace_id.as_deref())
+                    .unwrap_or("trace_net");
+                register_net(netlist, synthetic_id, trace.name.as_deref(), true)
+            });
+
+            netlist.nets[idx].reference_count += 1;
             if let Some(trace_id) = trace.trace_id.as_deref() {
                 netlist.nets[idx].trace_ids.push(trace_id.to_string());
             }
 
             for port_id in &trace.connected_source_port_ids {
-                let endpoint = Endpoint::port(Some(port_id.clone()), None);
+                let port_opt = circuit
+                    .ports()
+                    .find(|p| p.port_id.as_deref() == Some(port_id));
+                let comp = port_opt
+                    .and_then(|p| p.source_component_id.as_deref())
+                    .and_then(|cid| comp_map.get(cid).copied())
+                    .map(str::to_string)
+                    .or_else(|| port_opt.and_then(|p| p.source_component_id.clone()));
+
+                let endpoint = if let Some(p) = port_opt {
+                    Endpoint::with_details(
+                        Some(port_id.clone()),
+                        comp,
+                        p.name.clone(),
+                        p.pin_number,
+                        p.port_hints.clone().unwrap_or_default(),
+                    )
+                } else {
+                    Endpoint::port(Some(port_id.clone()), None)
+                };
                 attach_endpoint(netlist, idx, endpoint);
                 netlist.port_to_net.insert(port_id.clone(), idx);
             }

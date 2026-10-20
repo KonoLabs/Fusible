@@ -15,6 +15,7 @@ fn port(id: &str, name: Option<&str>, net: &str) -> CircuitElement {
         port_id: Some(id.to_string()),
         name: name.map(str::to_string),
         net_id: Some(net.to_string()),
+        ..Default::default()
     })
 }
 
@@ -100,16 +101,19 @@ fn traces_propagate_endpoints_and_bridge_ports() {
                 port_id: Some("U1.3".to_string()),
                 name: None,
                 net_id: None,
+                ..Default::default()
             }),
             CircuitElement::Port(Port {
                 port_id: Some("U2.3".to_string()),
                 name: None,
                 net_id: None,
+                ..Default::default()
             }),
             CircuitElement::Trace(Trace {
                 trace_id: Some("t1".to_string()),
                 connected_source_port_ids: vec!["U1.3".to_string(), "U2.3".to_string()],
                 connected_source_net_ids: vec!["n1".to_string()],
+                ..Default::default()
             }),
         ],
     };
@@ -133,11 +137,13 @@ fn anonymous_endpoints_are_preserved_for_electrical_soundness() {
                 port_id: None,
                 name: None,
                 net_id: Some("n1".to_string()),
+                ..Default::default()
             }),
             CircuitElement::Port(Port {
                 port_id: Some("U1.1".to_string()),
                 name: None,
                 net_id: Some("n1".to_string()),
+                ..Default::default()
             }),
         ],
     };

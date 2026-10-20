@@ -22,6 +22,7 @@ fn floating_net() -> Circuit {
                 port_id: Some("U1.1".to_string()),
                 name: None,
                 net_id: Some("n1".to_string()),
+                ..Default::default()
             }),
         ],
     }
@@ -70,6 +71,7 @@ fn rules_run_in_registration_order() {
                 port_id: Some("U1.1".to_string()),
                 name: None,
                 net_id: Some("n1".to_string()),
+                ..Default::default()
             }),
             CircuitElement::Net(Net {
                 net_id: None,
@@ -79,6 +81,7 @@ fn rules_run_in_registration_order() {
                 port_id: Some("U1.2".to_string()),
                 name: None,
                 net_id: Some("undefined".to_string()),
+                ..Default::default()
             }),
         ],
     };

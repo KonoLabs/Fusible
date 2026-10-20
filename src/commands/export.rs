@@ -43,7 +43,7 @@ pub fn run(
 
     if !skip_lint {
         println!("🔍 Verifying electrical rules before export (fuse check)...");
-        check::run(file, None)?;
+        check::run(file, None, None)?;
         println!("⚡ Fuse intact — proceeding with artifact export.\n");
     } else {
         println!("⚠️  Skipping electrical rule verification (--skip-lint requested).\n");
@@ -53,6 +53,19 @@ pub fn run(
 
     if let Some(preset_name) = preset {
         run_preset(&runner, &entry, preset_name, output.as_deref())
+    } else if format == "kicad_project" || format == "kicad" {
+        let dest = output.unwrap_or_else(|| PathBuf::from("dist/cad/kicad"));
+        std::fs::create_dir_all(&dest).ok();
+        let tmp_zip = dest.join(".kicad_export.zip");
+        println!("📦 Exporting KiCad project to {}...", dest.display());
+        runner.export(&entry, "kicad_zip", Some(&tmp_zip))?;
+        extract_zip_archive(&tmp_zip, &dest);
+        let _ = std::fs::remove_file(&tmp_zip);
+        println!(
+            "✅ Successfully exported KiCad project to {}!",
+            dest.display()
+        );
+        Ok(())
     } else {
         println!(
             "📦 Exporting \"{}\" to format: {}...",
@@ -63,6 +76,15 @@ pub fn run(
         println!("✅ Successfully exported {format}!");
         Ok(())
     }
+}
+
+fn extract_zip_archive(zip_path: &Path, target_dir: &Path) {
+    let mut cmd = std::process::Command::new("unzip");
+    cmd.args(["-o", "-q"])
+        .arg(zip_path)
+        .arg("-d")
+        .arg(target_dir);
+    let _ = cmd.status();
 }
 
 fn export_fab(runner: &Runner, entry: &Path, out: Option<&Path>) -> Result<(), ExportError> {
@@ -93,6 +115,15 @@ fn export_cad(runner: &Runner, entry: &Path, out: Option<&Path>) -> Result<(), E
     let kicad = base.join("kicad.zip");
     println!("  • Exporting KiCad project -> {}", kicad.display());
     runner.export(entry, "kicad_zip", Some(&kicad))?;
+
+    let kicad_dir = base.join("kicad");
+    std::fs::create_dir_all(&kicad_dir).ok();
+    extract_zip_archive(&kicad, &kicad_dir);
+    println!(
+        "  • KiCad project files extracted -> {}",
+        kicad_dir.display()
+    );
+
     let step = base.join("board.step");
     println!("  • Exporting 3D STEP -> {}", step.display());
     runner.export(entry, "step", Some(&step))?;

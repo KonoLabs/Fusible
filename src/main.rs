@@ -6,6 +6,7 @@
 //! * `2` — tool error (unreadable/malformed input, runner failure, usage error).
 
 pub mod cli;
+pub mod codegen;
 pub mod commands;
 pub mod config;
 pub mod linter;
@@ -61,7 +62,7 @@ fn main() -> ExitCode {
             Ok(code) => ExitCode::from(code as u8),
             Err(err) => fail(err, EXIT_TOOL_ERROR),
         },
-        Some(Commands::Check { file, mcu }) => dispatch_check(file, mcu),
+        Some(Commands::Check { file, mcu, pins_rs }) => dispatch_check(file, mcu, pins_rs),
         Some(Commands::Build { file }) => dispatch_build(file),
         Some(Commands::Export {
             file,
@@ -89,7 +90,7 @@ fn handle_default_invocation(cli: Cli) -> ExitCode {
         .is_some();
 
     if cli.input.is_some() || has_manifest {
-        dispatch_check(cli.input, cli.mcu)
+        dispatch_check(cli.input, cli.mcu, None)
     } else {
         let _ = Cli::command().print_help();
         println!();
@@ -97,8 +98,12 @@ fn handle_default_invocation(cli: Cli) -> ExitCode {
     }
 }
 
-fn dispatch_check(file: Option<std::path::PathBuf>, mcu: Option<String>) -> ExitCode {
-    match commands::check::run(file, mcu) {
+fn dispatch_check(
+    file: Option<std::path::PathBuf>,
+    mcu: Option<String>,
+    pins_rs: Option<std::path::PathBuf>,
+) -> ExitCode {
+    match commands::check::run(file, mcu, pins_rs) {
         Ok(()) => ExitCode::SUCCESS,
         Err(CheckError::FuseBlown(blown)) => fail(blown, EXIT_VIOLATIONS),
         Err(err) => fail(err, EXIT_TOOL_ERROR),

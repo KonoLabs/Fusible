@@ -6,17 +6,25 @@ use crate::tscircuit::error::RunnerError;
 
 /// Resolves the path to the generated `circuit.json` on disk.
 pub fn resolve_circuit_json(file: &Path, stdout: &str) -> Result<PathBuf, RunnerError> {
-    if let Some(path) = extract_circuit_json_path(stdout) {
-        if path.exists() {
-            return Ok(path);
-        }
-    }
-
+    let parent = file.parent().unwrap_or_else(|| Path::new(""));
     let stem = file
         .file_stem()
         .map(|s| s.to_string_lossy())
         .unwrap_or_default();
+
+    if let Some(path) = extract_circuit_json_path(stdout) {
+        if path.exists() {
+            return Ok(path);
+        }
+        let joined = parent.join(&path);
+        if joined.exists() {
+            return Ok(joined);
+        }
+    }
+
     let candidates = [
+        parent.join("dist").join(stem.as_ref()).join("circuit.json"),
+        parent.join("dist").join("circuit.json"),
         Path::new("dist")
             .join(file.with_extension(""))
             .join("circuit.json"),

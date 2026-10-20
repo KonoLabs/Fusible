@@ -95,7 +95,22 @@ impl Runner {
         format: &str,
         output: Option<&Path>,
     ) -> Result<(), RunnerError> {
-        let mut cmd = export_command(&self.kind, file, format, output);
+        let abs_output = output.map(|p| {
+            if p.is_absolute() {
+                p.to_path_buf()
+            } else {
+                std::env::current_dir()
+                    .map(|cd| cd.join(p))
+                    .unwrap_or_else(|_| p.to_path_buf())
+            }
+        });
+        if let Some(ref p) = abs_output {
+            if let Some(parent) = p.parent() {
+                std::fs::create_dir_all(parent).ok();
+            }
+        }
+
+        let mut cmd = export_command(&self.kind, file, format, abs_output.as_deref());
         let out = cmd.output().map_err(|source| RunnerError::Io {
             command: command::format_command(&cmd),
             source,

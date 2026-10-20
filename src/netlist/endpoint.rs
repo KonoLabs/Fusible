@@ -16,17 +16,33 @@ pub struct Endpoint {
     pub kind: EndpointKind,
     pub component_id: Option<String>,
     pub name: Option<String>,
+    pub pin_number: Option<u32>,
+    pub hints: Vec<String>,
 }
 
 impl Endpoint {
     /// Constructs a port endpoint.
     pub fn port(id: Option<String>, name: Option<String>) -> Self {
-        let component_id = id.as_deref().and_then(parse_comp_id).map(str::to_string);
+        Self::with_details(id, None, name, None, Vec::new())
+    }
+
+    /// Constructs a port endpoint with full component, pin number, and hint details.
+    pub fn with_details(
+        id: Option<String>,
+        component_id: Option<String>,
+        name: Option<String>,
+        pin_number: Option<u32>,
+        hints: Vec<String>,
+    ) -> Self {
+        let comp =
+            component_id.or_else(|| id.as_deref().and_then(parse_comp_id).map(str::to_string));
         Self {
             id,
             kind: EndpointKind::Port,
-            component_id,
+            component_id: comp,
             name,
+            pin_number,
+            hints,
         }
     }
 
@@ -38,6 +54,8 @@ impl Endpoint {
             kind: EndpointKind::Pad,
             component_id,
             name: None,
+            pin_number: None,
+            hints: Vec::new(),
         }
     }
 
@@ -54,6 +72,16 @@ impl Endpoint {
     /// Human-readable pin name accessor.
     pub fn name(&self) -> Option<&str> {
         self.name.as_deref()
+    }
+
+    /// Pin number accessor if available.
+    pub fn pin_number(&self) -> Option<u32> {
+        self.pin_number
+    }
+
+    /// Port hints accessor.
+    pub fn hints(&self) -> &[String] {
+        &self.hints
     }
 
     /// True if this endpoint is a component port.

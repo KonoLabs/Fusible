@@ -23,6 +23,7 @@ fn port(id: &str, net_id: Option<&str>) -> CircuitElement {
         port_id: Some(id.to_string()),
         name: None,
         net_id: net_id.map(str::to_string),
+        ..Default::default()
     })
 }
 
@@ -64,6 +65,7 @@ fn endpoints_counted_across_ports_pads_and_traces() {
         trace_id: Some("t1".to_string()),
         connected_source_port_ids: vec!["U1.1".to_string(), "U1.2".to_string()],
         connected_source_net_ids: vec!["n1".to_string()],
+        ..Default::default()
     });
     let traced = vec![
         net(Some("n1"), "GND"),
@@ -82,6 +84,7 @@ fn elements_without_identifiers_are_reported_as_malformed() {
         port_id: None,
         name: Some("SDA".to_string()),
         net_id: None,
+        ..Default::default()
     });
     let v = rule_violations(MalformedElementRule, vec![net(None, "GND"), nameless_port]);
 
@@ -109,6 +112,7 @@ fn referenced_but_undefined_nets_are_reported_once() {
         trace_id: Some("t1".to_string()),
         connected_source_port_ids: vec!["U1.4".to_string()],
         connected_source_net_ids: vec!["missing".to_string()],
+        ..Default::default()
     });
     let v = rule_violations(
         GhostNetRule,

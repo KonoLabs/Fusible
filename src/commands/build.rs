@@ -26,33 +26,40 @@ pub enum BuildError {
 
 /// Orchestrates full circuit validation and firmware build.
 pub fn run(file: Option<PathBuf>) -> Result<(), BuildError> {
-    // 1. Hardware validation: the fuse blows here if electrical rules fail!
-    check::run(file, None)?;
+    let loaded = FusibleConfig::find_and_load(Path::new(".")).ok().flatten();
+    let cfg = loaded.as_ref().map(|(_, c)| c);
+
+    let pins_rs = cfg
+        .and_then(|c| c.firmware.as_ref())
+        .and_then(|f| f.pins_rs.clone());
+
+    // 1. Hardware validation & pin bindings: the fuse blows here if electrical rules fail!
+    check::run(file, None, pins_rs)?;
 
     // 2. Firmware compilation: only if fuse is intact.
-    build_firmware_if_configured()?;
+    build_firmware_if_configured(cfg)?;
 
     println!("✅ Full build succeeded (fuse intact)");
     Ok(())
 }
 
-fn build_firmware_if_configured() -> Result<(), BuildError> {
-    let Some((_, cfg)) = FusibleConfig::find_and_load(Path::new(".")).ok().flatten() else {
+fn build_firmware_if_configured(cfg: Option<&FusibleConfig>) -> Result<(), BuildError> {
+    let Some(cfg) = cfg else {
         return Ok(());
     };
-    let Some(fw) = cfg.firmware else {
+    let Some(fw) = &cfg.firmware else {
         return Ok(());
     };
-    let Some(cmd) = fw.build_cmd else {
+    let Some(cmd) = &fw.build_cmd else {
         return Ok(());
     };
 
     println!("🦀 Building firmware: \"{}\"...", cmd);
-    let status = execute_shell(&cmd, fw.path.as_deref())
+    let status = execute_shell(cmd, fw.path.as_deref())
         .map_err(|e| BuildError::ExecutionFailed(e.to_string()))?;
 
     if !status.success() {
-        return Err(BuildError::FirmwareFailed(cmd));
+        return Err(BuildError::FirmwareFailed(cmd.clone()));
     }
     Ok(())
 }

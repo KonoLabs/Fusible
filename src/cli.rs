@@ -46,13 +46,17 @@ pub enum Commands {
     /// Run the electronic linter on a circuit file or monorepo project
     #[command(alias = "lint")]
     Check {
-        /// Path to Circuit JSON or TSX entry file
+        /// Path to Circuit JSON, TSX, or KiCad entry file
         #[arg(value_name = "FILE")]
         file: Option<PathBuf>,
 
-        /// Silicon target, e.g. `stm32g431`
+        /// Silicon target, e.g. `stm32g431` or `esp32-s3`
         #[arg(long, value_name = "MCU")]
         mcu: Option<String>,
+
+        /// Destination path for generated firmware pin bindings (pins.rs)
+        #[arg(long, value_name = "PATH")]
+        pins_rs: Option<PathBuf>,
     },
 
     /// Compile circuit artifacts and build firmware
