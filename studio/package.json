@@ -6,11 +6,20 @@
     "build": "bun build src/index.ts --target=browser --outfile=../src/assets/studio.bundle.js --minify"
   },
   "dependencies": {
+    "@tscircuit/3d-viewer": "0.0.627",
+    "@tscircuit/checks": "0.0.257",
     "@tscircuit/circuit-json-util": "^0.0.123",
-    "circuit-to-svg": "^0.0.450"
+    "@tscircuit/core": "0.0.2178",
+    "@tscircuit/math-utils": "0.0.36",
+    "@tscircuit/props": "0.0.704",
+    "circuit-to-svg": "^0.0.450",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
     "typescript": "latest"
   }
 }

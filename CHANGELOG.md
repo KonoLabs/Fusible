@@ -5,6 +5,15 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.8.5] - 2026-10-20
+
+### Added
+
+- Integrated official `@tscircuit/3d-viewer` (`CadViewer`) into the Dev Studio bundle, rendering authentic 3D component CAD models (gull-wing leads, molded IC bodies, SMD passives, and pin headers) with baked copper traces.
+- Multi-point studio lighting rig with ambient baseline, hemisphere bounce light, key/fill directional lights, bottom illumination for underside components, and camera headlight tracking camera rotation.
+- Authentic 3D component models in native Three.js engine for chip resistors, MLCC capacitors, LEDs with emissive glow, pin headers with tall gold square pins, tact switches, test points, and molded ICs with pin 1 index dots.
+- Dual-engine switcher `[ENGINE: CAD]` / `[ENGINE: NATIVE]` with instant zero-latency toggling between upstream CadViewer and native WebGL raycasting.
+
 ## [0.8.4] - 2026-10-20
 
 ### Added

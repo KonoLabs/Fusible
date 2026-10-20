@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Fusible Studio</title>
-  <script src="/studio.bundle.js"></script>
+  <script type="module" src="/studio.bundle.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <style>
@@ -511,6 +511,7 @@
       <button class="btn" onclick="setCameraPreset('ISO')">[ISO]</button>
       <button class="btn" onclick="setCameraPreset('FRONT')">[FRONT]</button>
       <button class="btn" onclick="setCameraPreset('RESET')">[RESET]</button>
+      <button class="btn" id="btn-engine-toggle" onclick="toggle3dEngine()">[ENGINE: CAD]</button>
     </div>
   </header>
 
@@ -518,7 +519,10 @@
     <div id="viewport-container">
       <div id="viewport-grid"></div>
       <div id="canvas-content"></div>
-      <div id="three-container"></div>
+      <div id="three-container">
+        <div id="three-native" style="width:100%;height:100%;position:absolute;inset:0;"></div>
+        <div id="three-cad" style="width:100%;height:100%;position:absolute;inset:0;display:none;"></div>
+      </div>
       <div class="hud-toast">
         <div class="status-dot" id="live-dot"></div>
         <span id="live-status">[LIVE] SSE CONNECTED</span>
@@ -690,6 +694,39 @@
       isDragging = false;
     });
 
+    let engine3d = 'cad';
+
+    function toggle3dEngine() {
+      engine3d = engine3d === 'cad' ? 'native' : 'cad';
+      updateEngineUI();
+    }
+
+    function updateEngineUI() {
+      const btn = document.getElementById('btn-engine-toggle');
+      if (btn) btn.textContent = engine3d === 'cad' ? '[ENGINE: CAD]' : '[ENGINE: NATIVE]';
+      const nativeEl = document.getElementById('three-native');
+      const cadEl = document.getElementById('three-cad');
+      if (engine3d === 'cad' && window.Tscircuit && window.Tscircuit.render3dViewer && lastCircuitJson) {
+        if (cadEl) cadEl.style.display = 'block';
+        if (nativeEl) nativeEl.style.display = 'none';
+        try {
+          window.Tscircuit.render3dViewer(cadEl, lastCircuitJson);
+        } catch (err) {
+          if (cadEl) cadEl.style.display = 'none';
+          if (nativeEl) nativeEl.style.display = 'block';
+          initThree();
+          build3DScene();
+          setTimeout(onThreeResize, 10);
+        }
+      } else {
+        if (cadEl) cadEl.style.display = 'none';
+        if (nativeEl) nativeEl.style.display = 'block';
+        initThree();
+        build3DScene();
+        setTimeout(onThreeResize, 10);
+      }
+    }
+
     function switchView(view) {
       currentView = view;
       document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -707,6 +744,7 @@
       if (is3d) {
         initThree();
         build3DScene();
+        updateEngineUI();
         setTimeout(onThreeResize, 10);
         setCameraPreset('ISO');
       } else {
@@ -1093,9 +1131,9 @@
 
     function onThreeResize() {
       if (!renderer || !camera) return;
-      const container = document.getElementById('three-container');
-      const w = container.clientWidth;
-      const h = container.clientHeight;
+      const container = document.getElementById('three-native');
+      const w = container.clientWidth || window.innerWidth;
+      const h = container.clientHeight || window.innerHeight;
       if (w === 0 || h === 0) return;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
@@ -1109,35 +1147,48 @@
 
     function initThree() {
       if (threeInitialized) return;
-      const container = document.getElementById('three-container');
+      const container = document.getElementById('three-native');
       const width = container.clientWidth || window.innerWidth;
       const height = container.clientHeight || window.innerHeight;
 
       scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x000000);
+      scene.background = new THREE.Color(0x0a0c10);
 
       camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 2000);
-      camera.position.set(0, 100, 100);
+      camera.position.set(0, 80, 100);
 
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       renderer.setSize(width, height);
       renderer.setPixelRatio(window.devicePixelRatio || 1);
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.05;
       container.appendChild(renderer.domElement);
 
       controls = new THREE.OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.05;
 
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.25);
       scene.add(ambientLight);
 
-      const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.9);
-      dirLight1.position.set(60, 120, 80);
+      const hemiLight = new THREE.HemisphereLight(0xffffff, 0x18181b, 0.6);
+      scene.add(hemiLight);
+
+      const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.25);
+      dirLight1.position.set(70, 130, 80);
       scene.add(dirLight1);
 
-      const dirLight2 = new THREE.DirectionalLight(0x8899aa, 0.5);
-      dirLight2.position.set(-60, -80, -60);
+      const dirLight2 = new THREE.DirectionalLight(0x90cdf4, 0.5);
+      dirLight2.position.set(-80, 50, -70);
       scene.add(dirLight2);
+
+      const bottomLight = new THREE.DirectionalLight(0xffffff, 0.85);
+      bottomLight.position.set(40, -110, 50);
+      scene.add(bottomLight);
+
+      const headlight = new THREE.DirectionalLight(0xffffff, 0.7);
+      camera.add(headlight);
+      scene.add(camera);
 
       const grid = new THREE.GridHelper(200, 40, 0x353535, 0x131313);
       grid.position.y = -1.0;
@@ -1165,7 +1216,7 @@
 
     function onThreeMouseMove(e) {
       if (currentView !== '3d' || !renderer || !camera || !boardGroup) return;
-      const container = document.getElementById('three-container');
+      const container = document.getElementById('three-native');
       const rect = container.getBoundingClientRect();
       mouseVector.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       mouseVector.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
@@ -1400,62 +1451,225 @@
         }
       });
 
-      const chipMat = new THREE.MeshStandardMaterial({
-        color: 0x1a1a1a,
-        roughness: 0.6,
-        metalness: 0.2
-      });
-      const pinMat = new THREE.MeshStandardMaterial({
-        color: 0xe2e8f0,
+      const silverMat = new THREE.MeshStandardMaterial({
+        color: 0xdce4ec,
         roughness: 0.2,
+        metalness: 0.95
+      });
+      const goldMat = new THREE.MeshStandardMaterial({
+        color: 0xf59e0b,
+        roughness: 0.25,
         metalness: 0.9
+      });
+      const darkEpoxyMat = new THREE.MeshStandardMaterial({
+        color: 0x18181b,
+        roughness: 0.6,
+        metalness: 0.15
+      });
+      const ceramicCapMat = new THREE.MeshStandardMaterial({
+        color: 0x9b7653,
+        roughness: 0.45,
+        metalness: 0.05
+      });
+      const ceramicResMat = new THREE.MeshStandardMaterial({
+        color: 0x222225,
+        roughness: 0.65,
+        metalness: 0.1
       });
 
       elements.filter(e => e.type === 'pcb_component').forEach(comp => {
         const cx = comp.center?.x ?? comp.x ?? 0;
         const cz = comp.center?.y ?? comp.y ?? 0;
-        const cw = comp.width || 6;
-        const ch = comp.height || 6;
-        const cThick = 1.6;
+        const cw = Math.max(comp.width || 4, 0.8);
+        const ch = Math.max(comp.height || 4, 0.8);
         const isBottom = comp.layer === 'bottom';
-        const cy = isBottom ? -(substrateThickness / 2 + cThick / 2 + 0.05) : (substrateThickness / 2 + cThick / 2 + 0.05);
 
         const compName = Object.keys(componentsMap).find(k => componentsMap[k].id === comp.pcb_component_id) || comp.pcb_component_id || 'U';
         const compData = componentsMap[compName] || {};
+        const ftype = (compData.ftype || '').toLowerCase();
+        const nameUpper = compName.toUpperCase();
+        const pinsCount = compData.pins?.length || 0;
 
-        const chipGeo = new THREE.BoxGeometry(cw, cThick, ch);
-        const chipMesh = new THREE.Mesh(chipGeo, chipMat.clone());
-        chipMesh.position.set(cx, cy, cz);
-        chipMesh.userData = {
+        const compGroup = new THREE.Group();
+        const userData = {
           type: 'component',
           name: compName,
           part: compData.mpn || compData.ftype || 'IC',
           pos: `(${cx.toFixed(2)}, ${cz.toFixed(2)}) mm`,
           layer: comp.layer || 'top',
-          extra: `${compData.pins?.length || 0} pins`
+          extra: `${pinsCount} pins`
         };
-        boardGroup.add(chipMesh);
+
+        if (ftype.includes('resistor') || nameUpper.startsWith('R')) {
+          const thick = 0.55;
+          const cy = isBottom ? -(substrateThickness / 2 + thick / 2 + 0.03) : (substrateThickness / 2 + thick / 2 + 0.03);
+          const isVert = ch > cw;
+          const len = isVert ? ch : cw;
+          const wid = isVert ? cw : ch;
+          const capLen = Math.max(len * 0.22, 0.2);
+          const bodyLen = Math.max(len - capLen * 2, 0.2);
+
+          const bodyGeo = isVert ? new THREE.BoxGeometry(wid, thick, bodyLen) : new THREE.BoxGeometry(bodyLen, thick, wid);
+          const bodyMesh = new THREE.Mesh(bodyGeo, ceramicResMat.clone());
+          bodyMesh.userData = userData;
+          compGroup.add(bodyMesh);
+
+          const capGeo = isVert ? new THREE.BoxGeometry(wid * 1.02, thick * 1.02, capLen) : new THREE.BoxGeometry(capLen, thick * 1.02, wid * 1.02);
+          const capOffset = (bodyLen + capLen) / 2;
+          const cap1 = new THREE.Mesh(capGeo, silverMat);
+          const cap2 = new THREE.Mesh(capGeo, silverMat);
+          if (isVert) {
+            cap1.position.set(0, 0, -capOffset);
+            cap2.position.set(0, 0, capOffset);
+          } else {
+            cap1.position.set(-capOffset, 0, 0);
+            cap2.position.set(capOffset, 0, 0);
+          }
+          cap1.userData = userData;
+          cap2.userData = userData;
+          compGroup.add(cap1);
+          compGroup.add(cap2);
+          compGroup.position.set(cx, cy, cz);
+        } else if (ftype.includes('capacitor') || nameUpper.startsWith('C')) {
+          const thick = 0.65;
+          const cy = isBottom ? -(substrateThickness / 2 + thick / 2 + 0.03) : (substrateThickness / 2 + thick / 2 + 0.03);
+          const isVert = ch > cw;
+          const len = isVert ? ch : cw;
+          const wid = isVert ? cw : ch;
+          const capLen = Math.max(len * 0.22, 0.2);
+          const bodyLen = Math.max(len - capLen * 2, 0.2);
+
+          const bodyGeo = isVert ? new THREE.BoxGeometry(wid, thick, bodyLen) : new THREE.BoxGeometry(bodyLen, thick, wid);
+          const bodyMesh = new THREE.Mesh(bodyGeo, ceramicCapMat.clone());
+          bodyMesh.userData = userData;
+          compGroup.add(bodyMesh);
+
+          const capGeo = isVert ? new THREE.BoxGeometry(wid * 1.02, thick * 1.02, capLen) : new THREE.BoxGeometry(capLen, thick * 1.02, wid * 1.02);
+          const capOffset = (bodyLen + capLen) / 2;
+          const cap1 = new THREE.Mesh(capGeo, silverMat);
+          const cap2 = new THREE.Mesh(capGeo, silverMat);
+          if (isVert) {
+            cap1.position.set(0, 0, -capOffset);
+            cap2.position.set(0, 0, capOffset);
+          } else {
+            cap1.position.set(-capOffset, 0, 0);
+            cap2.position.set(capOffset, 0, 0);
+          }
+          cap1.userData = userData;
+          cap2.userData = userData;
+          compGroup.add(cap1);
+          compGroup.add(cap2);
+          compGroup.position.set(cx, cy, cz);
+        } else if (ftype.includes('led') || nameUpper.startsWith('LED')) {
+          const thick = 0.85;
+          const cy = isBottom ? -(substrateThickness / 2 + thick / 2 + 0.03) : (substrateThickness / 2 + thick / 2 + 0.03);
+          const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(cw, 0.3, ch), silverMat);
+          baseMesh.position.y = -thick / 2 + 0.15;
+          baseMesh.userData = userData;
+          compGroup.add(baseMesh);
+
+          const ledColor = nameUpper.includes('RED') ? 0xef4444 : nameUpper.includes('BLUE') ? 0x38bdf8 : 0x22c55e;
+          const ledMat = new THREE.MeshStandardMaterial({
+            color: ledColor,
+            emissive: ledColor,
+            emissiveIntensity: 0.6,
+            roughness: 0.2,
+            metalness: 0.1,
+            transparent: true,
+            opacity: 0.85
+          });
+          const domeMesh = new THREE.Mesh(new THREE.BoxGeometry(cw * 0.8, thick - 0.3, ch * 0.8), ledMat);
+          domeMesh.position.y = 0.15;
+          domeMesh.userData = userData;
+          compGroup.add(domeMesh);
+          compGroup.position.set(cx, cy, cz);
+        } else if (ftype.includes('header') || ftype.includes('connector') || nameUpper.startsWith('J') || nameUpper.startsWith('HDR') || nameUpper.startsWith('CON') || nameUpper.startsWith('P')) {
+          const thick = 2.5;
+          const cy = isBottom ? -(substrateThickness / 2 + thick / 2 + 0.03) : (substrateThickness / 2 + thick / 2 + 0.03);
+          const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(cw, thick, ch), darkEpoxyMat.clone());
+          baseMesh.userData = userData;
+          compGroup.add(baseMesh);
+
+          const pinH = 6.0;
+          const pinW = 0.64;
+          const pinGeo = new THREE.BoxGeometry(pinW, pinH, pinW);
+          const nPins = Math.max(pinsCount || 2, Math.round(Math.max(cw, ch) / 2.54) || 2);
+          const isVert = ch > cw;
+          for (let p = 0; p < nPins; p++) {
+            const pinMesh = new THREE.Mesh(pinGeo, goldMat);
+            const offset = (p - (nPins - 1) / 2) * (Math.max(cw, ch) / nPins);
+            const px = isVert ? 0 : offset;
+            const pz = isVert ? offset : 0;
+            const py = isBottom ? -pinH / 2 : pinH / 2;
+            pinMesh.position.set(px, py, pz);
+            pinMesh.userData = userData;
+            compGroup.add(pinMesh);
+          }
+          compGroup.position.set(cx, cy, cz);
+        } else if (ftype.includes('switch') || ftype.includes('button') || nameUpper.startsWith('SW') || nameUpper.startsWith('BTN')) {
+          const thick = 1.6;
+          const cy = isBottom ? -(substrateThickness / 2 + thick / 2 + 0.03) : (substrateThickness / 2 + thick / 2 + 0.03);
+          const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(cw, thick, ch), silverMat);
+          baseMesh.userData = userData;
+          compGroup.add(baseMesh);
+
+          const btnMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
+          const btnRadius = Math.min(cw, ch) * 0.3;
+          const btnMesh = new THREE.Mesh(new THREE.CylinderGeometry(btnRadius, btnRadius, 0.8, 16), btnMat);
+          btnMesh.position.y = thick / 2 + 0.4;
+          btnMesh.userData = userData;
+          compGroup.add(btnMesh);
+          compGroup.position.set(cx, cy, cz);
+        } else if (ftype.includes('test') || nameUpper.startsWith('TP')) {
+          const cy = isBottom ? -(substrateThickness / 2 + 0.4) : (substrateThickness / 2 + 0.4);
+          const ringMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.1, 16), goldMat);
+          ringMesh.userData = userData;
+          compGroup.add(ringMesh);
+          const beadMesh = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 12), goldMat);
+          beadMesh.position.y = 0.3;
+          beadMesh.userData = userData;
+          compGroup.add(beadMesh);
+          compGroup.position.set(cx, cy, cz);
+        } else {
+          const thick = 1.4;
+          const cy = isBottom ? -(substrateThickness / 2 + thick / 2 + 0.05) : (substrateThickness / 2 + thick / 2 + 0.05);
+          const chipMesh = new THREE.Mesh(new THREE.BoxGeometry(cw, thick, ch), darkEpoxyMat.clone());
+          chipMesh.userData = userData;
+          compGroup.add(chipMesh);
+
+          const dotMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
+          const dotMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.05, 12), dotMat);
+          dotMesh.position.set(-cw / 2 + 0.6, thick / 2 + 0.03, -ch / 2 + 0.6);
+          compGroup.add(dotMesh);
+
+          const totalPins = pinsCount || (cw > 8 ? 16 : 8);
+          const sidePins = Math.max(2, Math.floor(totalPins / 2));
+          const pinW = 0.4;
+          const pinLen = 0.8;
+          const pinH = 0.2;
+          const pinY = isBottom ? thick / 2 - 0.1 : -thick / 2 + 0.1;
+
+          for (let p = 0; p < sidePins; p++) {
+            const offset = (p - (sidePins - 1) / 2) * (ch / sidePins);
+            const leftPin = new THREE.Mesh(new THREE.BoxGeometry(pinLen, pinH, pinW), silverMat);
+            leftPin.position.set(-cw / 2 - pinLen / 2 + 0.1, pinY, offset);
+            leftPin.userData = userData;
+            compGroup.add(leftPin);
+
+            const rightPin = new THREE.Mesh(new THREE.BoxGeometry(pinLen, pinH, pinW), silverMat);
+            rightPin.position.set(cw / 2 + pinLen / 2 - 0.1, pinY, offset);
+            rightPin.userData = userData;
+            compGroup.add(rightPin);
+          }
+          compGroup.position.set(cx, cy, cz);
+        }
+
+        boardGroup.add(compGroup);
 
         const sprite = makeTextSprite(compName);
-        sprite.position.set(cx, cy + (isBottom ? -cThick / 2 - 0.4 : cThick / 2 + 0.4), cz);
+        const spriteY = isBottom ? -(substrateThickness / 2 + 1.8) : (substrateThickness / 2 + 1.8);
+        sprite.position.set(cx, spriteY, cz);
         boardGroup.add(sprite);
-
-        const pinW = 0.6;
-        const pinLen = 1.0;
-        const pinH = 0.2;
-        const pinY = isBottom ? -(substrateThickness / 2 + 0.05) : (substrateThickness / 2 + 0.05);
-
-        const numPins = 4;
-        for (let p = 0; p < numPins; p++) {
-          const offset = (p - (numPins - 1) / 2) * (ch / numPins);
-          const leftPin = new THREE.Mesh(new THREE.BoxGeometry(pinLen, pinH, pinW), pinMat);
-          leftPin.position.set(cx - cw / 2, pinY, cz + offset);
-          boardGroup.add(leftPin);
-
-          const rightPin = new THREE.Mesh(new THREE.BoxGeometry(pinLen, pinH, pinW), pinMat);
-          rightPin.position.set(cx + cw / 2, pinY, cz + offset);
-          boardGroup.add(rightPin);
-        }
       });
     }
 
@@ -1486,6 +1700,7 @@
         parseCircuitGraph();
         if (currentView === '3d') {
           build3DScene();
+          updateEngineUI();
         }
       }
       updateDiagnostics(data.fuse_blown, data.diagnostics || []);
