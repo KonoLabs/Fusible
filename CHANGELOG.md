@@ -5,6 +5,14 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.8.16] - 2026-10-21
+
+### Added
+
+- Reordered Dev Studio header tabs with Schematic first, then PCB Layout, then 3D View.
+- Styled PCB Viewer top-left toolbar overlays and dropdown controls to match Fusible dark theme palette.
+- Elevated 3D silkscreen rendering for text placed within component footprint bounds, rendering labels directly on chip IC packages.
+
 ## [0.8.15] - 2026-10-20
 
 ### Added
