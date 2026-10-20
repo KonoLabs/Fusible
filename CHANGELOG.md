@@ -5,6 +5,12 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.8.7] - 2026-10-20
+
+### Added
+
+- Added `pixelarticons:cpu-sharp` vector favicon in Fusible green (`#86A881`) to Dev Studio and added server endpoints for `/favicon.ico` and `/favicon.svg`.
+
 ## [0.8.6] - 2026-10-20
 
 ### Added
