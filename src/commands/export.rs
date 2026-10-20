@@ -39,6 +39,10 @@ pub fn run(
     output: Option<PathBuf>,
     skip_lint: bool,
 ) -> Result<(), ExportError> {
+    if let Some(preset_name) = preset {
+        validate_preset(preset_name)?;
+    }
+
     let entry = resolve_entry(file.clone()).unwrap_or_else(|_| PathBuf::from("index.tsx"));
 
     if !skip_lint {
@@ -153,12 +157,22 @@ fn export_docs(runner: &Runner, entry: &Path, out: Option<&Path>) -> Result<(), 
     Ok(())
 }
 
+fn validate_preset(preset: &str) -> Result<(), ExportError> {
+    match preset {
+        "fab" | "cad" | "docs" | "all" => Ok(()),
+        other => Err(ExportError::UnknownPreset {
+            preset: other.to_string(),
+        }),
+    }
+}
+
 fn run_preset(
     runner: &Runner,
     entry: &Path,
     preset: &str,
     custom_output: Option<&Path>,
 ) -> Result<(), ExportError> {
+    validate_preset(preset)?;
     match preset {
         "fab" => export_fab(runner, entry, custom_output),
         "cad" => export_cad(runner, entry, custom_output),
@@ -171,8 +185,6 @@ fn run_preset(
             export_docs(runner, entry, custom_output)?;
             Ok(())
         }
-        other => Err(ExportError::UnknownPreset {
-            preset: other.to_string(),
-        }),
+        _ => unreachable!(),
     }
 }

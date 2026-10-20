@@ -5,11 +5,15 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
-## [Unreleased]
+## [0.3.1] - 2026-10-20
+
+### Added
+
+- Architecture blueprint for progressive native Rust rewrites (`docs/NATIVE_RUST_ARCHITECTURE.md`) covering native Gerber/Drill generation, KiCad S-expression parser/writer, SVG renderer, and parallel autorouter.
 
 ### Changed
 
-- Replaced on-the-fly `bun x` package execution with direct invocation of installed `tsci` / `tscircuit` binaries (local `./node_modules/.bin/tsci`, `./hardware/node_modules/.bin/tsci`, or global PATH).
+- Replaced on-the-fly `bun x` package execution with direct invocation of installed `tsci` / `tscircuit` binaries (local `./node_modules/.bin/tsci`, `./hardware/node_modules/.bin/tsci`, or global PATH), removing startup latency and peer-dependency noise.
 - Updated `README.md` to document `tscircuit` as a direct system prerequisite (`bun add -g tscircuit` or `npm install -g tscircuit`).
 - Enhanced `fusible dev` output to announce the local server webview URL (`http://localhost:3020`) and prompt on startup.
 
