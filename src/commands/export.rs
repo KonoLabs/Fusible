@@ -58,17 +58,18 @@ pub fn run(
         println!("⚠️  Skipping electrical rule verification (--skip-lint requested).\n");
     }
 
-    let runner = Runner::detect()?;
+    let runner = Runner::detect().ok();
     let board_title = resolve_board_title();
 
     if let Some(preset_name) = preset {
-        let circuit_json = if preset_name == "fab" || preset_name == "all" {
-            load_or_build_circuit_json(&entry, &runner)?
+        let circuit_json = if preset_name == "fab" || preset_name == "all" || preset_name == "docs"
+        {
+            load_or_build_circuit_json(&entry, runner.as_ref())?
         } else {
             String::new()
         };
         run_preset(
-            &runner,
+            runner.as_ref(),
             &entry,
             &circuit_json,
             &board_title,
@@ -76,7 +77,7 @@ pub fn run(
             output.as_deref(),
         )
     } else if format == "gerbers" || format == "gerber" {
-        let circuit_json = load_or_build_circuit_json(&entry, &runner)?;
+        let circuit_json = load_or_build_circuit_json(&entry, runner.as_ref())?;
         let dest = output.unwrap_or_else(|| PathBuf::from("dist/gerbers.zip"));
         if let Some(parent) = dest.parent() {
             std::fs::create_dir_all(parent)?;
@@ -91,7 +92,7 @@ pub fn run(
         println!("✅ Successfully exported gerbers to {}!", dest.display());
         Ok(())
     } else if format == "pcb-svg" || format == "pcb_svg" {
-        let circuit_json = load_or_build_circuit_json(&entry, &runner)?;
+        let circuit_json = load_or_build_circuit_json(&entry, runner.as_ref())?;
         let dest = output.unwrap_or_else(|| PathBuf::from("dist/pcb.svg"));
         if let Some(parent) = dest.parent() {
             std::fs::create_dir_all(parent)?;
@@ -108,6 +109,7 @@ pub fn run(
         );
         Ok(())
     } else if format == "kicad_project" || format == "kicad" {
+        let runner = runner.ok_or(RunnerError::NotFound)?;
         let dest = output.unwrap_or_else(|| PathBuf::from("dist/cad/kicad"));
         std::fs::create_dir_all(&dest)?;
         let tmp_zip = dest.join(".kicad_export.zip");
@@ -121,6 +123,7 @@ pub fn run(
         );
         Ok(())
     } else {
+        let runner = runner.ok_or(RunnerError::NotFound)?;
         println!(
             "📦 Exporting \"{}\" to format: {}...",
             entry.display(),
@@ -140,7 +143,10 @@ fn resolve_board_title() -> String {
         .unwrap_or_else(|| "Hardware Board".to_string())
 }
 
-fn load_or_build_circuit_json(entry: &Path, runner: &Runner) -> Result<String, ExportError> {
+fn load_or_build_circuit_json(
+    entry: &Path,
+    runner: Option<&Runner>,
+) -> Result<String, ExportError> {
     if entry.extension().and_then(|e| e.to_str()) == Some("json") {
         std::fs::read_to_string(entry).map_err(|e| {
             CheckError::Read(check::ReadError {
@@ -150,6 +156,7 @@ fn load_or_build_circuit_json(entry: &Path, runner: &Runner) -> Result<String, E
             .into()
         })
     } else {
+        let runner = runner.ok_or(RunnerError::NotFound)?;
         println!(
             "⚙️  Evaluating \"{}\" for native export...",
             entry.display()
@@ -176,8 +183,6 @@ fn extract_zip_archive(zip_path: &Path, target_dir: &Path) {
 }
 
 fn export_fab(
-    _runner: &Runner,
-    _entry: &Path,
     circuit_json: &str,
     board_title: &str,
     out: Option<&Path>,
@@ -221,12 +226,7 @@ fn export_cad(runner: &Runner, entry: &Path, out: Option<&Path>) -> Result<(), E
     Ok(())
 }
 
-fn export_docs(
-    _runner: &Runner,
-    _entry: &Path,
-    circuit_json: &str,
-    out: Option<&Path>,
-) -> Result<(), ExportError> {
+fn export_docs(circuit_json: &str, out: Option<&Path>) -> Result<(), ExportError> {
     let base = out
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("dist/docs"));
@@ -259,7 +259,7 @@ fn validate_preset(preset: &str) -> Result<(), ExportError> {
 }
 
 fn run_preset(
-    runner: &Runner,
+    runner: Option<&Runner>,
     entry: &Path,
     circuit_json: &str,
     board_title: &str,
@@ -268,15 +268,19 @@ fn run_preset(
 ) -> Result<(), ExportError> {
     validate_preset(preset)?;
     match preset {
-        "fab" => export_fab(runner, entry, circuit_json, board_title, custom_output),
-        "cad" => export_cad(runner, entry, custom_output),
-        "docs" => export_docs(runner, entry, circuit_json, custom_output),
+        "fab" => export_fab(circuit_json, board_title, custom_output),
+        "cad" => {
+            let runner = runner.ok_or(RunnerError::NotFound)?;
+            export_cad(runner, entry, custom_output)
+        }
+        "docs" => export_docs(circuit_json, custom_output),
         "all" => {
-            export_fab(runner, entry, circuit_json, board_title, custom_output)?;
+            export_fab(circuit_json, board_title, custom_output)?;
             println!();
+            let runner = runner.ok_or(RunnerError::NotFound)?;
             export_cad(runner, entry, custom_output)?;
             println!();
-            export_docs(runner, entry, circuit_json, custom_output)?;
+            export_docs(circuit_json, custom_output)?;
             Ok(())
         }
         _ => unreachable!(),
