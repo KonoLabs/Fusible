@@ -31,6 +31,10 @@ pub fn render_schematic(circuit: &Circuit, netlist: &Netlist) -> String {
     let mut writer = SvgWriter::new();
     let components: Vec<_> = circuit.components().collect();
 
+    if components.is_empty() {
+        return String::new();
+    }
+
     let comp_w = 40.0;
     let pin_h = 6.0;
     let gap_x = 35.0;
@@ -49,7 +53,11 @@ pub fn render_schematic(circuit: &Circuit, netlist: &Netlist) -> String {
         let cid = comp.component_id.as_deref().unwrap_or("U");
         let ports: Vec<_> = circuit
             .ports()
-            .filter(|p| p.source_component_id.as_deref() == Some(cid))
+            .filter(|p| {
+                p.source_component_id.as_deref() == Some(cid)
+                    || (p.source_component_id.is_none()
+                        && p.port_id.as_deref().and_then(|id| id.split('.').next()) == Some(cid))
+            })
             .collect();
 
         let comp_h = 16.0 + (ports.len() as f64 * pin_h).max(12.0);
@@ -118,7 +126,12 @@ pub fn render_schematic(circuit: &Circuit, netlist: &Netlist) -> String {
             // Render pin names
             let ports: Vec<_> = circuit
                 .ports()
-                .filter(|p| p.source_component_id.as_deref() == Some(cid))
+                .filter(|p| {
+                    p.source_component_id.as_deref() == Some(cid)
+                        || (p.source_component_id.is_none()
+                            && p.port_id.as_deref().and_then(|id| id.split('.').next())
+                                == Some(cid))
+                })
                 .collect();
             for (p_idx, port) in ports.iter().enumerate() {
                 let py = y + 17.0 + (p_idx as f64 * pin_h);

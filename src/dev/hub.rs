@@ -1,5 +1,4 @@
-use std::io::{self, Read};
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone, Default)]
@@ -25,34 +24,5 @@ impl ClientHub {
         if let Ok(mut lock) = self.clients.lock() {
             lock.retain(|tx| tx.send(msg.clone()).is_ok());
         }
-    }
-}
-
-pub struct SseReader {
-    rx: Receiver<Vec<u8>>,
-    buffer: Vec<u8>,
-}
-
-impl SseReader {
-    pub fn new(rx: Receiver<Vec<u8>>) -> Self {
-        Self {
-            rx,
-            buffer: Vec::new(),
-        }
-    }
-}
-
-impl Read for SseReader {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        if self.buffer.is_empty() {
-            match self.rx.recv() {
-                Ok(data) => self.buffer = data,
-                Err(_) => return Ok(0),
-            }
-        }
-        let count = std::cmp::min(buf.len(), self.buffer.len());
-        buf[..count].copy_from_slice(&self.buffer[..count]);
-        self.buffer.drain(..count);
-        Ok(count)
     }
 }

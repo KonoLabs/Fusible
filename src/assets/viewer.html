@@ -861,24 +861,25 @@
 
       const sourceCompMap = {};
       elements.filter(e => e.type === 'source_component').forEach(sc => {
-        sourceCompMap[sc.source_component_id] = {
-          name: sc.name || 'U',
+        sourceCompMap[sc.source_component_id || sc.component_id] = {
+          name: sc.name || sc.component_id || 'U',
           mpn: sc.manufacturer_part_number || '',
-          ftype: sc.ftype || ''
+          ftype: sc.ftype || sc.kind || ''
         };
       });
 
       const portNetMap = {};
       elements.filter(e => e.type === 'source_port').forEach(sp => {
-        portNetMap[sp.source_port_id] = {
+        portNetMap[sp.source_port_id || sp.port_id] = {
           name: sp.name || '',
           pin: sp.pin_number || ''
         };
       });
 
       elements.filter(e => e.type === 'source_net').forEach(sn => {
-        netsMap[sn.name] = {
-          name: sn.name,
+        const netName = sn.name || sn.net_id || 'NET';
+        netsMap[netName] = {
+          name: netName,
           count: 0
         };
       });
@@ -912,6 +913,24 @@
           pins: []
         };
       });
+
+      if (Object.keys(componentsMap).length === 0) {
+        Object.entries(sourceCompMap).forEach(([id, src]) => {
+          const name = src.name || id;
+          componentsMap[name] = {
+            name,
+            mpn: src.mpn,
+            ftype: src.ftype,
+            x: 0,
+            y: 0,
+            w: 4,
+            h: 4,
+            layer: 'top',
+            id,
+            pins: []
+          };
+        });
+      }
 
       elements.filter(e => e.type === 'schematic_component').forEach(sc => {
         const src = sourceCompMap[sc.source_component_id] || {};
@@ -1421,6 +1440,36 @@
       });
     }
 
+    function updateStudio(data) {
+      if (!data) return;
+      if (data.board_name) {
+        document.getElementById('board-name').textContent = data.board_name.toUpperCase();
+      }
+      if (data.pcb_svg) pcbSvg = data.pcb_svg;
+      if (data.schematic_svg) schematicSvg = data.schematic_svg;
+      if (data.circuit_json) {
+        lastCircuitJson = data.circuit_json;
+        parseCircuitGraph();
+        if (currentView === '3d') {
+          build3DScene();
+        }
+      }
+      updateDiagnostics(data.fuse_blown, data.diagnostics || []);
+      if (currentView !== '3d') {
+        renderCurrentView();
+      }
+    }
+
+    function fetchInitialData() {
+      fetch('/api/circuit')
+        .then(res => {
+          if (!res.ok) throw new Error('Network error');
+          return res.json();
+        })
+        .then(data => updateStudio(data))
+        .catch(() => {});
+    }
+
     function connectSSE() {
       const eventSource = new EventSource('/events');
       const liveDot = document.getElementById('live-dot');
@@ -1434,22 +1483,7 @@
       eventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          if (data.board_name) {
-            document.getElementById('board-name').textContent = data.board_name.toUpperCase();
-          }
-          if (data.pcb_svg) pcbSvg = data.pcb_svg;
-          if (data.schematic_svg) schematicSvg = data.schematic_svg;
-          if (data.circuit_json) {
-            lastCircuitJson = data.circuit_json;
-            parseCircuitGraph();
-            if (currentView === '3d') {
-              build3DScene();
-            }
-          }
-          updateDiagnostics(data.fuse_blown, data.diagnostics || []);
-          if (currentView !== '3d') {
-            renderCurrentView();
-          }
+          updateStudio(data);
         } catch (err) {
           console.error(err);
         }
@@ -1461,6 +1495,7 @@
       };
     }
 
+    fetchInitialData();
     connectSSE();
   </script>
 </body>

@@ -5,6 +5,15 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.8.3] - 2026-10-20
+
+### Fixed
+
+- Fixed dev server SSE stream hang by replacing buffered `tiny_http::Response` streaming with direct unbuffered writer writes and socket flushes on `/events`.
+- Added `/api/circuit` JSON endpoint and initial client fetch so Dev Studio renders instantly on load without waiting for SSE stream handshake.
+- Fixed empty schematic preview and components list for circuits by adding fallback port-to-component prefix matching and source component mapping in Dev Studio.
+- Prevented empty 0-dimension SVG rendering when a circuit contains no components.
+
 ## [0.8.2] - 2026-10-20
 
 ### Added

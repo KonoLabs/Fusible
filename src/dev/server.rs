@@ -1,12 +1,13 @@
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use tiny_http::{Header, Response, Server, StatusCode};
+use tiny_http::{Header, Response, Server};
 
-use super::hub::{ClientHub, SseReader};
+use super::hub::ClientHub;
 use super::pipeline::execute_pipeline;
 use super::watcher::start_file_watcher;
 
@@ -76,6 +77,16 @@ pub fn run_dev_server(entry: PathBuf, port: u16) -> Result<(), Box<dyn std::erro
                 let response = Response::from_data(FONT_DATA).with_header(header);
                 let _ = request.respond(response);
             }
+            "/api/circuit" => {
+                let header =
+                    Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..]).unwrap();
+                let body = cached_payload
+                    .lock()
+                    .map(|l| l.clone())
+                    .unwrap_or_else(|_| "{}".to_string());
+                let response = Response::from_string(body).with_header(header);
+                let _ = request.respond(response);
+            }
             "/events" => {
                 let (tx, rx) = mpsc::channel();
                 if let Ok(lock) = cached_payload.lock() {
@@ -85,22 +96,22 @@ pub fn run_dev_server(entry: PathBuf, port: u16) -> Result<(), Box<dyn std::erro
                 hub.add_client(tx);
 
                 thread::spawn(move || {
-                    let sse_stream = SseReader::new(rx);
-                    let response = Response::new(
-                        StatusCode(200),
-                        vec![
-                            Header::from_bytes(&b"Content-Type"[..], &b"text/event-stream"[..])
-                                .unwrap(),
-                            Header::from_bytes(&b"Cache-Control"[..], &b"no-cache"[..]).unwrap(),
-                            Header::from_bytes(&b"Connection"[..], &b"keep-alive"[..]).unwrap(),
-                            Header::from_bytes(&b"Access-Control-Allow-Origin"[..], &b"*"[..])
-                                .unwrap(),
-                        ],
-                        sse_stream,
-                        None,
-                        None,
-                    );
-                    let _ = request.respond(response);
+                    let mut writer = request.into_writer();
+                    let headers = "HTTP/1.1 200 OK\r\n\
+Content-Type: text/event-stream\r\n\
+Cache-Control: no-cache\r\n\
+Connection: keep-alive\r\n\
+Access-Control-Allow-Origin: *\r\n\
+\r\n";
+                    if writer.write_all(headers.as_bytes()).is_err() || writer.flush().is_err() {
+                        return;
+                    }
+
+                    while let Ok(msg) = rx.recv() {
+                        if writer.write_all(&msg).is_err() || writer.flush().is_err() {
+                            break;
+                        }
+                    }
                 });
             }
             _ => {
