@@ -9,9 +9,8 @@
 Fusible unifies hardware and firmware into a single monorepo contract using `fusible.yml`,
 wrapping development servers, dark-theme web previewers, artifact exports, and firmware codegen.
 
-![Fusible Studio - PCB layout](assets/demo1.png)
-
-![Fusible Studio - 3D view](assets/demo2.png)
+![demo1](assets/demo1.png)
+![demo3](assets/demo3.png)
 
 ## Project status
 
