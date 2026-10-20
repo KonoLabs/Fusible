@@ -5,6 +5,20 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.8.11] - 2026-10-20
+
+### Added
+
+- Added top-right switch in PCB mode to toggle between the interactive PCB inspector and the realistic 3D vector layout.
+- Added raycast object-hierarchy traversal and rich metadata inspection across components, pins, pads, vias, and traces in 3D view.
+- Added 3D click-to-inspect bridge for both native Three.js scene and CadViewer.
+
+### Fixed
+
+- Fixed schematic component hover glitch where an opaque gray rectangle covered hovered chips.
+- Fixed schematic global label color contrast by replacing white fill override with dark badge background and amber typography.
+- Eliminated initial PCB layout startup flash by cleanly holding the selected view mode.
+
 ## [0.8.10] - 2026-10-20
 
 ### Fixed

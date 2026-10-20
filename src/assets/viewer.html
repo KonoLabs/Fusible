@@ -23,9 +23,14 @@
       fill: #86A881 !important;
       font-weight: bold !important;
     }
-    .tscircuit-schematic .net-label {
-      fill: #ffffff !important;
-      font-weight: bold !important;
+    .tscircuit-schematic .net-label,
+    .tscircuit-schematic .sch-net-label {
+      fill: #1F1F1F !important;
+      stroke: #f59e0b !important;
+    }
+    .tscircuit-schematic .sch-net-label-text,
+    .tscircuit-schematic text.net-label {
+      fill: #f59e0b !important;
     }
     #pcb-container,
     #pcb-container > div,
@@ -554,8 +559,12 @@
       background: var(--surface-hover) !important;
       color: var(--green) !important;
     }
-    #schematic-container div[style*="zIndex"],
-    #schematic-container div[style*="z-index"],
+    #schematic-container div[style*="pointer-events: none"],
+    #schematic-container div[style*="pointerEvents: none"] {
+      background: transparent !important;
+      background-color: transparent !important;
+      box-shadow: none !important;
+    }
     #schematic-container div[style*="rgba(255, 255, 255"],
     #schematic-container div[style*="background-color: rgba(255, 255, 255"],
     #schematic-container div[style*="backgroundColor: rgba(255, 255, 255"] {
@@ -619,6 +628,7 @@
     </div>
 
     <div class="controls" id="controls-2d">
+      <button class="btn" id="btn-pcb-mode" onclick="togglePcbMode()"><iconify-icon icon="pixelarticons:switch"></iconify-icon> <span id="pcb-mode-label">VIEW: INSPECTOR</span></button>
       <button class="btn" onclick="zoomIn()"><iconify-icon icon="pixelarticons:zoom-in"></iconify-icon> ZOOM +</button>
       <button class="btn" onclick="zoomOut()"><iconify-icon icon="pixelarticons:zoom-out"></iconify-icon> ZOOM -</button>
       <button class="btn" onclick="resetZoom()"><iconify-icon icon="pixelarticons:undo"></iconify-icon> RESET</button>
@@ -638,7 +648,7 @@
       <div id="viewport-grid"></div>
       <div id="pcb-container" style="position:absolute;inset:0;width:100%;height:100%;z-index:2;display:none;"></div>
       <div id="schematic-container" style="position:absolute;inset:0;width:100%;height:100%;z-index:2;display:none;"></div>
-      <div id="canvas-content"></div>
+      <div id="canvas-content" style="display:none;"></div>
       <div id="three-container">
         <div id="three-native" style="width:100%;height:100%;position:absolute;inset:0;"></div>
         <div id="three-cad" style="width:100%;height:100%;position:absolute;inset:0;display:none;"></div>
@@ -732,9 +742,11 @@
 
   <script>
     let currentView = 'pcb';
+    let pcbMode = 'inspector';
     let pcbSvg = '';
     let schematicSvg = '';
     let lastCircuitJson = null;
+    let tscircuitFallback = false;
 
     let zoomLevel = 1.0;
     let panX = 0;
@@ -768,7 +780,10 @@
     }
 
     function isInteractive2dActive() {
-      return (currentView === 'pcb' || currentView === 'schematic') && !!window.Tscircuit;
+      if (currentView === 'pcb') {
+        return pcbMode === 'inspector' && !!window.Tscircuit;
+      }
+      return currentView === 'schematic' && !!window.Tscircuit;
     }
 
     function zoomIn() {
@@ -896,6 +911,8 @@
 
       document.getElementById('controls-2d').style.display = is3d ? 'none' : 'flex';
       document.getElementById('controls-3d').style.display = is3d ? 'flex' : 'none';
+      const btnPcbMode = document.getElementById('btn-pcb-mode');
+      if (btnPcbMode) btnPcbMode.style.display = view === 'pcb' ? 'inline-flex' : 'none';
 
       hideTooltip();
 
@@ -925,6 +942,15 @@
       if (activePane) activePane.classList.add('active');
     }
 
+    function togglePcbMode() {
+      pcbMode = pcbMode === 'inspector' ? '3d' : 'inspector';
+      const label = document.getElementById('pcb-mode-label');
+      if (label) {
+        label.textContent = pcbMode === 'inspector' ? 'VIEW: INSPECTOR' : 'VIEW: 3D';
+      }
+      renderCurrentView();
+    }
+
     function renderCurrentView() {
       const pcbEl = document.getElementById('pcb-container');
       const schEl = document.getElementById('schematic-container');
@@ -932,18 +958,30 @@
 
       if (currentView === 'pcb') {
         if (schEl) schEl.style.display = 'none';
-        if (window.Tscircuit && window.Tscircuit.renderPcbViewer && lastCircuitJson) {
-          if (canvasEl) canvasEl.style.display = 'none';
-          if (pcbEl) {
-            pcbEl.style.display = 'block';
-            window.Tscircuit.renderPcbViewer(pcbEl, lastCircuitJson, (ref) => selectComponent(ref));
-          }
-        } else {
+        if (pcbMode === '3d') {
           if (pcbEl) pcbEl.style.display = 'none';
           if (canvasEl) {
             canvasEl.style.display = 'inline-block';
             canvasEl.innerHTML = pcbSvg || '<div class="empty-state">NO PCB LAYOUT AVAILABLE</div>';
             setup2DInteractivity();
+          }
+        } else {
+          if (window.Tscircuit && window.Tscircuit.renderPcbViewer && lastCircuitJson) {
+            if (canvasEl) canvasEl.style.display = 'none';
+            if (pcbEl) {
+              pcbEl.style.display = 'block';
+              window.Tscircuit.renderPcbViewer(pcbEl, lastCircuitJson, (ref) => selectComponent(ref));
+            }
+          } else if (tscircuitFallback) {
+            if (pcbEl) pcbEl.style.display = 'none';
+            if (canvasEl) {
+              canvasEl.style.display = 'inline-block';
+              canvasEl.innerHTML = pcbSvg || '<div class="empty-state">NO PCB LAYOUT AVAILABLE</div>';
+              setup2DInteractivity();
+            }
+          } else {
+            if (pcbEl) pcbEl.style.display = 'none';
+            if (canvasEl) canvasEl.style.display = 'none';
           }
         }
       } else if (currentView === 'schematic') {
@@ -954,13 +992,16 @@
             schEl.style.display = 'block';
             window.Tscircuit.renderSchematicViewer(schEl, lastCircuitJson, (ref) => selectComponent(ref));
           }
-        } else {
+        } else if (tscircuitFallback) {
           if (schEl) schEl.style.display = 'none';
           if (canvasEl) {
             canvasEl.style.display = 'inline-block';
             canvasEl.innerHTML = schematicSvg || '<div class="empty-state">NO SCHEMATIC AVAILABLE</div>';
             setup2DInteractivity();
           }
+        } else {
+          if (schEl) schEl.style.display = 'none';
+          if (canvasEl) canvasEl.style.display = 'none';
         }
       }
     }
@@ -988,11 +1029,12 @@
       if (!data) return;
       let html = `<div class="tooltip-title">${escapeHtml(data.name || data.ref || 'ELEMENT')}</div>`;
       if (data.type) html += `<div class="tooltip-meta">${escapeHtml(data.type.toUpperCase())}</div>`;
-      if (data.part) html += `<div class="tooltip-row"><span>MPN:</span><span class="tooltip-val">${escapeHtml(data.part)}</span></div>`;
+      if (data.part || data.mpn) html += `<div class="tooltip-row"><span>MPN/PART:</span><span class="tooltip-val">${escapeHtml(data.part || data.mpn)}</span></div>`;
       if (data.net) html += `<div class="tooltip-row"><span>NET:</span><span class="tooltip-val" style="color:var(--blue)">${escapeHtml(data.net)}</span></div>`;
       if (data.pos) html += `<div class="tooltip-row"><span>POS:</span><span class="tooltip-val">${data.pos}</span></div>`;
       if (data.layer) html += `<div class="tooltip-row"><span>LAYER:</span><span class="tooltip-val">${escapeHtml(data.layer)}</span></div>`;
-      if (data.extra) html += `<div class="tooltip-row"><span>PINS:</span><span class="tooltip-val">${data.extra}</span></div>`;
+      if (data.pins !== undefined && data.pins !== null) html += `<div class="tooltip-row"><span>PINS:</span><span class="tooltip-val">${data.pins}</span></div>`;
+      if (data.extra) html += `<div class="tooltip-row"><span>INFO:</span><span class="tooltip-val">${escapeHtml(String(data.extra))}</span></div>`;
 
       tooltip.innerHTML = html;
       tooltip.style.left = `${x + 14}px`;
@@ -1314,16 +1356,27 @@
         </div>
         ${comp.mpn ? `<div class="prop-row"><span class="prop-key">MPN</span><span class="prop-val">${escapeHtml(comp.mpn)}</span></div>` : ''}
         <div class="prop-row"><span class="prop-key">CENTER</span><span class="prop-val">(${comp.x.toFixed(2)}, ${comp.y.toFixed(2)}) mm</span></div>
-        <div class="prop-row"><span class="prop-key">FOOTPRINT</span><span class="prop-val">${comp.w.toFixed(1)} x ${comp.h.toFixed(1)} mm</span></div>
-        <div class="prop-row"><span class="prop-key">LAYER</span><span class="prop-val">${escapeHtml(comp.layer.toUpperCase())}</span></div>
+        ${comp.w && comp.h ? `<div class="prop-row"><span class="prop-key">FOOTPRINT</span><span class="prop-val">${comp.w.toFixed(1)} x ${comp.h.toFixed(1)} mm</span></div>` : ''}
+        <div class="prop-row"><span class="prop-key">LAYER</span><span class="prop-val">${escapeHtml((comp.layer || 'top').toUpperCase())}</span></div>
         ${pinsHtml}
       `;
 
       if (isPinned && currentView === '3d' && boardGroup) {
         boardGroup.children.forEach(obj => {
-          if (obj.userData && obj.userData.name === comp.name && obj.material) {
-            obj.material.emissive = new THREE.Color(0x86A881);
-            obj.material.emissiveIntensity = 0.8;
+          if (obj.userData && obj.userData.name === comp.name) {
+            obj.traverse(child => {
+              if (child.isMesh && child.material && child.material.emissive) {
+                child.material.emissive = new THREE.Color(0x86A881);
+                child.material.emissiveIntensity = 0.8;
+              }
+            });
+          } else {
+            obj.traverse(child => {
+              if (child.isMesh && child.material && child.material.emissive) {
+                child.material.emissive.setHex(child.userData.__origEmissive !== undefined ? child.userData.__origEmissive : 0x000000);
+                child.material.emissiveIntensity = child.userData.__origEmissiveIntensity !== undefined ? child.userData.__origEmissiveIntensity : 0.0;
+              }
+            });
           }
         });
       }
@@ -1474,23 +1527,51 @@
 
       raycaster.setFromCamera(mouseVector, camera);
       const intersects = raycaster.intersectObjects(boardGroup.children, true);
-      const hit = intersects.find(i => i.object.userData && i.object.userData.type);
-
-      if (hit) {
-        if (hoveredObject !== hit.object) {
-          clearThreeHighlight();
-          hoveredObject = hit.object;
-          if (hoveredObject.material && hoveredObject.material.emissive) {
-            originalColor = hoveredObject.material.emissive.getHex();
-            hoveredObject.material.emissive.setHex(0x38bdf8);
-            hoveredObject.material.emissiveIntensity = 0.8;
+      let target = null;
+      for (const hit of intersects) {
+        let cur = hit.object;
+        while (cur && cur !== boardGroup && cur !== scene) {
+          if (cur.userData && (cur.userData.name || cur.userData.type)) {
+            target = cur;
+            break;
           }
+          cur = cur.parent;
         }
-        showTooltip(e.clientX, e.clientY, hoveredObject.userData);
-        if (hoveredObject.userData && hoveredObject.userData.name) {
-          const comp = findComponent(hoveredObject.userData.name);
+        if (target) break;
+      }
+
+      if (target) {
+        if (hoveredObject !== target) {
+          clearThreeHighlight();
+          hoveredObject = target;
+          hoveredObject.traverse(child => {
+            if (child.isMesh && child.material && child.material.emissive) {
+              if (child.userData.__origEmissive === undefined) {
+                child.userData.__origEmissive = child.material.emissive.getHex();
+                child.userData.__origEmissiveIntensity = child.material.emissiveIntensity;
+              }
+              child.material.emissive.setHex(0x38bdf8);
+              child.material.emissiveIntensity = 0.8;
+            }
+          });
+        }
+        showTooltip(e.clientX, e.clientY, target.userData);
+        if (!pinnedComponent) {
+          const comp = findComponent(target.userData.name);
           if (comp) {
             inspectComponent(comp, false);
+          } else if (target.userData.type) {
+            inspectComponent({
+              name: target.userData.name || target.userData.type.toUpperCase(),
+              mpn: target.userData.part || '',
+              ftype: target.userData.type.toUpperCase(),
+              x: parseFloat(target.userData.pos?.match(/[\d.-]+/g)?.[0] || 0),
+              y: parseFloat(target.userData.pos?.match(/[\d.-]+/g)?.[1] || 0),
+              w: 0,
+              h: 0,
+              layer: target.userData.layer || 'top',
+              pins: target.userData.net ? [{ pin: target.userData.name || '1', net: target.userData.net }] : []
+            }, false);
           }
         }
         container.style.cursor = 'pointer';
@@ -1504,16 +1585,65 @@
       }
     }
 
-    function onThreeClick() {
-      if (hoveredObject && hoveredObject.userData && hoveredObject.userData.name) {
-        selectComponent(hoveredObject.userData.name);
+    function onThreeClick(e) {
+      if (currentView !== '3d' || !renderer || !camera || !boardGroup) return;
+      const container = document.getElementById('three-native');
+      if (e) {
+        const rect = container.getBoundingClientRect();
+        mouseVector.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        mouseVector.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(mouseVector, camera);
+      }
+      const intersects = raycaster.intersectObjects(boardGroup.children, true);
+      let target = null;
+      for (const hit of intersects) {
+        let cur = hit.object;
+        while (cur && cur !== boardGroup && cur !== scene) {
+          if (cur.userData && (cur.userData.name || cur.userData.type)) {
+            target = cur;
+            break;
+          }
+          cur = cur.parent;
+        }
+        if (target) break;
+      }
+      if (!target && hoveredObject) {
+        target = hoveredObject;
+      }
+      if (target && target.userData) {
+        switchSidebarTab('inspector');
+        const comp = findComponent(target.userData.name);
+        if (comp) {
+          inspectComponent(comp, true);
+        } else {
+          inspectComponent({
+            name: target.userData.name || target.userData.type.toUpperCase(),
+            mpn: target.userData.part || '',
+            ftype: target.userData.type.toUpperCase(),
+            x: parseFloat(target.userData.pos?.match(/[\d.-]+/g)?.[0] || 0),
+            y: parseFloat(target.userData.pos?.match(/[\d.-]+/g)?.[1] || 0),
+            w: 0,
+            h: 0,
+            layer: target.userData.layer || 'top',
+            pins: target.userData.net ? [{ pin: target.userData.name || '1', net: target.userData.net }] : []
+          }, true);
+        }
       }
     }
 
     function clearThreeHighlight() {
-      if (hoveredObject && hoveredObject.material && hoveredObject.material.emissive) {
-        hoveredObject.material.emissive.setHex(originalColor || 0x000000);
-        hoveredObject.material.emissiveIntensity = 0.0;
+      if (hoveredObject) {
+        hoveredObject.traverse(child => {
+          if (child.isMesh && child.material && child.material.emissive) {
+            if (pinnedComponent && (hoveredObject.userData?.name === pinnedComponent || child.userData?.name === pinnedComponent)) {
+              child.material.emissive.setHex(0x86A881);
+              child.material.emissiveIntensity = 0.8;
+            } else {
+              child.material.emissive.setHex(child.userData.__origEmissive !== undefined ? child.userData.__origEmissive : 0x000000);
+              child.material.emissiveIntensity = child.userData.__origEmissiveIntensity !== undefined ? child.userData.__origEmissiveIntensity : 0.0;
+            }
+          }
+        });
       }
       hoveredObject = null;
     }
@@ -1678,11 +1808,23 @@
           padMesh = new THREE.Mesh(geo, padMat.clone());
         }
         padMesh.position.set(px, py, pz);
+
+        const parentComp = Object.values(componentsMap).find(c => c.id === pad.pcb_component_id || c.pcbComponentId === pad.pcb_component_id);
+        const pinHint = pad.port_hints?.[0] || '';
+        const pinInfo = parentComp?.pins?.find(p => p.pin === String(pinHint) || (pad.port_hints && pad.port_hints.includes(p.pin)));
+        const padNet = pad.net || pinInfo?.net || pad.subcircuit_id || '';
+        const padName = parentComp ? `${parentComp.name}.${pinHint || 'PAD'}` : (pinHint ? `PAD ${pinHint}` : 'PAD');
+
         padMesh.userData = {
           type: 'smtpad',
-          name: pad.port_hints?.[0] ? `PAD ${pad.port_hints[0]}` : 'PAD',
+          name: padName,
+          part: parentComp?.mpn || parentComp?.ftype || 'PAD',
+          mpn: parentComp?.mpn || '',
           pos: `(${px.toFixed(2)}, ${pz.toFixed(2)}) mm`,
-          layer: pad.layer || 'top'
+          layer: pad.layer || 'top',
+          pins: parentComp?.pins?.length || 1,
+          extra: padNet ? `NET: ${padNet}` : (parentComp ? `${parentComp.name}` : ''),
+          net: padNet
         };
         boardGroup.add(padMesh);
       });
@@ -1700,19 +1842,31 @@
         const outerR = ((via.outer_diameter || 0.6) / 2);
         const holeR = ((via.hole_diameter || 0.3) / 2);
 
+        const connectedTrace = elements.find(e => e.type === 'pcb_trace' && (e.route || []).some(pt => Math.hypot(pt.x - vx, pt.y - vz) < 0.2));
+        const viaNet = via.connection_name || via.net || connectedTrace?.connection_name || '';
+
+        const viaUserData = {
+          type: via.type === 'pcb_via' ? 'via' : 'plated_hole',
+          name: via.name || (via.type === 'pcb_via' ? (viaNet ? `VIA [${viaNet}]` : 'VIA') : (viaNet ? `HOLE [${viaNet}]` : 'PLATED HOLE')),
+          part: via.type === 'pcb_via' ? `VIA dia=${via.outer_diameter || 0.6}mm` : `HOLE dia=${via.hole_diameter || 0.3}mm`,
+          mpn: '',
+          pos: `(${vx.toFixed(2)}, ${vz.toFixed(2)}) mm`,
+          layer: via.layers?.join('/') || 'through',
+          pins: 1,
+          extra: viaNet ? `NET: ${viaNet}` : 'THROUGH-HOLE',
+          net: viaNet
+        };
+
         const viaGeo = new THREE.CylinderGeometry(outerR, outerR, substrateThickness + 0.06, 24);
         const viaMesh = new THREE.Mesh(viaGeo, viaMat.clone());
         viaMesh.position.set(vx, 0, vz);
-        viaMesh.userData = {
-          type: 'via',
-          name: via.type === 'pcb_via' ? 'VIA' : 'PLATED HOLE',
-          pos: `(${vx.toFixed(2)}, ${vz.toFixed(2)}) mm`
-        };
+        viaMesh.userData = viaUserData;
         boardGroup.add(viaMesh);
 
         const holeGeo = new THREE.CylinderGeometry(holeR, holeR, substrateThickness + 0.08, 16);
         const holeMesh = new THREE.Mesh(holeGeo, holeMat);
         holeMesh.position.set(vx, 0, vz);
+        holeMesh.userData = viaUserData;
         boardGroup.add(holeMesh);
       });
 
@@ -1743,11 +1897,23 @@
           geo.rotateX(-Math.PI / 2);
           geo.rotateY(-angle);
 
+          const midX = (p1.x + p2.x) / 2;
+          const midZ = (p1.y + p2.y) / 2;
+          const traceLayer = isBottom ? 'bottom' : 'top';
+          const traceNet = trace.connection_name || 'SIGNAL';
+
           const mesh = new THREE.Mesh(geo, traceMat);
-          mesh.position.set((p1.x + p2.x) / 2, py, (p1.y + p2.y) / 2);
+          mesh.position.set(midX, py, midZ);
           mesh.userData = {
             type: 'trace',
-            net: trace.connection_name || 'SIGNAL'
+            name: `TRACE [${traceNet}]`,
+            part: `WIDTH ${w.toFixed(2)}mm`,
+            mpn: '',
+            pos: `(${midX.toFixed(2)}, ${midZ.toFixed(2)}) mm`,
+            layer: traceLayer,
+            pins: 0,
+            extra: `LEN ${len.toFixed(2)}mm`,
+            net: traceNet
           };
           boardGroup.add(mesh);
         }
@@ -1797,10 +1963,14 @@
           type: 'component',
           name: compName,
           part: compData.mpn || compData.ftype || 'IC',
+          mpn: compData.mpn || '',
           pos: `(${cx.toFixed(2)}, ${cz.toFixed(2)}) mm`,
           layer: comp.layer || 'top',
-          extra: `${pinsCount} pins`
+          pins: pinsCount,
+          extra: `${pinsCount} pins`,
+          net: compData.pins?.[0]?.net || ''
         };
+        compGroup.userData = userData;
 
         if (ftype.includes('resistor') || nameUpper.startsWith('R')) {
           const thick = 0.55;
@@ -1942,6 +2112,7 @@
           const dotMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
           const dotMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.05, 12), dotMat);
           dotMesh.position.set(-cw / 2 + 0.6, thick / 2 + 0.03, -ch / 2 + 0.6);
+          dotMesh.userData = userData;
           compGroup.add(dotMesh);
 
           const totalPins = pinsCount || (cw > 8 ? 16 : 8);
@@ -1971,6 +2142,7 @@
         const sprite = makeTextSprite(compName);
         const spriteY = isBottom ? -(substrateThickness / 2 + 1.8) : (substrateThickness / 2 + 1.8);
         sprite.position.set(cx, spriteY, cz);
+        sprite.userData = userData;
         boardGroup.add(sprite);
       });
     }
@@ -2020,6 +2192,13 @@
         }
       }
     });
+
+    setTimeout(() => {
+      if (!window.Tscircuit) {
+        tscircuitFallback = true;
+        renderCurrentView();
+      }
+    }, 2000);
 
     function fetchInitialData() {
       fetch('/api/circuit')
