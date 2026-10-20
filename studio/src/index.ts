@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createRoot, Root } from "react-dom/client";
+import * as THREE from "three";
+import { OrbitControls } from "three-stdlib";
 import {
   convertCircuitJsonToSchematicSvg,
   convertCircuitJsonToPcbSvg,
@@ -14,9 +16,13 @@ import pixelarticons from "@iconify-json/pixelarticons/icons.json";
 
 addCollection(pixelarticons as any);
 
+if (typeof window !== "undefined") {
+  (window as any).THREE = Object.assign({}, THREE, { OrbitControls });
+}
+
 export const FUSIBLE_SCHEMATIC_PALETTE = {
   background: "#000000",
-  component_body: "#1E1E1E",
+  component_body: "#1F1F1F",
   component_outline: "#86A881",
   wire: "#38bdf8",
   wire_crossing: "#7dd3fc",
@@ -29,11 +35,11 @@ export const FUSIBLE_SCHEMATIC_PALETTE = {
   label_local: "#FFFFFF",
   label_global: "#f59e0b",
   label_hier: "#c87d32",
-  label_background: "#1E1E1E",
+  label_background: "#1F1F1F",
   net_name: "#94a3b8",
   bus: "#818cf8",
   bus_junction: "#818cf8",
-  grid: "#1E1E1E",
+  grid: "#1F1F1F",
   grid_axes: "#353535",
   fields: "#cbd5e1",
   note: "#93c5fd",

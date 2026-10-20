@@ -6,8 +6,6 @@
   <title>Fusible Studio</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24'%3E%3Cpath fill='%2386A881' d='M5 3h14v2H5zm0 16h14v2H5zM3 5h2v14H3zm16 0h2v14h-2zM7 7h10v2H7zm0 8h10v2H7zm0-6h2v6H7zm8 0h2v6h-2zm-4-8h2v2h-2zm0 20h2v2h-2zM1 11h2v2H1zm20 0h2v2h-2zm0-4h2v2h-2zm0 8h2v2h-2zM1 15h2v2H1zm0-8h2v2H1zm6-6h2v2H7zm8 0h2v2h-2zm0 20h2v2h-2zm-8 0h2v2H7z'/%3E%3C/svg%3E">
   <script type="module" src="/studio.bundle.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <style>
     .tscircuit-schematic {
       background-color: #0d1117 !important;
@@ -52,8 +50,8 @@
     }
     :root {
       --bg: #000000;
-      --surface: #1E1E1E;
-      --surface-hover: #2A2A2A;
+      --surface: #1F1F1F;
+      --surface-hover: #2B2B2B;
       --border: #353535;
       --border-subtle: #222222;
       --green: #86A881;
@@ -78,19 +76,19 @@
       user-select: none;
     }
     header {
-      height: 52px;
+      height: 56px;
       background: var(--surface);
       border-bottom: none;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 16px;
+      padding: 0 24px;
       z-index: 20;
     }
     .brand {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 16px;
     }
     .brand-title {
       font-size: 14px;
@@ -137,12 +135,13 @@
       display: flex;
       background: var(--bg);
       border: none;
+      gap: 4px;
     }
     .tab-btn {
       background: transparent;
       border: none;
       color: var(--text-subtle);
-      padding: 6px 14px;
+      padding: 8px 16px;
       font-family: 'Undefined', monospace;
       font-size: 11px;
       letter-spacing: 0.05em;
@@ -164,14 +163,14 @@
     .controls {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
     }
     .btn {
       background: var(--surface);
       border: none;
       color: var(--text-body);
       font-family: 'Undefined', monospace;
-      padding: 6px 12px;
+      padding: 7px 14px;
       font-size: 11px;
       letter-spacing: 0.05em;
       cursor: pointer;
@@ -182,8 +181,6 @@
     .btn:hover {
       background: var(--surface-hover);
       color: var(--text);
-    }
-      border-color: var(--olive);
     }
     main {
       flex: 1;
@@ -280,7 +277,7 @@
     }
     .sidebar-section {
       padding: 12px 16px;
-      border-bottom: 1px solid var(--border);
+      border-bottom: none;
     }
     .section-title {
       font-size: 11px;
@@ -305,7 +302,7 @@
     .layer-color-dot {
       width: 8px;
       height: 8px;
-      border: 1px solid rgba(255,255,255,0.2);
+      border: none;
     }
     .toggle-checkbox {
       accent-color: var(--green);
@@ -320,7 +317,7 @@
       align-items: baseline;
       margin-bottom: 12px;
       padding-bottom: 8px;
-      border-bottom: 1px solid var(--border);
+      border-bottom: none;
     }
     .inspector-name {
       font-size: 14px;
@@ -338,7 +335,7 @@
       justify-content: space-between;
       padding: 4px 0;
       font-size: 11px;
-      border-bottom: 1px solid rgba(53, 53, 53, 0.3);
+      border-bottom: none;
     }
     .prop-key {
       color: var(--text-subtle);
@@ -362,12 +359,11 @@
       padding: 3px 6px;
       font-size: 10px;
       background: var(--surface-hover);
-      border: 1px solid var(--border-subtle);
+      border: none;
       margin-bottom: 3px;
       cursor: pointer;
     }
     .pin-item:hover {
-      border-color: var(--blue);
       color: var(--blue);
     }
     .pin-net {
@@ -378,7 +374,7 @@
       justify-content: space-between;
       align-items: center;
       padding: 8px 16px;
-      border-bottom: 1px solid var(--border-subtle);
+      border-bottom: none;
       font-size: 11px;
       cursor: pointer;
       transition: background 0.1s;
@@ -389,7 +385,7 @@
     }
     .comp-item.selected {
       background: rgba(134, 168, 129, 0.12);
-      border-left: 3px solid var(--green);
+      border-left: none;
     }
     .comp-sub {
       color: var(--text-subtle);
@@ -400,7 +396,7 @@
       justify-content: space-between;
       align-items: center;
       padding: 8px 16px;
-      border-bottom: 1px solid var(--border-subtle);
+      border-bottom: none;
       font-size: 11px;
       cursor: pointer;
       color: var(--text-body);
@@ -411,11 +407,11 @@
     }
     .net-item.selected {
       background: rgba(56, 189, 248, 0.12);
-      border-left: 3px solid var(--blue);
+      border-left: none;
     }
     .diag-card {
       background: rgba(244, 63, 94, 0.06);
-      border: 1px solid rgba(244, 63, 94, 0.3);
+      border: none;
       padding: 10px;
       margin: 12px 16px;
       font-size: 11px;
@@ -453,8 +449,8 @@
       position: absolute;
       bottom: 16px;
       left: 16px;
-      background: rgba(30, 30, 30, 0.95);
-      border: 1px solid var(--border);
+      background: rgba(31, 31, 31, 0.95);
+      border: none;
       padding: 6px 12px;
       font-size: 11px;
       color: var(--text-subtle);
@@ -473,8 +469,8 @@
       position: fixed;
       z-index: 1000;
       pointer-events: none;
-      background: rgba(30, 30, 30, 0.95);
-      border: 1px solid var(--border);
+      background: rgba(31, 31, 31, 0.95);
+      border: none;
       padding: 8px 12px;
       font-size: 11px;
       line-height: 1.4;
@@ -527,9 +523,9 @@
     div[aria-label*="Visibility"],
     .sv-sheet-item,
     [data-radix-popper-content-wrapper] > div {
-      background: rgba(30, 30, 30, 0.96) !important;
+      background: rgba(31, 31, 31, 0.96) !important;
       color: var(--text) !important;
-      border: 1px solid var(--border) !important;
+      border: none !important;
       border-radius: 2px !important;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8) !important;
       font-family: 'Undefined', monospace !important;
@@ -563,9 +559,9 @@
     #schematic-container div[style*="rgba(255, 255, 255"],
     #schematic-container div[style*="background-color: rgba(255, 255, 255"],
     #schematic-container div[style*="backgroundColor: rgba(255, 255, 255"] {
-      background-color: rgba(30, 30, 30, 0.96) !important;
+      background-color: rgba(31, 31, 31, 0.96) !important;
       color: var(--text) !important;
-      border: 1px solid var(--border) !important;
+      border: none !important;
       border-radius: 2px !important;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8) !important;
       font-family: 'Undefined', monospace !important;
@@ -589,9 +585,9 @@
     #three-cad div[style*="background-color: rgb(255, 255, 255)"],
     #three-cad div[style*="background: white"],
     #three-cad div[style*="background:white"] {
-      background-color: rgba(30, 30, 30, 0.95) !important;
+      background-color: rgba(31, 31, 31, 0.95) !important;
       color: var(--text) !important;
-      border: 1px solid var(--border) !important;
+      border: none !important;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7) !important;
       font-family: 'Undefined', monospace !important;
       font-size: 11px !important;
@@ -649,7 +645,7 @@
       </div>
       <div class="hud-toast">
         <div class="status-dot" id="live-dot"></div>
-        <span id="live-status"><iconify-icon icon="pixelarticons:radio-signal"></iconify-icon> [LIVE] SSE CONNECTED</span>
+        <span id="live-status">SSE CONNECTED</span>
       </div>
       <div id="hover-tooltip" class="hover-tooltip"></div>
     </div>
@@ -1445,7 +1441,7 @@
       camera.add(headlight);
       scene.add(camera);
 
-      const grid = new THREE.GridHelper(200, 40, 0x353535, 0x1E1E1E);
+      const grid = new THREE.GridHelper(200, 40, 0x353535, 0x1F1F1F);
       grid.position.y = -1.0;
       scene.add(grid);
 
@@ -2042,7 +2038,7 @@
 
       eventSource.onopen = () => {
         liveDot.style.background = 'var(--green)';
-        liveStatus.innerHTML = '<iconify-icon icon="pixelarticons:radio-signal"></iconify-icon> [LIVE] SSE CONNECTED';
+        liveStatus.textContent = 'SSE CONNECTED';
       };
 
       eventSource.onmessage = (event) => {
@@ -2056,7 +2052,7 @@
 
       eventSource.onerror = () => {
         liveDot.style.background = 'var(--alert)';
-        liveStatus.innerHTML = '<iconify-icon icon="pixelarticons:alert"></iconify-icon> [WAIT] RECONNECTING...';
+        liveStatus.textContent = 'RECONNECTING...';
       };
     }
 

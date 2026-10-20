@@ -5,6 +5,17 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.8.10] - 2026-10-20
+
+### Fixed
+
+- Fixed Dev Studio layout collapse caused by malformed button hover CSS rule that broke main flex container.
+- Eliminated multiple Three.js import warnings by bundling Three.js and OrbitControls within the studio module and dropping duplicate CDN scripts.
+- Removed borders around cards, content, popovers, and SSE connection status badge.
+- Updated gray palette surface color from `#1E1E1E` to `#1F1F1F`.
+- Added more padding to the top navigation header and tab controls.
+- Simplified SSE status text to "SSE CONNECTED".
+
 ## [0.8.9] - 2026-10-20
 
 ### Changed
