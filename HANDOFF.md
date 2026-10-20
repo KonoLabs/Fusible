@@ -1,7 +1,7 @@
 # HANDOFF.md — Fusible & FieldCam
 
 **Session Timestamp**: 2026-10-20
-**Current Release**: `fusible v0.3.1` (Live on [crates.io/crates/fusible](https://crates.io/crates/fusible))
+**Current Release**: `fusible v0.4.0` (Live on [crates.io/crates/fusible](https://crates.io/crates/fusible))
 **Repositories**:
 - `Fusible`: `https://github.com/KonoLabs/Fusible` (Branch: `main`, clean, up-to-date)
 - `FieldCam`: `https://github.com/KonoLabs/FieldCam` (Branch: `main`, clean, up-to-date)

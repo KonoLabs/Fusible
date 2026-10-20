@@ -7,6 +7,7 @@ use thiserror::Error;
 
 use crate::commands::check::{self, CheckError};
 use crate::commands::target::resolve_entry;
+use crate::config::FusibleConfig;
 use crate::tscircuit::{Runner, RunnerError};
 
 /// Unified error enum for the export pipeline.
@@ -19,6 +20,10 @@ pub enum ExportError {
     #[error(transparent)]
     #[diagnostic(transparent)]
     Runner(#[from] RunnerError),
+
+    #[error("failed to export manufacturing files: {0}")]
+    #[diagnostic(code(fusible::export::io_error))]
+    Io(#[from] std::io::Error),
 
     #[error("unknown export preset \"{preset}\"")]
     #[diagnostic(
@@ -54,12 +59,40 @@ pub fn run(
     }
 
     let runner = Runner::detect()?;
+    let board_title = resolve_board_title();
 
     if let Some(preset_name) = preset {
-        run_preset(&runner, &entry, preset_name, output.as_deref())
+        let circuit_json = if preset_name == "fab" || preset_name == "all" {
+            load_or_build_circuit_json(&entry, &runner)?
+        } else {
+            String::new()
+        };
+        run_preset(
+            &runner,
+            &entry,
+            &circuit_json,
+            &board_title,
+            preset_name,
+            output.as_deref(),
+        )
+    } else if format == "gerbers" || format == "gerber" {
+        let circuit_json = load_or_build_circuit_json(&entry, &runner)?;
+        let dest = output.unwrap_or_else(|| PathBuf::from("dist/gerbers.zip"));
+        if let Some(parent) = dest.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        println!(
+            "📦 Generating native RS-274X gerbers to {}...",
+            dest.display()
+        );
+        let files = crate::gerber::generate_gerber_files(&circuit_json, &board_title);
+        let zip_bytes = crate::gerber::create_gerber_zip(&files)?;
+        std::fs::write(&dest, zip_bytes)?;
+        println!("✅ Successfully exported gerbers to {}!", dest.display());
+        Ok(())
     } else if format == "kicad_project" || format == "kicad" {
         let dest = output.unwrap_or_else(|| PathBuf::from("dist/cad/kicad"));
-        std::fs::create_dir_all(&dest).ok();
+        std::fs::create_dir_all(&dest)?;
         let tmp_zip = dest.join(".kicad_export.zip");
         println!("📦 Exporting KiCad project to {}...", dest.display());
         runner.export(&entry, "kicad_zip", Some(&tmp_zip))?;
@@ -82,6 +115,39 @@ pub fn run(
     }
 }
 
+fn resolve_board_title() -> String {
+    FusibleConfig::find_and_load(Path::new("."))
+        .ok()
+        .flatten()
+        .and_then(|(_, cfg)| cfg.name)
+        .unwrap_or_else(|| "Hardware Board".to_string())
+}
+
+fn load_or_build_circuit_json(entry: &Path, runner: &Runner) -> Result<String, ExportError> {
+    if entry.extension().and_then(|e| e.to_str()) == Some("json") {
+        std::fs::read_to_string(entry).map_err(|e| {
+            CheckError::Read(check::ReadError {
+                path: entry.display().to_string(),
+                source: e,
+            })
+            .into()
+        })
+    } else {
+        println!(
+            "⚙️  Evaluating \"{}\" for native export...",
+            entry.display()
+        );
+        let json_path = runner.build(entry, None)?;
+        std::fs::read_to_string(&json_path).map_err(|e| {
+            CheckError::Read(check::ReadError {
+                path: json_path.display().to_string(),
+                source: e,
+            })
+            .into()
+        })
+    }
+}
+
 fn extract_zip_archive(zip_path: &Path, target_dir: &Path) {
     let mut cmd = std::process::Command::new("unzip");
     cmd.args(["-o", "-q"])
@@ -91,20 +157,22 @@ fn extract_zip_archive(zip_path: &Path, target_dir: &Path) {
     let _ = cmd.status();
 }
 
-fn export_fab(runner: &Runner, entry: &Path, out: Option<&Path>) -> Result<(), ExportError> {
+fn export_fab(
+    _runner: &Runner,
+    _entry: &Path,
+    circuit_json: &str,
+    board_title: &str,
+    out: Option<&Path>,
+) -> Result<(), ExportError> {
     let base = out
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("dist/fab"));
-    std::fs::create_dir_all(&base).ok();
+    std::fs::create_dir_all(&base)?;
     println!("📦 Running fabrication export preset (fab)...");
-    let gerbers = base.join("gerbers.zip");
-    println!("  • Exporting gerbers -> {}", gerbers.display());
-    runner.export(entry, "gerbers", Some(&gerbers))?;
-    let json = base.join("circuit.json");
-    println!("  • Exporting circuit-json -> {}", json.display());
-    runner.export(entry, "circuit-json", Some(&json))?;
+    println!("  • Exporting RS-274X gerbers & drill files via native Rust engine...");
+    crate::gerber::export_fab_bundle(circuit_json, board_title, &base)?;
     println!(
-        "✅ Fabrication artifacts generated in \"{}\"",
+        "✅ Fabrication artifacts generated in \"{}\" (gerbers.zip, circuit.json)",
         base.display()
     );
     Ok(())
@@ -169,16 +237,18 @@ fn validate_preset(preset: &str) -> Result<(), ExportError> {
 fn run_preset(
     runner: &Runner,
     entry: &Path,
+    circuit_json: &str,
+    board_title: &str,
     preset: &str,
     custom_output: Option<&Path>,
 ) -> Result<(), ExportError> {
     validate_preset(preset)?;
     match preset {
-        "fab" => export_fab(runner, entry, custom_output),
+        "fab" => export_fab(runner, entry, circuit_json, board_title, custom_output),
         "cad" => export_cad(runner, entry, custom_output),
         "docs" => export_docs(runner, entry, custom_output),
         "all" => {
-            export_fab(runner, entry, custom_output)?;
+            export_fab(runner, entry, circuit_json, board_title, custom_output)?;
             println!();
             export_cad(runner, entry, custom_output)?;
             println!();

@@ -9,6 +9,7 @@ pub mod cli;
 pub mod codegen;
 pub mod commands;
 pub mod config;
+pub mod gerber;
 pub mod linter;
 pub mod netlist;
 pub mod parser;

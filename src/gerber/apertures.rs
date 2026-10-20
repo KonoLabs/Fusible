@@ -1,0 +1,71 @@
+//! Aperture definitions and deduplication dictionary for Gerber RS-274X.
+
+use std::collections::HashMap;
+use std::fmt::Write as FmtWrite;
+
+/// Aperture geometry types supported in RS-274X standard template definitions.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Aperture {
+    Circle { diameter_nm: i64 },
+    Rectangle { width_nm: i64, height_nm: i64 },
+    Obround { width_nm: i64, height_nm: i64 },
+}
+
+/// An aperture dictionary that allocates contiguous D-codes starting at D10.
+#[derive(Debug, Default)]
+pub struct ApertureDictionary {
+    map: HashMap<Aperture, u32>,
+    ordered: Vec<(u32, Aperture)>,
+    next_id: u32,
+}
+
+impl ApertureDictionary {
+    /// Creates a new empty dictionary starting at D-code 10.
+    pub fn new() -> Self {
+        Self {
+            map: HashMap::new(),
+            ordered: Vec::new(),
+            next_id: 10,
+        }
+    }
+
+    /// Interns an aperture and returns its unique D-code.
+    pub fn intern(&mut self, aperture: Aperture) -> u32 {
+        if let Some(&id) = self.map.get(&aperture) {
+            return id;
+        }
+        let id = self.next_id;
+        self.next_id += 1;
+        self.map.insert(aperture.clone(), id);
+        self.ordered.push((id, aperture));
+        id
+    }
+
+    /// Emits all aperture definition commands (%ADD...*%).
+    pub fn write_definitions(&self, out: &mut String) {
+        for (id, ap) in &self.ordered {
+            match ap {
+                Aperture::Circle { diameter_nm } => {
+                    let d = *diameter_nm as f64 / 1_000_000.0;
+                    let _ = writeln!(out, "%ADD{id}C,{:.6}*%", d);
+                }
+                Aperture::Rectangle {
+                    width_nm,
+                    height_nm,
+                } => {
+                    let w = *width_nm as f64 / 1_000_000.0;
+                    let h = *height_nm as f64 / 1_000_000.0;
+                    let _ = writeln!(out, "%ADD{id}R,{:.6}X{:.6}*%", w, h);
+                }
+                Aperture::Obround {
+                    width_nm,
+                    height_nm,
+                } => {
+                    let w = *width_nm as f64 / 1_000_000.0;
+                    let h = *height_nm as f64 / 1_000_000.0;
+                    let _ = writeln!(out, "%ADD{id}O,{:.6}X{:.6}*%", w, h);
+                }
+            }
+        }
+    }
+}

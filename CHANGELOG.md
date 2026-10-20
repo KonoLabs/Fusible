@@ -5,6 +5,19 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.4.0] - 2026-10-20
+
+### Added
+
+- Native pure-Rust RS-274X Extended Gerber & Excellon NC drill generator (`src/gerber/`):
+  - `ApertureDictionary`: Allocates and deduplicates circular (`C`), rectangular (`R`), and obround (`O`) apertures with zero waste.
+  - `GerberWriter`: Serializes standards-compliant RS-274X command streams (`%FSLAX46Y46*%`, `%MOMM*%`, `%LPD*%`) using 64-bit nanometer fixed-point arithmetic (`Coord`), eliminating float rounding drift.
+  - `ExcellonWriter`: Formats multi-tool plated (PTH) and non-plated (NPTH) drill files (`drill_pth.drl`).
+  - Layer engine: Maps `pcb_board` (`Edge_Cuts.gbr`), `pcb_smtpad`, `pcb_trace`, `pcb_plated_hole`, `pcb_via`, and `pcb_silkscreen_path` into `F_Cu.gbr`, `B_Cu.gbr`, `F_Mask.gbr`, `B_Mask.gbr`, `F_Paste.gbr`, `B_Paste.gbr`, `F_Silk.gbr`, and `B_Silk.gbr`.
+  - Automatic zip packaging (`dist/fab/gerbers.zip`) via pure-Rust `zip` crate in `<5ms` with zero npm/runner execution.
+  - Integrated into `fusible export --preset fab` and `fusible export -f gerbers`.
+- Added automated crates.io release job in GitHub Actions release workflow.
+
 ## [0.3.1] - 2026-10-20
 
 ### Added
