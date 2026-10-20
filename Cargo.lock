@@ -278,7 +278,7 @@ dependencies = [
 
 [[package]]
 name = "fusible"
-version = "0.8.12"
+version = "0.8.13"
 dependencies = [
  "clap",
  "miette",

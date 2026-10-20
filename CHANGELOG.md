@@ -5,6 +5,12 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.8.13] - 2026-10-20
+
+### Fixed
+
+- Formatted pin multiplexing linter rule to satisfy rustfmt check in CI.
+
 ## [0.8.12] - 2026-10-20
 
 ### Fixed
