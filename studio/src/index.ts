@@ -70,8 +70,24 @@ export const FUSIBLE_SCHEMATIC_PALETTE = {
   erc_warning: "#f59e0b",
 };
 
+export function normalizeCircuitJsonForSchematic(circuitJson: any) {
+  if (!Array.isArray(circuitJson)) return circuitJson || [];
+  const sheets = circuitJson.filter((e: any) => e?.type === "schematic_sheet");
+  if (!sheets.length) return circuitJson;
+
+  const components = circuitJson.filter((e: any) => e?.type === "schematic_component");
+  const componentsWithSheet = components.filter((e: any) => !!e.schematic_sheet_id);
+
+  if (components.length > 0 && componentsWithSheet.length === 0) {
+    return circuitJson.filter((e: any) => e?.type !== "schematic_sheet");
+  }
+
+  return circuitJson;
+}
+
 export function renderFusibleSchematicSvg(circuitJson: any, options: any = {}) {
-  return convertCircuitJsonToSchematicSvg(circuitJson, {
+  const normalized = normalizeCircuitJsonForSchematic(circuitJson);
+  return convertCircuitJsonToSchematicSvg(normalized, {
     ...options,
     colorOverrides: {
       schematic: FUSIBLE_SCHEMATIC_PALETTE,
@@ -522,6 +538,10 @@ function ResponsiveSchematicViewer({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+  const normalizedCircuit = React.useMemo(
+    () => normalizeCircuitJsonForSchematic(circuitJson),
+    [circuitJson]
+  );
 
   useEffect(() => {
     const parent = containerRef.current?.parentElement || containerRef.current;
@@ -551,7 +571,7 @@ function ResponsiveSchematicViewer({
     },
     React.createElement(SchematicViewer, {
       key: `${dimensions.width}x${dimensions.height}`,
-      circuitJson: circuitJson || [],
+      circuitJson: normalizedCircuit || [],
       containerStyle: { width: "100%", height: "100%", backgroundColor: "#000000" },
       colorOverrides: {
         schematic: FUSIBLE_SCHEMATIC_PALETTE,
@@ -559,13 +579,13 @@ function ResponsiveSchematicViewer({
       onSchematicComponentClicked: (event: any) => {
         const id = event?.schematicComponentId || event?.refdes;
         if (id && onSelectComponent) {
-          onSelectComponent(resolveComponentRefdes(circuitJson || [], id));
+          onSelectComponent(resolveComponentRefdes(normalizedCircuit || [], id));
         }
       },
       onViewPcbComponent: (event: any) => {
         const refdes = event?.refdes;
         if (refdes && onSelectComponent) {
-          onSelectComponent(resolveComponentRefdes(circuitJson || [], refdes));
+          onSelectComponent(resolveComponentRefdes(normalizedCircuit || [], refdes));
         }
       },
     })

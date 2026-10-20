@@ -5,6 +5,12 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.8.14] - 2026-10-20
+
+### Fixed
+
+- Normalized circuit JSON in Dev Studio schematic viewer to prevent empty canvas borders when circuits contain unpopulated or self-closing schematic sheets.
+
 ## [0.8.13] - 2026-10-20
 
 ### Fixed
