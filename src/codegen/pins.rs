@@ -337,10 +337,21 @@ pub fn generate_pins_rs(mcu: &McuInfo, board_name: &str) -> String {
     // Module with all individual GPIO constants
     buf.push_str("/// Hardware GPIO pin constants extracted from the circuit netlist.\n");
     buf.push_str("pub mod gpio {\n");
+    let target = crate::silicon::find_target(&mcu.chip);
     for pin in &mcu.pins {
+        let af_doc = target
+            .and_then(|t| {
+                let spec = t.find_pin(&pin.pin_label)?;
+                let sig = crate::silicon::PeripheralSignal::parse(&pin.signal_name)
+                    .or_else(|| crate::silicon::PeripheralSignal::parse(&pin.net_name))?;
+                let af = spec.get_af(&sig)?;
+                Some(format!(" [{}: AF{}]", af.af_name, af.af_number))
+            })
+            .unwrap_or_default();
+
         buf.push_str(&format!(
-            "    /// Pin {} (hardware net `{}`).\n",
-            pin.pin_number, pin.net_name
+            "    /// Pin {} (hardware net `{}`){}.\n",
+            pin.pin_number, pin.net_name, af_doc
         ));
         buf.push_str(&format!(
             "    pub const {}: u8 = {};\n",

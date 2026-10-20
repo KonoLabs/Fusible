@@ -1,8 +1,6 @@
 //! `unconnected_net`: a net must not be left floating.
 
-use crate::linter::{Diagnostic, Rule};
-use crate::netlist::Netlist;
-use crate::parser::Circuit;
+use crate::linter::{Diagnostic, LintContext, Rule};
 
 /// Minimum number of endpoints for a net to count as connected.
 const MIN_CONNECTIONS: usize = 2;
@@ -17,10 +15,8 @@ impl Rule for UnconnectedNetRule {
         "unconnected_net"
     }
 
-    fn check(&self, circuit: &Circuit) -> Vec<Diagnostic> {
-        let netlist = Netlist::from_circuit(circuit);
-
-        netlist
+    fn check(&self, ctx: &LintContext<'_>) -> Vec<Diagnostic> {
+        ctx.netlist
             .floating_nets()
             .filter(|net| net.is_defined)
             .map(|net| Diagnostic {

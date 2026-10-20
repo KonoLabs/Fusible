@@ -5,6 +5,24 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.5.0] - 2026-10-20
+
+### Added
+
+- Native Silicon Pin-Muxing & Alternate Function (AF) validation engine (`src/silicon/`):
+  - Built-in zero-allocation silicon database for **STM32** (AF0–AF15 multiplexer), **RP2040** (GPIO0–GPIO29 function select F1–F9), and **ESP32-S3** (boot strapping pins `GPIO0`/`GPIO45`/`GPIO46` and reserved SPI/Octal Flash/PSRAM pins `GPIO26..37`).
+  - New electrical rule `PinMuxRule` (`src/linter/rules/pin_mux.rs`): detects unsupported alternate functions, pin assignment collisions, strapping load conflicts, and reserved pin accesses.
+  - Fail-closed fuse contract enforcement: blows the fuse (`exit 1`) with miette diagnostics and generates helpful alternative pin recommendations (e.g. suggesting valid alternate pins when an AF mismatch occurs).
+  - Silicon-driven firmware codegen (`src/codegen/pins.rs`): automatically annotates generated `pins.rs` constants with verified Alternate Function mappings (`[AF7: AF7]`, `[F1: AF1]`).
+  - Added integration test `subcommand_check_blows_fuse_on_silicon_pin_mux_conflict` and reference broken example `examples/circuit-pinmux-violation.json`.
+
+### Changed
+
+- Re-architected linter pipeline with `LintContext`: computes lowered bipartite `Netlist` once per run, eliminating 3–4 redundant graph constructions across rules and firmware codegen.
+- Modularized KiCad project converter out of `commands::check` into dedicated `src/tscircuit/kicad.rs` module.
+- Replaced external system `unzip` invocation with pure-Rust `zip::ZipArchive` extraction in `commands::export`.
+- Optimized trace indexing in `src/netlist/builder.rs` with pre-indexed $O(1)$ port lookups, eliminating nested linear scans and drastically reducing cognitive complexity.
+
 ## [0.4.0] - 2026-10-20
 
 ### Added

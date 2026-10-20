@@ -135,3 +135,87 @@ fn referenced_but_undefined_nets_are_reported_once() {
     assert!(v[0].message.contains("missing"));
     assert!(v[0].message.contains("4 connection(s)"));
 }
+
+#[test]
+fn pin_mux_rule_detects_invalid_alternate_function() {
+    use super::PinMuxRule;
+    use crate::parser::Component;
+
+    let chip = CircuitElement::Component(Component {
+        component_id: Some("U1".to_string()),
+        name: Some("STM32G431".to_string()),
+        kind: Some("chip".to_string()),
+    });
+    let port_pa5 = CircuitElement::Port(Port {
+        port_id: Some("U1.PA5".to_string()),
+        source_component_id: Some("U1".to_string()),
+        name: Some("PA5".to_string()),
+        net_id: Some("net_tx".to_string()),
+        ..Default::default()
+    });
+    let net_tx = net(Some("net_tx"), "UART1_TX");
+    let remote_port = CircuitElement::Port(Port {
+        port_id: Some("J1.1".to_string()),
+        source_component_id: Some("J1".to_string()),
+        name: Some("RX".to_string()),
+        net_id: Some("net_tx".to_string()),
+        ..Default::default()
+    });
+
+    let v = rule_violations(PinMuxRule, vec![chip, port_pa5, net_tx, remote_port]);
+
+    assert_eq!(v.len(), 1);
+    assert_eq!(v[0].rule, "pin_mux");
+    assert!(v[0].message.contains("PA5"));
+    assert!(v[0].message.contains("UART1_TX"));
+    assert!(v[0].help.as_ref().unwrap().contains("PA9"));
+}
+
+#[test]
+fn pin_mux_rule_detects_esp32_strapping_conflict() {
+    use super::PinMuxRule;
+    use crate::parser::Component;
+
+    let chip = CircuitElement::Component(Component {
+        component_id: Some("U1".to_string()),
+        name: Some("ESP32-S3".to_string()),
+        kind: Some("chip".to_string()),
+    });
+    let port_gpio0 = CircuitElement::Port(Port {
+        port_id: Some("U1.GPIO0".to_string()),
+        source_component_id: Some("U1".to_string()),
+        name: Some("GPIO0".to_string()),
+        net_id: Some("net_led".to_string()),
+        ..Default::default()
+    });
+    let net_led = net(Some("net_led"), "LED_STATUS");
+    let remote_port = CircuitElement::Port(Port {
+        port_id: Some("D1.K".to_string()),
+        source_component_id: Some("D1".to_string()),
+        name: Some("K".to_string()),
+        net_id: Some("net_led".to_string()),
+        ..Default::default()
+    });
+
+    let v = rule_violations(PinMuxRule, vec![chip, port_gpio0, net_led, remote_port]);
+
+    assert_eq!(v.len(), 1);
+    assert_eq!(v[0].rule, "pin_mux");
+    assert!(v[0].message.contains("GPIO0"));
+    assert!(v[0].message.contains("strapping pin"));
+}
+
+#[test]
+fn pin_mux_rule_on_example_file() {
+    let source = include_str!("../../../examples/circuit-pinmux-violation.json");
+    let circuit = crate::parser::parse(
+        source,
+        std::path::Path::new("examples/circuit-pinmux-violation.json"),
+    )
+    .unwrap();
+    let netlist = crate::netlist::Netlist::from_circuit(&circuit);
+    let ctx = crate::linter::LintContext::new(&circuit, &netlist).with_mcu(Some("stm32g431"));
+    let v = crate::linter::Linter::default().run_with_context(&ctx);
+    println!("Violations on example file: {:?}", v);
+    assert_eq!(v.len(), 1);
+}

@@ -12,14 +12,17 @@
 //!
 //! Diagnostics and their miette rendering live in the `diagnostics`
 //! submodule: only the engine stays here.
+mod context;
 mod diagnostics;
 mod rules;
 #[cfg(test)]
 mod tests;
 
+pub use context::LintContext;
 pub use diagnostics::{Diagnostic, FuseBlown};
-pub use rules::{GhostNetRule, MalformedElementRule, UnconnectedNetRule};
+pub use rules::{GhostNetRule, MalformedElementRule, PinMuxRule, UnconnectedNetRule};
 
+use crate::netlist::Netlist;
 use crate::parser::Circuit;
 
 // ---------------------------------------------------------------------------
@@ -31,8 +34,8 @@ pub trait Rule {
     /// Short rule name, reused as the diagnostic's error code.
     fn name(&self) -> &'static str;
 
-    /// Runs the rule against the AST. An empty vector = rule passed.
-    fn check(&self, circuit: &Circuit) -> Vec<Diagnostic>;
+    /// Runs the rule against the lint context. An empty vector = rule passed.
+    fn check(&self, ctx: &LintContext<'_>) -> Vec<Diagnostic>;
 }
 
 /// The fuse: runs every pass and aggregates their violations.
@@ -55,23 +58,25 @@ impl Linter {
     }
 
     /// Runs every pass in registration order and concatenates their
-    /// diagnostics.
+    /// diagnostics, automatically constructing the lowered netlist.
     pub fn run(&self, circuit: &Circuit) -> Vec<Diagnostic> {
-        self.rules
-            .iter()
-            .flat_map(|rule| rule.check(circuit))
-            .collect()
+        let netlist = Netlist::from_circuit(circuit);
+        let ctx = LintContext::new(circuit, &netlist);
+        self.run_with_context(&ctx)
+    }
+
+    /// Runs every pass against a pre-built lint context.
+    pub fn run_with_context(&self, ctx: &LintContext<'_>) -> Vec<Diagnostic> {
+        self.rules.iter().flat_map(|rule| rule.check(ctx)).collect()
     }
 }
 
 impl Default for Linter {
     fn default() -> Self {
-        // Phase 1: three rules proving the architecture. The rest of the
-        // electrical playbook (decoupling, pull-ups, voltage domains) joins
-        // here in phase 2.
         Self::new()
             .with_rule(UnconnectedNetRule)
             .with_rule(MalformedElementRule)
             .with_rule(GhostNetRule)
+            .with_rule(PinMuxRule)
     }
 }

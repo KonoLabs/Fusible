@@ -149,12 +149,13 @@ fn load_or_build_circuit_json(entry: &Path, runner: &Runner) -> Result<String, E
 }
 
 fn extract_zip_archive(zip_path: &Path, target_dir: &Path) {
-    let mut cmd = std::process::Command::new("unzip");
-    cmd.args(["-o", "-q"])
-        .arg(zip_path)
-        .arg("-d")
-        .arg(target_dir);
-    let _ = cmd.status();
+    let file = match std::fs::File::open(zip_path) {
+        Ok(f) => f,
+        Err(_) => return,
+    };
+    if let Ok(mut archive) = zip::ZipArchive::new(file) {
+        let _ = archive.extract(target_dir);
+    }
 }
 
 fn export_fab(

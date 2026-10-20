@@ -7,6 +7,7 @@
 pub mod command;
 pub mod detect;
 pub mod error;
+pub mod kicad;
 pub mod output;
 #[cfg(test)]
 mod tests;
@@ -19,6 +20,7 @@ pub use command::{
 };
 pub use detect::detect_runner;
 pub use error::RunnerError;
+pub use kicad::{convert_kicad, is_kicad_target};
 
 /// Represents the detected or configured tscircuit execution backend.
 #[derive(Debug, Clone, PartialEq, Eq)]

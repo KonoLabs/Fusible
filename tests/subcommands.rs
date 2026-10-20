@@ -55,6 +55,25 @@ fn subcommand_check_detects_blown_fuse() {
 }
 
 #[test]
+fn subcommand_check_blows_fuse_on_silicon_pin_mux_conflict() {
+    let out = fusible()
+        .args([
+            "check",
+            "examples/circuit-pinmux-violation.json",
+            "--mcu",
+            "stm32g431",
+        ])
+        .output()
+        .expect("binary should run");
+
+    assert_eq!(out.status.code(), Some(1));
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(stderr.contains("the fuse blew"));
+    assert!(stderr.contains("PA5"));
+    assert!(stderr.contains("UART1_TX"));
+}
+
+#[test]
 fn subcommand_init_creates_valid_manifest() {
     let fixture = TestDir::new("subcmd_init");
 

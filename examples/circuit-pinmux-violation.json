@@ -1,0 +1,6 @@
+[
+  { "type": "source_component", "component_id": "U1", "name": "STM32G431", "kind": "chip" },
+  { "type": "source_net", "net_id": "n_tx", "name": "UART1_TX" },
+  { "type": "source_port", "port_id": "U1.PA5", "source_component_id": "U1", "name": "PA5", "net_id": "n_tx" },
+  { "type": "source_port", "port_id": "J1.RX", "source_component_id": "J1", "name": "RX", "net_id": "n_tx" }
+]

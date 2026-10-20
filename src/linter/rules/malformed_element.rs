@@ -1,7 +1,7 @@
 //! `malformed_element`: a recognized element must carry its identifier.
 
-use crate::linter::{Diagnostic, Rule};
-use crate::parser::{Circuit, CircuitElement};
+use crate::linter::{Diagnostic, LintContext, Rule};
+use crate::parser::CircuitElement;
 
 /// A recognized element without an identifier.
 ///
@@ -50,8 +50,8 @@ impl Rule for MalformedElementRule {
         "malformed_element"
     }
 
-    fn check(&self, circuit: &Circuit) -> Vec<Diagnostic> {
-        circuit
+    fn check(&self, ctx: &LintContext<'_>) -> Vec<Diagnostic> {
+        ctx.circuit
             .elements
             .iter()
             .enumerate()

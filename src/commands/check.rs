@@ -94,140 +94,12 @@ fn compile_tsx(entry: &Path) -> Result<(PathBuf, String), CheckError> {
 }
 
 fn convert_kicad(entry: &Path) -> Result<(PathBuf, String), CheckError> {
-    let mut file_paths: Vec<PathBuf> = Vec::new();
-
-    if entry.is_file() {
-        file_paths.push(entry.to_path_buf());
-        if let Some(parent) = entry.parent() {
-            let stem = entry.file_stem().unwrap_or_default();
-            if entry.extension().and_then(|e| e.to_str()) == Some("kicad_sch") {
-                let pcb_path = parent.join(stem).with_extension("kicad_pcb");
-                if pcb_path.is_file() {
-                    file_paths.push(pcb_path);
-                }
-            } else if entry.extension().and_then(|e| e.to_str()) == Some("kicad_pcb") {
-                let sch_path = parent.join(stem).with_extension("kicad_sch");
-                if sch_path.is_file() {
-                    file_paths.push(sch_path);
-                }
-            }
-        }
-    } else if entry.is_dir() {
-        if let Ok(entries) = std::fs::read_dir(entry) {
-            for e in entries.filter_map(Result::ok) {
-                let p = e.path();
-                if let Some(ext) = p.extension().and_then(|x| x.to_str()) {
-                    if ext == "kicad_sch" || ext == "kicad_pcb" {
-                        file_paths.push(p);
-                    }
-                }
-            }
-        }
-    }
-
-    let fallback = find_fallback_circuit_json(entry);
-    let dist_dir = std::env::current_dir()
-        .map(|cd| cd.join("dist"))
-        .unwrap_or_else(|_| PathBuf::from("dist"));
-    std::fs::create_dir_all(&dist_dir).ok();
-    let out_json_path = dist_dir.join("circuit.json");
-
-    println!(
-        "📐 Converting KiCad design (\"{}\") to Circuit JSON...",
-        entry.display()
-    );
-
-    let abs_paths: Vec<String> = file_paths
-        .iter()
-        .map(|p| {
-            if p.is_absolute() {
-                p.display().to_string()
-            } else {
-                std::env::current_dir()
-                    .map(|cd| cd.join(p).display().to_string())
-                    .unwrap_or_else(|_| p.display().to_string())
-            }
+    crate::tscircuit::convert_kicad(entry).map_err(|err_msg| {
+        CheckError::Read(ReadError {
+            path: entry.display().to_string(),
+            source: std::io::Error::new(std::io::ErrorKind::NotFound, err_msg),
         })
-        .collect();
-
-    let paths_json = serde_json::to_string(&abs_paths).unwrap_or_else(|_| "[]".to_string());
-    let script = format!(
-        r#"
-const {{ KicadToCircuitJsonConverter }} = require("kicad-to-circuit-json");
-const fs = require("fs");
-const path = require("path");
-const paths = {};
-const converter = new KicadToCircuitJsonConverter();
-for (const p of paths) {{
-    try {{
-        converter.addFile(path.basename(p), fs.readFileSync(p, "utf-8"));
-    }} catch (e) {{}}
-}}
-converter.runUntilFinished();
-const out = converter.getOutput();
-fs.writeFileSync("{}", JSON.stringify(out, null, 2));
-"#,
-        paths_json,
-        out_json_path.display()
-    );
-
-    let mut node_paths = Vec::new();
-    if let Ok(np) = std::env::var("NODE_PATH") {
-        node_paths.push(np);
-    }
-    node_paths.push("node_modules".to_string());
-    node_paths.push("../node_modules".to_string());
-    if let Ok(home) = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")) {
-        node_paths.push(format!("{home}/.bun/install/global/node_modules"));
-        node_paths.push(format!("{home}/.npm-global/lib/node_modules"));
-        node_paths.push(format!("{home}/node_modules"));
-    }
-    let combined_node_path = node_paths.join(":");
-
-    // Try executing via bun, then fall back to node
-    let runners = ["bun", "node"];
-    let mut success = false;
-
-    for runner_bin in runners {
-        let mut cmd = std::process::Command::new(runner_bin);
-        cmd.arg("-e").arg(&script);
-        cmd.env("NODE_PATH", &combined_node_path);
-
-        if let Ok(out) = cmd.output() {
-            if out.status.success() && out_json_path.is_file() {
-                success = true;
-                break;
-            }
-        }
-    }
-
-    if success {
-        let content = std::fs::read_to_string(&out_json_path).map_err(|source| ReadError {
-            path: out_json_path.display().to_string(),
-            source,
-        })?;
-        return Ok((out_json_path, content));
-    }
-
-    if let Some(fb) = fallback {
-        println!(
-            "⚠️  KiCad converter runner unavailable; falling back to existing \"{}\"...",
-            fb.display()
-        );
-        let content = std::fs::read_to_string(&fb).map_err(|source| ReadError {
-            path: fb.display().to_string(),
-            source,
-        })?;
-        return Ok((fb, content));
-    }
-
-    Err(CheckError::Read(ReadError {
-        path: entry.display().to_string(),
-        source: std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            "failed to convert KiCad project to Circuit JSON",
-        ),
-    }))
+    })
 }
 
 fn load_circuit_source(entry: &Path) -> Result<(PathBuf, String), CheckError> {
@@ -255,7 +127,9 @@ pub fn run(
     let (json_path, source) = load_circuit_source(&entry)?;
 
     let circuit = parser::parse(&source, &json_path)?;
-    let violations = Linter::default().run(&circuit);
+    let netlist = Netlist::from_circuit(&circuit);
+    let ctx = crate::linter::LintContext::new(&circuit, &netlist).with_mcu(target_mcu.as_deref());
+    let violations = Linter::default().run_with_context(&ctx);
 
     if violations.is_empty() {
         println!("✅ Circuit validated (fuse intact)");
@@ -265,7 +139,6 @@ pub fn run(
 
         let target_pins_rs = resolve_pins_rs(pins_rs);
         if let Some(pins_path) = target_pins_rs {
-            let netlist = Netlist::from_circuit(&circuit);
             let board_name = resolve_board_name();
             if let Some(mcu_info) =
                 crate::codegen::extract_mcu_pins(&circuit, &netlist, target_mcu.as_deref())

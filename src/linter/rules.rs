@@ -17,10 +17,12 @@
 
 mod ghost_net;
 mod malformed_element;
+mod pin_mux;
 #[cfg(test)]
 mod tests;
 mod unconnected_net;
 
 pub use ghost_net::GhostNetRule;
 pub use malformed_element::MalformedElementRule;
+pub use pin_mux::PinMuxRule;
 pub use unconnected_net::UnconnectedNetRule;

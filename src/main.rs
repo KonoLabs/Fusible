@@ -13,6 +13,7 @@ pub mod gerber;
 pub mod linter;
 pub mod netlist;
 pub mod parser;
+pub mod silicon;
 pub mod tscircuit;
 
 use std::path::Path;

@@ -62,11 +62,16 @@ Fusible unifies the hardware development workflow by wrapping tscircuit commands
 - [x] **Milestone 6: Bidirectional EDA Collaboration** — KiCad export (`kicad_project`, `.kicad_pro`, `.kicad_sch`, `.kicad_pcb`), KiCad linter integration, tested end-to-end on `FieldCam`.
 - [x] **Milestone 7: Packaging & Release** — Published `fusible v0.3.0` on crates.io with 100% test pass rate and zero clippy warnings.
 
-## 5. Phase 2: Advanced DRC, Silicon Pin-Muxing & Sync
+- [x] **Milestone 8: Pure Rust Fabrication** — RS-274X Gerber and Excellon drill generator in pure Rust (`<5ms` generation time, zero runner dependencies).
+- [x] **Milestone 9: Silicon Pin-Muxing Engine & Alternate Function (AF) Validation** (`v0.5.0`):
+  - Silicon database for STM32 (AF0–AF15), RP2040 (F1–F9 function select), and ESP32-S3 (boot strapping and reserved flash pins).
+  - Validation of assigned GPIOs against physical silicon capabilities with alternative pin recommendations.
+  - Fail-closed fuse contract enforcement (`exit 1`) on AF mismatch, pin collisions, and strapping violations.
 
-- [ ] **Silicon Pin-Muxing Engine & Alternate Function (AF) Validation**:
-  - Silicon database for STM32, ESP32-S3, RP2040.
-  - Verification that assigned GPIOs support requested hardware peripherals (SPI, UART, I2C, DVP, PWM).
+## 5. Phase 2: Advanced DRC, Native Docs & Sync
+
+- [ ] **Native Pure-Rust SVG Documentation Exporter (`--preset docs`)**:
+  - Direct vector rendering of schematic symbols, traces, and PCB layout without Node/browser overhead.
 - [ ] **Advanced Electrical DRC**:
   - Decoupling capacitor proximity rule (detecting floating VDD rails without local bypass caps).
   - Power rail current capacity & trace clearance heuristics.

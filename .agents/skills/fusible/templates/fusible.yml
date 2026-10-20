@@ -1,0 +1,26 @@
+# ==============================================================================
+# fusible.yml — Hardware & Firmware Monorepo Manifest
+# ==============================================================================
+name: my-board
+
+hardware:
+  # Entry point declarative TSX file
+  entry: hardware/index.tsx
+  # Destination directory for Circuit JSON, Gerbers, and exports
+  out_dir: dist
+  # Live interactive preview server port (fusible dev)
+  port: 3020
+
+mcu:
+  # Target microcontroller silicon: esp32-s3 | stm32g431 | rp2040
+  chip: esp32-s3
+
+firmware:
+  # Path to embedded firmware workspace
+  path: apps/firmware
+  # Framework: esp-idf | embassy | no-std
+  framework: esp-idf
+  # Destination for auto-generated typed Rust pin constants
+  pins_rs: apps/firmware/src/pins.rs
+  # Build/test command executed during `fusible build`
+  build_cmd: cargo test
