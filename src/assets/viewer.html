@@ -670,6 +670,65 @@
       border-radius: 2px !important;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.8) !important;
     }
+    /* Fusible theme for PCB Viewer Toolbar (Top-Left Options) */
+    #pcb-container [data-toolbar-overlay],
+    [data-toolbar-overlay] {
+      font-family: 'Undefined', monospace !important;
+      gap: 6px !important;
+    }
+    #pcb-container [data-toolbar-overlay] > div,
+    [data-toolbar-overlay] > div,
+    [data-toolbar-overlay] button,
+    #pcb-container button,
+    #pcb-container select,
+    #pcb-container input,
+    #pcb-container [data-toolbar-overlay] div[style*="cursor: pointer"] {
+      font-family: 'Undefined', monospace !important;
+      font-size: 11px !important;
+      letter-spacing: 0.05em !important;
+      background: var(--surface) !important;
+      background-color: var(--surface) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 2px !important;
+      color: var(--text) !important;
+      box-shadow: none !important;
+      outline: none !important;
+      transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease !important;
+    }
+    #pcb-container [data-toolbar-overlay] > div:hover,
+    [data-toolbar-overlay] > div:hover,
+    [data-toolbar-overlay] button:hover,
+    #pcb-container button:hover,
+    #pcb-container [data-toolbar-overlay] div[style*="cursor: pointer"]:hover {
+      background: var(--surface-hover) !important;
+      background-color: var(--surface-hover) !important;
+      color: var(--green) !important;
+      border-color: var(--green) !important;
+    }
+    [data-toolbar-overlay] div[style*="minWidth: 120"],
+    [data-toolbar-overlay] div[style*="min-width: 120"],
+    [data-toolbar-overlay] div[style*="position: absolute"] {
+      background: rgba(31, 31, 31, 0.96) !important;
+      background-color: rgba(31, 31, 31, 0.96) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 2px !important;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8) !important;
+      backdrop-filter: blur(8px) !important;
+    }
+    [data-toolbar-overlay] div[style*="minWidth: 120"] > div,
+    [data-toolbar-overlay] div[style*="min-width: 120"] > div {
+      font-family: 'Undefined', monospace !important;
+      font-size: 11px !important;
+      padding: 6px 10px !important;
+      color: var(--text) !important;
+      border: none !important;
+    }
+    [data-toolbar-overlay] div[style*="minWidth: 120"] > div:hover,
+    [data-toolbar-overlay] div[style*="min-width: 120"] > div:hover {
+      background: var(--surface-hover) !important;
+      color: var(--green) !important;
+    }
+
     #three-cad div[style*="background-color: white"],
     #three-cad div[style*="background-color: rgb(255, 255, 255)"],
     #three-cad div[style*="background: white"],
@@ -702,13 +761,13 @@
     </div>
 
     <div class="tabs">
-      <button class="tab-btn active" data-view="pcb" onclick="switchView('pcb')"><iconify-icon icon="pixelarticons:grid"></iconify-icon><span>PCB LAYOUT</span></button>
-      <button class="tab-btn" data-view="schematic" onclick="switchView('schematic')"><iconify-icon icon="pixelarticons:git-commit"></iconify-icon><span>SCHEMATIC</span></button>
+      <button class="tab-btn active" data-view="schematic" onclick="switchView('schematic')"><iconify-icon icon="pixelarticons:git-commit"></iconify-icon><span>SCHEMATIC</span></button>
+      <button class="tab-btn" data-view="pcb" onclick="switchView('pcb')"><iconify-icon icon="pixelarticons:grid"></iconify-icon><span>PCB LAYOUT</span></button>
       <button class="tab-btn" data-view="3d" onclick="switchView('3d')"><iconify-icon icon="pixelarticons:cube"></iconify-icon><span>3D VIEW</span></button>
     </div>
 
     <div class="controls" id="controls-2d">
-      <button class="btn" id="btn-pcb-mode" onclick="togglePcbMode()"><iconify-icon icon="pixelarticons:switch"></iconify-icon> <span id="pcb-mode-label">VIEW: INSPECTOR</span></button>
+      <button class="btn" id="btn-pcb-mode" style="display: none;" onclick="togglePcbMode()"><iconify-icon icon="pixelarticons:switch"></iconify-icon> <span id="pcb-mode-label">VIEW: INSPECTOR</span></button>
       <button class="btn" onclick="zoomIn()"><iconify-icon icon="pixelarticons:zoom-in"></iconify-icon> ZOOM +</button>
       <button class="btn" onclick="zoomOut()"><iconify-icon icon="pixelarticons:zoom-out"></iconify-icon> ZOOM -</button>
       <button class="btn" onclick="resetZoom()"><iconify-icon icon="pixelarticons:undo"></iconify-icon> RESET</button>
@@ -821,7 +880,7 @@
   </main>
 
   <script>
-    let currentView = 'pcb';
+    let currentView = 'schematic';
     let pcbMode = 'inspector';
     let pcbSvg = '';
     let schematicSvg = '';
@@ -2228,6 +2287,58 @@
         sprite.position.set(cx, spriteY, cz);
         sprite.userData = userData;
         boardGroup.add(sprite);
+      });
+
+      const pcbComponents = elements.filter(e => e.type === 'pcb_component');
+      elements.filter(e => e.type === 'pcb_silkscreen_text').forEach(st => {
+        const text = st.text || '';
+        if (!text) return;
+        const sx = st.x ?? st.center?.x ?? st.anchor_position?.x ?? 0;
+        const sz = st.y ?? st.center?.y ?? st.anchor_position?.y ?? 0;
+        const isBottom = st.layer === 'bottom';
+
+        let compThick = 0;
+        pcbComponents.forEach(c => {
+          const ccx = c.center?.x ?? c.x ?? 0;
+          const ccz = c.center?.y ?? c.y ?? 0;
+          const ccw = Math.max(c.width || 4, 1.0) / 2;
+          const cch = Math.max(c.height || 4, 1.0) / 2;
+          if (Math.abs(sx - ccx) <= ccw && Math.abs(sz - ccz) <= cch) {
+            compThick = Math.max(compThick, 1.45);
+          }
+        });
+        const sy = isBottom ? -(substrateThickness / 2 + compThick + 0.04) : (substrateThickness / 2 + compThick + 0.04);
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const fontSize = Math.max(16, Math.round((st.font_size || 1.0) * 24));
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        const metrics = ctx.measureText(text);
+        const textW = Math.max(16, Math.ceil(metrics.width) + 8);
+        const textH = Math.max(16, Math.ceil(fontSize * 1.3) + 4);
+        canvas.width = textW;
+        canvas.height = textH;
+
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, textW / 2, textH / 2);
+
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.minFilter = THREE.LinearFilter;
+        const planeW = (st.font_size || 1.0) * (textW / fontSize);
+        const planeH = (st.font_size || 1.0) * 1.3;
+        const planeGeo = new THREE.PlaneGeometry(planeW, planeH);
+        const planeMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide });
+        const planeMesh = new THREE.Mesh(planeGeo, planeMat);
+        planeMesh.rotation.x = isBottom ? Math.PI / 2 : -Math.PI / 2;
+        if (st.ccw_rotation) {
+          const rotZ = ((st.ccw_rotation || 0) * Math.PI) / 180;
+          planeMesh.rotation.z = isBottom ? -rotZ : rotZ;
+        }
+        planeMesh.position.set(sx, sy, sz);
+        boardGroup.add(planeMesh);
       });
     }
 
