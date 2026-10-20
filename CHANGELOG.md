@@ -5,6 +5,16 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.8.1] - 2026-10-20
+
+### Fixed
+
+- Prevented dev server infinite compilation loops by ignoring `.tscircuit/`, `dist/`, `.probes/`, and `circuit.json` in the filesystem watcher.
+- Added `--ignore-errors` to tscircuit builds and accepted generated `circuit.json` when exit code is non-zero to prevent false failures on unrouted traces during live development.
+- Terminated child processes and drained output pipes on build timeout to eliminate orphaned zombie processes.
+- Added an atomic rebuild flag to prevent re-entrant or overlapping compiles in the dev server.
+- Resolved local runner executable paths to absolute paths when executing across directory boundaries.
+
 ## [0.8.0] - 2026-10-20
 
 ### Added

@@ -33,7 +33,7 @@ pub fn export_command(
 /// Builds the `Command` for building circuit json from a circuit file.
 pub fn build_command(kind: &RunnerKind, file: &Path) -> Command {
     let mut cmd = base_command(kind);
-    cmd.arg("build").arg(file);
+    cmd.arg("build").arg(file).arg("--ignore-errors");
     cmd
 }
 

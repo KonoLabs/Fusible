@@ -65,7 +65,7 @@ fn build_command_construction() {
 
     assert_eq!(cmd.get_program(), "./node_modules/.bin/tsci");
     let args: Vec<_> = cmd.get_args().collect();
-    assert_eq!(args, &["build", "circuit.tsx"]);
+    assert_eq!(args, &["build", "circuit.tsx", "--ignore-errors"]);
 }
 
 #[test]

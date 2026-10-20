@@ -76,6 +76,15 @@ impl Runner {
         let mut cmd = dev_command(&self.kind, &target_file, port);
         if let Some(ref dir) = working_dir {
             cmd.current_dir(dir);
+            if let RunnerKind::Local(ref p) = self.kind {
+                if p.is_relative() {
+                    let abs = std::env::current_dir()
+                        .unwrap_or_else(|_| PathBuf::from("."))
+                        .join(p);
+                    cmd = dev_command(&RunnerKind::Local(abs), &target_file, port);
+                    cmd.current_dir(dir);
+                }
+            }
         }
         cmd.stdin(Stdio::inherit())
             .stdout(Stdio::inherit())
@@ -133,6 +142,16 @@ impl Runner {
         let mut cmd = build_command(&self.kind, &target_file);
         if let Some(ref dir) = working_dir {
             cmd.current_dir(dir);
+            if let RunnerKind::Local(ref p) = self.kind {
+                if p.is_relative() {
+                    let abs = std::env::current_dir()
+                        .unwrap_or_else(|_| PathBuf::from("."))
+                        .join(p);
+                    cmd = std::process::Command::new(abs);
+                    cmd.arg("build").arg(&target_file).arg("--ignore-errors");
+                    cmd.current_dir(dir);
+                }
+            }
         }
         cmd.stdin(Stdio::null());
         cmd.env("CI", "1");
@@ -140,36 +159,73 @@ impl Runner {
         cmd.stderr(Stdio::piped());
 
         let cmd_str = command::format_command(&cmd);
-        let (tx, rx) = std::sync::mpsc::channel();
-        let child = cmd.spawn().map_err(|source| RunnerError::Io {
+        let mut child = cmd.spawn().map_err(|source| RunnerError::Io {
             command: cmd_str.clone(),
             source,
         })?;
 
-        std::thread::spawn(move || {
-            let res = child.wait_with_output();
-            let _ = tx.send(res);
+        let mut stdout_pipe = child.stdout.take();
+        let mut stderr_pipe = child.stderr.take();
+
+        let stdout_handle = std::thread::spawn(move || {
+            let mut buf = Vec::new();
+            if let Some(mut pipe) = stdout_pipe.take() {
+                use std::io::Read;
+                let _ = pipe.read_to_end(&mut buf);
+            }
+            buf
         });
 
-        let out = match rx.recv_timeout(std::time::Duration::from_secs(15)) {
-            Ok(Ok(output)) => output,
-            Ok(Err(source)) => {
-                return Err(RunnerError::Io {
-                    command: cmd_str,
-                    source,
-                })
+        let stderr_handle = std::thread::spawn(move || {
+            let mut buf = Vec::new();
+            if let Some(mut pipe) = stderr_pipe.take() {
+                use std::io::Read;
+                let _ = pipe.read_to_end(&mut buf);
             }
-            Err(_) => {
-                return Err(RunnerError::CommandFailed {
-                    command: cmd_str,
-                    code: None,
-                    stderr: "compilation timed out after 15 seconds".to_string(),
-                    help: "compilation took too long; falling back to cached circuit.json if available".to_string(),
-                });
+            buf
+        });
+
+        let start = std::time::Instant::now();
+        let timeout = std::time::Duration::from_secs(30);
+        let status = loop {
+            match child.try_wait() {
+                Ok(Some(s)) => break s,
+                Ok(None) => {
+                    if start.elapsed() >= timeout {
+                        let _ = child.kill();
+                        let _ = child.wait();
+                        return Err(RunnerError::CommandFailed {
+                            command: cmd_str,
+                            code: None,
+                            stderr: "compilation timed out after 30 seconds".to_string(),
+                            help: "compilation took too long; falling back to cached circuit.json if available".to_string(),
+                        });
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(50));
+                }
+                Err(source) => {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    return Err(RunnerError::Io {
+                        command: cmd_str,
+                        source,
+                    });
+                }
             }
         };
 
-        if !out.status.success() {
+        let stdout = stdout_handle.join().unwrap_or_default();
+        let stderr = stderr_handle.join().unwrap_or_default();
+        let out = std::process::Output {
+            status,
+            stdout,
+            stderr,
+        };
+
+        let stdout_str = String::from_utf8_lossy(&out.stdout);
+        let produced = output::resolve_circuit_json(file, &stdout_str);
+
+        if !out.status.success() && produced.is_err() {
             let details = command::extract_output_details(&out);
             return Err(RunnerError::CommandFailed {
                 command: command::format_command(&cmd),
@@ -179,14 +235,12 @@ impl Runner {
             });
         }
 
-        let stdout = String::from_utf8_lossy(&out.stdout);
-        let produced = output::resolve_circuit_json(file, &stdout)?;
-
+        let produced_path = produced?;
         if let Some(dest) = out_file {
-            output::copy_output(&produced, dest)?;
+            output::copy_output(&produced_path, dest)?;
             Ok(dest.to_path_buf())
         } else {
-            Ok(produced)
+            Ok(produced_path)
         }
     }
 

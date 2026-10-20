@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -35,16 +36,28 @@ pub fn run_dev_server(entry: PathBuf, port: u16) -> Result<(), Box<dyn std::erro
     let hub_clone = hub.clone();
     let entry_clone = entry.clone();
     let cache_clone = cached_payload.clone();
+    let is_rebuilding = Arc::new(AtomicBool::new(false));
 
+    let is_rebuilding_clone = is_rebuilding.clone();
     let _watcher = start_file_watcher(&watch_dir, move || {
-        println!("🔄 File change detected — rebuilding circuit preview...");
-        let payload = execute_pipeline(&entry_clone);
-        if let Ok(json_str) = serde_json::to_string(&payload) {
-            if let Ok(mut lock) = cache_clone.lock() {
-                *lock = json_str.clone();
-            }
-            hub_clone.broadcast(&json_str);
+        if is_rebuilding_clone.swap(true, Ordering::SeqCst) {
+            return;
         }
+        let hub = hub_clone.clone();
+        let entry = entry_clone.clone();
+        let cache = cache_clone.clone();
+        let flag = is_rebuilding_clone.clone();
+        thread::spawn(move || {
+            println!("🔄 File change detected — rebuilding circuit preview...");
+            let payload = execute_pipeline(&entry);
+            if let Ok(json_str) = serde_json::to_string(&payload) {
+                if let Ok(mut lock) = cache.lock() {
+                    *lock = json_str.clone();
+                }
+                hub.broadcast(&json_str);
+            }
+            flag.store(false, Ordering::SeqCst);
+        });
     })?;
 
     for request in server.incoming_requests() {
