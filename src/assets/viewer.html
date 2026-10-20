@@ -36,8 +36,7 @@
     #pcb-container > div,
     #pcb-container canvas,
     #schematic-container,
-    #schematic-container > div,
-    #schematic-container svg {
+    #schematic-container > div {
       width: 100% !important;
       height: 100% !important;
       display: block;
@@ -79,6 +78,10 @@
       height: 100vh;
       overflow: hidden;
       user-select: none;
+    }
+    #sidebar, #sidebar *, .sidebar-pane, .sidebar-pane *, .check-item, .check-item *, code, pre {
+      user-select: text !important;
+      -webkit-user-select: text !important;
     }
     header {
       height: 56px;
@@ -590,6 +593,83 @@
       font-size: 11px !important;
       font-weight: bold !important;
     }
+    #schematic-container button,
+    #schematic-container input,
+    .schematic-viewer-toolbar button {
+      font-family: 'Undefined', monospace !important;
+      border-radius: 2px !important;
+      background: var(--surface) !important;
+      border: 1px solid var(--border) !important;
+      color: var(--text) !important;
+      box-shadow: none !important;
+      outline: none !important;
+    }
+    #schematic-container button:hover,
+    .schematic-viewer-toolbar button:hover {
+      background: var(--surface-hover) !important;
+      color: var(--green) !important;
+      border-color: var(--green) !important;
+    }
+    [data-schematic-search] {
+      font-family: 'Undefined', monospace !important;
+    }
+    [data-schematic-search] > div {
+      background: var(--surface) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 2px !important;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8) !important;
+      color: var(--text) !important;
+    }
+    [data-schematic-search] input {
+      background: var(--bg) !important;
+      color: var(--text) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 2px !important;
+      font-family: 'Undefined', monospace !important;
+    }
+    [data-schematic-search] button,
+    [data-schematic-search] [role="button"] {
+      border: none !important;
+      border-radius: 2px !important;
+      background: transparent !important;
+      color: var(--text) !important;
+    }
+    [data-schematic-search] button:hover,
+    [data-schematic-search] [role="button"]:hover {
+      background: var(--surface-hover) !important;
+      color: var(--green) !important;
+    }
+    [data-schematic-search] span {
+      font-family: 'Undefined', monospace !important;
+    }
+    [data-schematic-warnings] {
+      font-family: 'Undefined', monospace !important;
+      background: var(--surface) !important;
+      color: var(--alert) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 2px !important;
+      box-shadow: none !important;
+    }
+    [data-schematic-warnings]:hover {
+      background: var(--surface-hover) !important;
+      border-color: var(--alert) !important;
+      color: var(--alert) !important;
+    }
+    [data-schematic-warnings][aria-pressed="true"] {
+      background: rgba(197, 84, 84, 0.2) !important;
+      border-color: var(--alert) !important;
+    }
+    .schematic-warning,
+    .schematic-warning * {
+      font-family: 'Undefined', monospace !important;
+    }
+    .schematic-warning [data-warning-reference="callout"] {
+      background: var(--surface) !important;
+      color: var(--text) !important;
+      border: 1px solid var(--alert) !important;
+      border-radius: 2px !important;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.8) !important;
+    }
     #three-cad div[style*="background-color: white"],
     #three-cad div[style*="background-color: rgb(255, 255, 255)"],
     #three-cad div[style*="background: white"],
@@ -930,6 +1010,10 @@
       } else {
         if (threeEl) threeEl.style.display = 'none';
         renderCurrentView();
+        if (view === 'schematic') {
+          window.dispatchEvent(new Event('resize'));
+          setTimeout(() => window.dispatchEvent(new Event('resize')), 10);
+        }
       }
     }
 

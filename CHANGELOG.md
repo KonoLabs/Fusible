@@ -5,6 +5,14 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.8.12] - 2026-10-20
+
+### Fixed
+
+- Fixed check text selection in Dev Studio sidebar, allowing copy/pasting diagnostics, codes, and paths.
+- Themed schematic toolbar controls, search, and warnings with native Fusible design tokens.
+- Fixed schematic viewer canvas resize and viewport matrix transformation upon tab switching.
+
 ## [0.8.11] - 2026-10-20
 
 ### Added

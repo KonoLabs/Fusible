@@ -160,7 +160,7 @@ pub fn extract_mcu_pins(
     })
 }
 
-fn select_mcu_component<'a>(
+pub(crate) fn select_mcu_component<'a>(
     circuit: &'a Circuit,
     target_chip: Option<&str>,
 ) -> Option<&'a crate::parser::Component> {

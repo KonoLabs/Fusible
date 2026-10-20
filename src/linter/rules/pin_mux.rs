@@ -29,7 +29,7 @@ impl Rule for PinMuxRule {
             None => return Vec::new(),
         };
 
-        let assignments = extract_assigned_pins(ctx);
+        let assignments = extract_assigned_pins(ctx, target, chip_name);
         if assignments.is_empty() {
             return Vec::new();
         }
@@ -126,10 +126,30 @@ fn detect_mcu_chip(circuit: &crate::parser::Circuit) -> Option<&'static str> {
     None
 }
 
-fn extract_assigned_pins(ctx: &LintContext<'_>) -> Vec<AssignedPin> {
+fn extract_assigned_pins(
+    ctx: &LintContext<'_>,
+    target: &crate::silicon::SiliconTarget,
+    chip_name: &str,
+) -> Vec<AssignedPin> {
     let mut assignments = Vec::new();
+    let mcu_comp = crate::codegen::pins::select_mcu_component(ctx.circuit, Some(chip_name));
+    let mcu_id = mcu_comp.and_then(|c| c.component_id.as_deref()).unwrap_or("U1");
+    let mcu_name = mcu_comp.and_then(|c| c.name.as_deref()).unwrap_or(mcu_id);
 
     for port in ctx.circuit.ports() {
+        if mcu_comp.is_some() {
+            let is_mcu_port = port.source_component_id.as_deref() == Some(mcu_id)
+                || port.source_component_id.as_deref() == Some(mcu_name)
+                || port
+                    .port_id
+                    .as_deref()
+                    .map(|pid| pid.starts_with(mcu_id) || pid.starts_with(mcu_name))
+                    .unwrap_or(false);
+            if !is_mcu_port {
+                continue;
+            }
+        }
+
         let pin_name = match port.name.as_deref().or_else(|| {
             port.port_hints
                 .as_ref()
@@ -138,6 +158,10 @@ fn extract_assigned_pins(ctx: &LintContext<'_>) -> Vec<AssignedPin> {
             Some(n) => n,
             None => continue,
         };
+
+        if target.find_pin(pin_name).is_none() {
+            continue;
+        }
 
         let port_id = match port.port_id.as_deref() {
             Some(id) => id,
