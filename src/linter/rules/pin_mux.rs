@@ -133,7 +133,9 @@ fn extract_assigned_pins(
 ) -> Vec<AssignedPin> {
     let mut assignments = Vec::new();
     let mcu_comp = crate::codegen::pins::select_mcu_component(ctx.circuit, Some(chip_name));
-    let mcu_id = mcu_comp.and_then(|c| c.component_id.as_deref()).unwrap_or("U1");
+    let mcu_id = mcu_comp
+        .and_then(|c| c.component_id.as_deref())
+        .unwrap_or("U1");
     let mcu_name = mcu_comp.and_then(|c| c.name.as_deref()).unwrap_or(mcu_id);
 
     for port in ctx.circuit.ports() {
