@@ -23,27 +23,18 @@ pub use error::RunnerError;
 /// Represents the detected or configured tscircuit execution backend.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RunnerKind {
-    /// Local node_modules executable (`./node_modules/.bin/tsci`).
+    /// Local node_modules executable (`./node_modules/.bin/tsci` or `tscircuit`).
     Local(PathBuf),
-    /// Globally installed executable on PATH (`tsci`).
+    /// Globally installed executable on PATH (`tsci` or `tscircuit`).
     Global(PathBuf),
-    /// Bun package executor (`bun x tscircuit ...`).
-    Bun(PathBuf),
-    /// NPX package executor (`npx tscircuit ...`).
-    Npx(PathBuf),
-    /// NPM package executor (`npm exec -- tscircuit ...`).
-    Npm(PathBuf),
 }
 
 impl RunnerKind {
     /// Human-friendly description of this runner backend.
     pub fn description(&self) -> String {
         match self {
-            Self::Local(p) => format!("local node_modules ({})", p.display()),
-            Self::Global(p) => format!("global tsci ({})", p.display()),
-            Self::Bun(p) => format!("bun executor ({})", p.display()),
-            Self::Npx(p) => format!("npx executor ({})", p.display()),
-            Self::Npm(p) => format!("npm executor ({})", p.display()),
+            Self::Local(p) => format!("local executable ({})", p.display()),
+            Self::Global(p) => format!("global executable ({})", p.display()),
         }
     }
 }

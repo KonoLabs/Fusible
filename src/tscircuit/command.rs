@@ -64,24 +64,12 @@ pub fn search_command(kind: &RunnerKind, query: &[String]) -> Command {
     cmd
 }
 
-/// Constructs a base `Command` with the binary and prefix arguments configured.
+/// Constructs a base `Command` with the binary configured.
 pub fn base_command(kind: &RunnerKind) -> Command {
     let program: &Path = match kind {
-        RunnerKind::Local(p)
-        | RunnerKind::Global(p)
-        | RunnerKind::Bun(p)
-        | RunnerKind::Npx(p)
-        | RunnerKind::Npm(p) => p,
+        RunnerKind::Local(p) | RunnerKind::Global(p) => p,
     };
-    let prefix_args: &[&str] = match kind {
-        RunnerKind::Local(_) | RunnerKind::Global(_) => &[],
-        RunnerKind::Bun(_) => &["x", "tscircuit"],
-        RunnerKind::Npx(_) => &["tscircuit"],
-        RunnerKind::Npm(_) => &["exec", "--", "tscircuit"],
-    };
-    let mut cmd = Command::new(program);
-    cmd.args(prefix_args);
-    cmd
+    Command::new(program)
 }
 
 /// Formats a command for diagnostic display.

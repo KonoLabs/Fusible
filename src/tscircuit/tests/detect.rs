@@ -71,55 +71,23 @@ fn detects_global_tsci_when_local_absent() {
     let global_bin = global_dir.join("tsci");
     create_executable(&global_bin);
 
-    let bun_dir = temp.path.join("bun_bin");
-    create_executable(&bun_dir.join("bun"));
-
-    let path_os = std::env::join_paths([&global_dir, &bun_dir]).unwrap();
+    let path_os = std::env::join_paths([&global_dir]).unwrap();
     let runner = detect_runner(&temp.path, Some(&path_os)).expect("runner detected");
 
     assert_eq!(runner.kind(), &RunnerKind::Global(global_bin));
 }
 
 #[test]
-fn detects_bun_before_npx() {
-    let temp = TempDirGuard::new("fusible_detect_bun");
-    let bun_dir = temp.path.join("bun_dir");
-    let bun_bin = bun_dir.join("bun");
-    create_executable(&bun_bin);
+fn detects_global_tscircuit_when_tsci_absent() {
+    let temp = TempDirGuard::new("fusible_detect_tscircuit");
+    let global_dir = temp.path.join("global");
+    let global_bin = global_dir.join("tscircuit");
+    create_executable(&global_bin);
 
-    let npx_dir = temp.path.join("npx_dir");
-    create_executable(&npx_dir.join("npx"));
-
-    let path_os = std::env::join_paths([&bun_dir, &npx_dir]).unwrap();
+    let path_os = std::env::join_paths([&global_dir]).unwrap();
     let runner = detect_runner(&temp.path, Some(&path_os)).expect("runner detected");
 
-    assert_eq!(runner.kind(), &RunnerKind::Bun(bun_bin));
-}
-
-#[test]
-fn detects_npx_when_only_npx_present() {
-    let temp = TempDirGuard::new("fusible_detect_npx");
-    let npx_dir = temp.path.join("npx_dir");
-    let npx_bin = npx_dir.join("npx");
-    create_executable(&npx_bin);
-
-    let path_os = std::env::join_paths([&npx_dir]).unwrap();
-    let runner = detect_runner(&temp.path, Some(&path_os)).expect("runner detected");
-
-    assert_eq!(runner.kind(), &RunnerKind::Npx(npx_bin));
-}
-
-#[test]
-fn detects_npm_when_only_npm_present() {
-    let temp = TempDirGuard::new("fusible_detect_npm");
-    let npm_dir = temp.path.join("npm_dir");
-    let npm_bin = npm_dir.join("npm");
-    create_executable(&npm_bin);
-
-    let path_os = std::env::join_paths([&npm_dir]).unwrap();
-    let runner = detect_runner(&temp.path, Some(&path_os)).expect("runner detected");
-
-    assert_eq!(runner.kind(), &RunnerKind::Npm(npm_bin));
+    assert_eq!(runner.kind(), &RunnerKind::Global(global_bin));
 }
 
 #[test]

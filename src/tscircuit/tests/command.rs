@@ -18,16 +18,13 @@ fn dev_command_construction_without_port() {
 }
 
 #[test]
-fn dev_command_construction_with_port_and_bun() {
-    let kind = RunnerKind::Bun(PathBuf::from("/usr/bin/bun"));
+fn dev_command_construction_with_port() {
+    let kind = RunnerKind::Global(PathBuf::from("/usr/local/bin/tsci"));
     let cmd = dev_command(&kind, Path::new("src/main.tsx"), Some(3020));
 
-    assert_eq!(cmd.get_program(), "/usr/bin/bun");
+    assert_eq!(cmd.get_program(), "/usr/local/bin/tsci");
     let args: Vec<_> = cmd.get_args().collect();
-    assert_eq!(
-        args,
-        &["x", "tscircuit", "dev", "src/main.tsx", "-p", "3020"]
-    );
+    assert_eq!(args, &["dev", "src/main.tsx", "-p", "3020"]);
 }
 
 #[test]
@@ -41,17 +38,16 @@ fn export_command_construction_without_output() {
 }
 
 #[test]
-fn export_command_construction_with_output_and_npx() {
-    let kind = RunnerKind::Npx(PathBuf::from("/usr/bin/npx"));
+fn export_command_construction_with_output() {
+    let kind = RunnerKind::Global(PathBuf::from("/usr/local/bin/tsci"));
     let out = Path::new("dist/export.json");
     let cmd = export_command(&kind, Path::new("circuit.tsx"), "gerbers", Some(out));
 
-    assert_eq!(cmd.get_program(), "/usr/bin/npx");
+    assert_eq!(cmd.get_program(), "/usr/local/bin/tsci");
     let args: Vec<_> = cmd.get_args().collect();
     assert_eq!(
         args,
         &[
-            "tscircuit",
             "export",
             "circuit.tsx",
             "-f",
@@ -64,33 +60,12 @@ fn export_command_construction_with_output_and_npx() {
 
 #[test]
 fn build_command_construction() {
-    let kind = RunnerKind::Bun(PathBuf::from("/usr/bin/bun"));
+    let kind = RunnerKind::Local(PathBuf::from("./node_modules/.bin/tsci"));
     let cmd = build_command(&kind, Path::new("circuit.tsx"));
 
-    assert_eq!(cmd.get_program(), "/usr/bin/bun");
+    assert_eq!(cmd.get_program(), "./node_modules/.bin/tsci");
     let args: Vec<_> = cmd.get_args().collect();
-    assert_eq!(args, &["x", "tscircuit", "build", "circuit.tsx"]);
-}
-
-#[test]
-fn export_command_construction_with_npm() {
-    let kind = RunnerKind::Npm(PathBuf::from("/usr/bin/npm"));
-    let cmd = export_command(&kind, Path::new("circuit.tsx"), "step", None);
-
-    assert_eq!(cmd.get_program(), "/usr/bin/npm");
-    let args: Vec<_> = cmd.get_args().collect();
-    assert_eq!(
-        args,
-        &[
-            "exec",
-            "--",
-            "tscircuit",
-            "export",
-            "circuit.tsx",
-            "-f",
-            "step"
-        ]
-    );
+    assert_eq!(args, &["build", "circuit.tsx"]);
 }
 
 #[test]

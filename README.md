@@ -18,6 +18,20 @@ wrapping tscircuit development servers, viewers, artifact exports, and hardware 
 | 2 | `mcu::` — pin-muxing validation against the silicon target | 🔜 |
 | 2 | `codegen::` — `pins.rs` generation for Embassy (fuse intact only) | 🔜 |
 
+## Prerequisites
+
+Fusible requires **`tscircuit`** (`tsci` CLI) to compile `.tsx` circuits, run the live dev previewer (`fusible dev`), and export manufacturing deliverables. Install it globally or locally in your workspace:
+
+```sh
+# Using bun (recommended):
+bun add -g tscircuit
+
+# Or using npm:
+npm install -g tscircuit
+```
+
+Inspect toolchain health anytime with `fusible doctor` (or run `fusible doctor --install` to automatically provision it).
+
 ## Installation
 
 ```sh
@@ -166,7 +180,7 @@ src/
 │   ├── init.rs             # fusible.yml scaffolding
 │   └── target.rs           # manifest & convention path resolution
 ├── config/                 # fusible.yml / fusible.yaml manifest loader
-├── tscircuit/              # runner detection (tsci, bun, npx) & process execution
+├── tscircuit/              # runner detection (local/global tsci) & process execution
 ├── parser/                 # Serde Circuit JSON parser
 ├── linter/                 # Rule trait + fail-closed electrical engine
 └── netlist/                # graph representation of circuit connectivity

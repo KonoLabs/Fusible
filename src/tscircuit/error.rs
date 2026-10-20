@@ -6,16 +6,16 @@ use thiserror::Error;
 /// Errors that can occur when discovering, invoking, or evaluating tscircuit.
 #[derive(Debug, Error, miette::Diagnostic)]
 pub enum RunnerError {
-    /// No valid runner (local tsci, global tsci, bun, or npx) was detected.
+    /// No valid runner (local or global tsci / tscircuit) was detected.
     #[error("no tscircuit runner found")]
     #[diagnostic(
         code(fusible::tscircuit::not_found),
         help(
             "Fusible requires tscircuit to compile, export, or preview circuits.\n\
-             Install bun or tscircuit using one of the following:\n\
-               • bun (recommended): curl -fsSL https://bun.sh/install | bash\n\
-               • global npm: npm install -g tscircuit\n\
-               • local project: npm install tscircuit"
+             Install tscircuit using one of the following:\n\
+               • bun: bun add -g tscircuit\n\
+               • npm: npm install -g tscircuit\n\
+               • or run: fusible doctor --install"
         )
     )]
     NotFound,

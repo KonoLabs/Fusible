@@ -52,19 +52,15 @@ fn report_prerequisites() -> (bool, bool) {
     let has_npm = path_var
         .as_deref()
         .and_then(|p| find_binary_in_path("npm", p));
-    let has_npx = path_var
-        .as_deref()
-        .and_then(|p| find_binary_in_path("npx", p));
-    let has_tsci = path_var
-        .as_deref()
-        .and_then(|p| find_binary_in_path("tsci", p));
+    let has_tsci = path_var.as_deref().and_then(|p| {
+        find_binary_in_path("tsci", p).or_else(|| find_binary_in_path("tscircuit", p))
+    });
 
     println!("Runtime prerequisites:");
+    print_status("tsci (tscircuit)", has_tsci.as_deref());
     print_status("bun", has_bun.as_deref());
     print_status("node", has_node.as_deref());
     print_status("npm", has_npm.as_deref());
-    print_status("npx", has_npx.as_deref());
-    print_status("tsci (global)", has_tsci.as_deref());
     (has_bun.is_some(), has_npm.is_some())
 }
 

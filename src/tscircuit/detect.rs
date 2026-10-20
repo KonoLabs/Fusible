@@ -9,47 +9,47 @@ use crate::tscircuit::{Runner, RunnerKind};
 /// Auto-detects how to execute tscircuit based on project directory and environment PATH.
 ///
 /// Order of precedence:
-/// 1. Local `./node_modules/.bin/tsci`
-/// 2. Global `tsci` on PATH
-/// 3. `bun` on PATH (`bun x tscircuit ...`)
-/// 4. `npx` on PATH (`npx tscircuit ...`)
-/// 5. `npm` on PATH (`npm exec -- tscircuit ...`)
+/// 1. Local `./node_modules/.bin/tsci` or `./node_modules/.bin/tscircuit`
+/// 2. Local `./hardware/node_modules/.bin/tsci` or `./hardware/node_modules/.bin/tscircuit`
+/// 3. Global `tsci` on PATH
+/// 4. Global `tscircuit` on PATH
 pub fn detect_runner(current_dir: &Path, path_var: Option<&OsStr>) -> Result<Runner, RunnerError> {
     if let Some(local_path) = find_local_tsci(current_dir) {
         return Ok(Runner::new(RunnerKind::Local(local_path)));
     }
 
     if let Some(path_var) = path_var {
-        if let Some(global_path) = find_binary_in_path("tsci", path_var) {
+        if let Some(global_path) = find_binary_in_path("tsci", path_var)
+            .or_else(|| find_binary_in_path("tscircuit", path_var))
+        {
             return Ok(Runner::new(RunnerKind::Global(global_path)));
-        }
-
-        if let Some(bun_path) = find_binary_in_path("bun", path_var) {
-            return Ok(Runner::new(RunnerKind::Bun(bun_path)));
-        }
-
-        if let Some(npx_path) = find_binary_in_path("npx", path_var) {
-            return Ok(Runner::new(RunnerKind::Npx(npx_path)));
-        }
-
-        if let Some(npm_path) = find_binary_in_path("npm", path_var) {
-            return Ok(Runner::new(RunnerKind::Npm(npm_path)));
         }
     }
 
     Err(RunnerError::NotFound)
 }
 
-/// Checks for `./node_modules/.bin/tsci` relative to the given directory.
+/// Checks for local tsci/tscircuit relative to the given directory or hardware subdirectory.
 fn find_local_tsci(dir: &Path) -> Option<PathBuf> {
-    let bin_dir = dir.join("node_modules").join(".bin");
-    let candidates = [
-        bin_dir.join("tsci"),
-        bin_dir.join("tsci.cmd"),
-        bin_dir.join("tsci.exe"),
+    let dirs = [
+        dir.join("node_modules").join(".bin"),
+        dir.join("hardware").join("node_modules").join(".bin"),
     ];
+    for bin_dir in dirs {
+        let candidates = [
+            bin_dir.join("tsci"),
+            bin_dir.join("tsci.cmd"),
+            bin_dir.join("tsci.exe"),
+            bin_dir.join("tscircuit"),
+            bin_dir.join("tscircuit.cmd"),
+            bin_dir.join("tscircuit.exe"),
+        ];
 
-    candidates.into_iter().find(|c| is_executable(c))
+        if let Some(found) = candidates.into_iter().find(|c| is_executable(c)) {
+            return Some(found);
+        }
+    }
+    None
 }
 
 /// Finds an executable binary with the given name within PATH.
