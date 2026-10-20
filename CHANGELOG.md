@@ -5,6 +5,21 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.8.8] - 2026-10-20
+
+### Fixed
+
+- Fixed 3D camera top preset transition by offsetting target position from the polar singularity, removing abrupt camera rotation at the end of the transition.
+- Fixed PCB layout view container height by making it dynamically resize to full viewport height.
+- Fixed schematic contrast by replacing dark-on-dark labels and wires with a high-contrast Fusible palette and readable white typography.
+- Fixed WebGPU worker crashes by setting default PCB renderer to 2D canvas.
+- Fixed sidebar inspector responsiveness on hover and click across PCB, schematic, and 3D views.
+- Themed all contextual menus, popovers, and tooltips to Fusible visual tokens.
+
+### Changed
+
+- Polished navigation tabs and controls: removed borders from sidebar, top bar, and buttons; cleaned up prefixes (`01 //`, `02 //`, `03 //`) and control brackets `[ ]`; removed icons from sidebar tab buttons for a clean typographic layout.
+
 ## [0.8.7] - 2026-10-20
 
 ### Added

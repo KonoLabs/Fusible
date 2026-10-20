@@ -10,10 +10,34 @@
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <style>
     .tscircuit-schematic {
-      background-color: transparent !important;
+      background-color: #0d1117 !important;
     }
     .tscircuit-schematic .boundary {
       fill: #0d1117 !important;
+    }
+    .tscircuit-schematic text {
+      fill: #f1f5f9 !important;
+      font-family: 'Undefined', monospace !important;
+    }
+    .tscircuit-schematic .component-name,
+    .tscircuit-schematic .port-label,
+    .tscircuit-schematic .reference {
+      fill: #86A881 !important;
+      font-weight: bold !important;
+    }
+    .tscircuit-schematic .net-label {
+      fill: #ffffff !important;
+      font-weight: bold !important;
+    }
+    #pcb-container,
+    #pcb-container > div,
+    #pcb-container canvas,
+    #schematic-container,
+    #schematic-container > div,
+    #schematic-container svg {
+      width: 100% !important;
+      height: 100% !important;
+      display: block;
     }
     @font-face {
       font-family: 'Undefined';
@@ -56,7 +80,7 @@
     header {
       height: 52px;
       background: var(--surface);
-      border-bottom: 1px solid var(--border);
+      border-bottom: none;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -83,7 +107,7 @@
       font-size: 11px;
       padding: 3px 8px;
       background: var(--surface-hover);
-      border: 1px solid var(--border);
+      border: none;
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
@@ -94,17 +118,15 @@
       padding: 3px 10px;
       font-size: 11px;
       letter-spacing: 0.05em;
-      border: 1px solid;
+      border: none;
     }
     .fuse-intact {
       background: rgba(34, 145, 71, 0.15);
       color: var(--green);
-      border-color: var(--green-dark);
     }
     .fuse-blown {
       background: rgba(244, 63, 94, 0.15);
       color: var(--alert);
-      border-color: var(--alert);
       animation: fusePulse 1.5s infinite;
     }
     @keyframes fusePulse {
@@ -114,7 +136,7 @@
     .tabs {
       display: flex;
       background: var(--bg);
-      border: 1px solid var(--border);
+      border: none;
     }
     .tab-btn {
       background: transparent;
@@ -125,11 +147,10 @@
       font-size: 11px;
       letter-spacing: 0.05em;
       cursor: pointer;
-      border-right: 1px solid var(--border);
       transition: color 0.15s ease, background 0.15s ease;
-    }
-    .tab-btn:last-child {
-      border-right: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
     }
     .tab-btn:hover {
       color: var(--text);
@@ -147,17 +168,21 @@
     }
     .btn {
       background: var(--surface);
-      border: 1px solid var(--border);
+      border: none;
       color: var(--text-body);
       font-family: 'Undefined', monospace;
-      padding: 5px 10px;
+      padding: 6px 12px;
       font-size: 11px;
       letter-spacing: 0.05em;
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
     .btn:hover {
       background: var(--surface-hover);
       color: var(--text);
+    }
       border-color: var(--olive);
     }
     main {
@@ -209,19 +234,19 @@
     #sidebar {
       width: 340px;
       background: var(--surface);
-      border-left: 1px solid var(--border);
+      border-left: none;
       display: flex;
       flex-direction: column;
       z-index: 10;
     }
     .sidebar-tabs {
       display: flex;
-      border-bottom: 1px solid var(--border);
+      border-bottom: none;
       background: var(--bg);
     }
     .sidebar-tab-btn {
       flex: 1;
-      padding: 8px 4px;
+      padding: 10px 4px;
       background: transparent;
       border: none;
       color: var(--text-subtle);
@@ -229,7 +254,7 @@
       font-size: 10px;
       letter-spacing: 0.05em;
       cursor: pointer;
-      border-right: 1px solid var(--border);
+      border-right: none;
       transition: color 0.15s, background 0.15s;
     }
     .sidebar-tab-btn:last-child {
@@ -495,6 +520,71 @@
       display: inline-flex;
       align-items: center;
     }
+    [role="menu"],
+    [role="menuitem"],
+    div[role="menu"],
+    div[aria-label*="context menu"],
+    div[aria-label*="Visibility"],
+    .sv-sheet-item,
+    [data-radix-popper-content-wrapper] > div {
+      background: rgba(19, 19, 19, 0.96) !important;
+      color: var(--text) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 2px !important;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8) !important;
+      font-family: 'Undefined', monospace !important;
+      font-size: 11px !important;
+      backdrop-filter: blur(8px) !important;
+    }
+    [role="menuitem"],
+    button[role="menuitem"],
+    div[role="menu"] button {
+      background: transparent !important;
+      color: var(--text-body) !important;
+      font-family: 'Undefined', monospace !important;
+      font-size: 11px !important;
+      padding: 6px 10px !important;
+      border: none !important;
+      border-radius: 0 !important;
+      transition: background 0.1s, color 0.1s !important;
+    }
+    [role="menuitem"]:hover,
+    [role="menuitem"]:focus,
+    [role="menuitem"]:focus-visible,
+    button[role="menuitem"]:hover,
+    div[role="menu"] button:hover,
+    .sv-sheet-item:hover,
+    .sv-sheet-item[data-highlighted] {
+      background: var(--surface-hover) !important;
+      color: var(--green) !important;
+    }
+    #schematic-container div[style*="zIndex"],
+    #schematic-container div[style*="z-index"],
+    #schematic-container div[style*="rgba(255, 255, 255"],
+    #schematic-container div[style*="background-color: rgba(255, 255, 255"],
+    #schematic-container div[style*="backgroundColor: rgba(255, 255, 255"] {
+      background-color: rgba(19, 19, 19, 0.96) !important;
+      color: var(--text) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 2px !important;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8) !important;
+      font-family: 'Undefined', monospace !important;
+      backdrop-filter: blur(8px) !important;
+    }
+    #schematic-container dl,
+    #schematic-container dl * {
+      font-family: 'Undefined', monospace !important;
+      color: var(--text-body) !important;
+    }
+    #schematic-container dt {
+      color: var(--text-subtle) !important;
+      font-size: 10px !important;
+    }
+    #schematic-container dd {
+      color: var(--green) !important;
+      font-size: 11px !important;
+      font-weight: bold !important;
+    }
     #three-cad div[style*="background-color: white"],
     #three-cad div[style*="background-color: rgb(255, 255, 255)"],
     #three-cad div[style*="background: white"],
@@ -527,23 +617,23 @@
     </div>
 
     <div class="tabs">
-      <button class="tab-btn active" data-view="pcb" onclick="switchView('pcb')"><iconify-icon icon="pixelarticons:grid"></iconify-icon> 01 // PCB LAYOUT</button>
-      <button class="tab-btn" data-view="schematic" onclick="switchView('schematic')"><iconify-icon icon="pixelarticons:git-commit"></iconify-icon> 02 // SCHEMATIC</button>
-      <button class="tab-btn" data-view="3d" onclick="switchView('3d')"><iconify-icon icon="pixelarticons:cube"></iconify-icon> 03 // 3D VIEW</button>
+      <button class="tab-btn active" data-view="pcb" onclick="switchView('pcb')"><iconify-icon icon="pixelarticons:grid"></iconify-icon><span>PCB LAYOUT</span></button>
+      <button class="tab-btn" data-view="schematic" onclick="switchView('schematic')"><iconify-icon icon="pixelarticons:git-commit"></iconify-icon><span>SCHEMATIC</span></button>
+      <button class="tab-btn" data-view="3d" onclick="switchView('3d')"><iconify-icon icon="pixelarticons:cube"></iconify-icon><span>3D VIEW</span></button>
     </div>
 
     <div class="controls" id="controls-2d">
-      <button class="btn" onclick="zoomIn()"><iconify-icon icon="pixelarticons:zoom-in"></iconify-icon> [ZOOM +]</button>
-      <button class="btn" onclick="zoomOut()"><iconify-icon icon="pixelarticons:zoom-out"></iconify-icon> [ZOOM -]</button>
-      <button class="btn" onclick="resetZoom()"><iconify-icon icon="pixelarticons:undo"></iconify-icon> [RESET]</button>
+      <button class="btn" onclick="zoomIn()"><iconify-icon icon="pixelarticons:zoom-in"></iconify-icon> ZOOM +</button>
+      <button class="btn" onclick="zoomOut()"><iconify-icon icon="pixelarticons:zoom-out"></iconify-icon> ZOOM -</button>
+      <button class="btn" onclick="resetZoom()"><iconify-icon icon="pixelarticons:undo"></iconify-icon> RESET</button>
     </div>
 
     <div class="controls" id="controls-3d" style="display: none;">
-      <button class="btn" onclick="setCameraPreset('TOP')"><iconify-icon icon="pixelarticons:arrow-up"></iconify-icon> [TOP]</button>
-      <button class="btn" onclick="setCameraPreset('ISO')"><iconify-icon icon="pixelarticons:corner-up-right"></iconify-icon> [ISO]</button>
-      <button class="btn" onclick="setCameraPreset('FRONT')"><iconify-icon icon="pixelarticons:arrow-down"></iconify-icon> [FRONT]</button>
-      <button class="btn" onclick="setCameraPreset('RESET')"><iconify-icon icon="pixelarticons:reload"></iconify-icon> [RESET]</button>
-      <button class="btn" id="btn-engine-toggle" onclick="toggle3dEngine()"><iconify-icon icon="pixelarticons:switch"></iconify-icon> <span id="engine-label">[ENGINE: CAD]</span></button>
+      <button class="btn" onclick="setCameraPreset('TOP')"><iconify-icon icon="pixelarticons:arrow-up"></iconify-icon> TOP</button>
+      <button class="btn" onclick="setCameraPreset('ISO')"><iconify-icon icon="pixelarticons:corner-up-right"></iconify-icon> ISO</button>
+      <button class="btn" onclick="setCameraPreset('FRONT')"><iconify-icon icon="pixelarticons:arrow-down"></iconify-icon> FRONT</button>
+      <button class="btn" onclick="setCameraPreset('RESET')"><iconify-icon icon="pixelarticons:reload"></iconify-icon> RESET</button>
+      <button class="btn" id="btn-engine-toggle" onclick="toggle3dEngine()"><iconify-icon icon="pixelarticons:switch"></iconify-icon> <span id="engine-label">ENGINE: CAD</span></button>
     </div>
   </header>
 
@@ -566,11 +656,11 @@
 
     <aside id="sidebar">
       <div class="sidebar-tabs">
-        <button class="sidebar-tab-btn active" onclick="switchSidebarTab('inspector')"><iconify-icon icon="pixelarticons:eye"></iconify-icon> INSPECT</button>
-        <button class="sidebar-tab-btn" onclick="switchSidebarTab('components')"><iconify-icon icon="pixelarticons:list"></iconify-icon> PARTS</button>
-        <button class="sidebar-tab-btn" onclick="switchSidebarTab('nets')"><iconify-icon icon="pixelarticons:git-pull-request"></iconify-icon> NETS</button>
-        <button class="sidebar-tab-btn" onclick="switchSidebarTab('layers')"><iconify-icon icon="pixelarticons:layers"></iconify-icon> LAYERS</button>
-        <button class="sidebar-tab-btn" onclick="switchSidebarTab('checks')"><iconify-icon icon="pixelarticons:checklist"></iconify-icon> CHECKS</button>
+        <button class="sidebar-tab-btn active" onclick="switchSidebarTab('inspector')">INSPECT</button>
+        <button class="sidebar-tab-btn" onclick="switchSidebarTab('components')">PARTS</button>
+        <button class="sidebar-tab-btn" onclick="switchSidebarTab('nets')">NETS</button>
+        <button class="sidebar-tab-btn" onclick="switchSidebarTab('layers')">LAYERS</button>
+        <button class="sidebar-tab-btn" onclick="switchSidebarTab('checks')">CHECKS</button>
       </div>
 
       <div class="sidebar-pane active" id="pane-inspector">
@@ -772,14 +862,14 @@
 
     function updateEngineUI() {
       const label = document.getElementById('engine-label');
-      if (label) label.textContent = engine3d === 'cad' ? '[ENGINE: CAD]' : '[ENGINE: NATIVE]';
+      if (label) label.textContent = engine3d === 'cad' ? 'ENGINE: CAD' : 'ENGINE: NATIVE';
       const nativeEl = document.getElementById('three-native');
       const cadEl = document.getElementById('three-cad');
       if (engine3d === 'cad' && window.Tscircuit && window.Tscircuit.render3dViewer && lastCircuitJson) {
         if (cadEl) cadEl.style.display = 'block';
         if (nativeEl) nativeEl.style.display = 'none';
         try {
-          window.Tscircuit.render3dViewer(cadEl, lastCircuitJson);
+          window.Tscircuit.render3dViewer(cadEl, lastCircuitJson, (ref) => selectComponent(ref));
         } catch (err) {
           if (cadEl) cadEl.style.display = 'none';
           if (nativeEl) nativeEl.style.display = 'block';
@@ -1075,6 +1165,9 @@
           h: ch,
           layer: pc.layer || 'top',
           id: pc.pcb_component_id,
+          sourceComponentId: pc.source_component_id,
+          pcbComponentId: pc.pcb_component_id,
+          schematicComponentId: null,
           pins: []
         };
       });
@@ -1092,6 +1185,9 @@
             h: 4,
             layer: 'top',
             id,
+            sourceComponentId: id,
+            pcbComponentId: id,
+            schematicComponentId: null,
             pins: []
           };
         });
@@ -1100,12 +1196,15 @@
       elements.filter(e => e.type === 'schematic_component').forEach(sc => {
         const src = sourceCompMap[sc.source_component_id] || {};
         const name = src.name;
-        if (name && componentsMap[name] && sc.port_labels) {
-          for (const pin in sc.port_labels) {
-            componentsMap[name].pins.push({
-              pin,
-              net: sc.port_labels[pin]
-            });
+        if (name && componentsMap[name]) {
+          componentsMap[name].schematicComponentId = sc.schematic_component_id;
+          if (sc.port_labels) {
+            for (const pin in sc.port_labels) {
+              componentsMap[name].pins.push({
+                pin,
+                net: sc.port_labels[pin]
+              });
+            }
           }
         }
       });
@@ -1150,14 +1249,49 @@
       `).join('');
     }
 
-    function selectComponent(name) {
-      selectedComponent = name;
-      renderComponentsList();
-      const comp = componentsMap[name];
-      if (!comp) return;
+    let pinnedComponent = null;
 
-      switchSidebarTab('inspector');
+    function findComponent(key) {
+      if (!key) return null;
+      if (componentsMap[key]) return componentsMap[key];
+      const normalized = String(key).trim();
+      if (componentsMap[normalized]) return componentsMap[normalized];
+      for (const c of Object.values(componentsMap)) {
+        if (
+          c.name === normalized ||
+          c.id === normalized ||
+          c.pcbComponentId === normalized ||
+          c.sourceComponentId === normalized ||
+          c.schematicComponentId === normalized
+        ) {
+          return c;
+        }
+      }
+      return null;
+    }
+
+    function resetInspector() {
+      if (pinnedComponent) return;
       const panel = document.getElementById('inspector-content');
+      if (panel) {
+        panel.innerHTML = '<div class="empty-state"><span>SELECT OR HOVER A COMPONENT OR PAD TO INSPECT</span></div>';
+      }
+    }
+
+    function inspectComponent(compOrName, isPinned = true) {
+      const comp = typeof compOrName === 'string' ? findComponent(compOrName) : compOrName;
+      if (!comp) {
+        if (!isPinned && !pinnedComponent) resetInspector();
+        return;
+      }
+      if (isPinned) {
+        pinnedComponent = comp.name;
+        selectedComponent = comp.name;
+        renderComponentsList();
+      }
+
+      const panel = document.getElementById('inspector-content');
+      if (!panel) return;
 
       let pinsHtml = '';
       if (comp.pins && comp.pins.length > 0) {
@@ -1176,7 +1310,10 @@
 
       panel.innerHTML = `
         <div class="inspector-header">
-          <span class="inspector-name">${escapeHtml(comp.name)}</span>
+          <div>
+            <span class="inspector-name">${escapeHtml(comp.name)}</span>
+            ${!isPinned ? '<span style="font-size:9px;color:var(--olive);margin-left:6px;vertical-align:middle;">[PREVIEW]</span>' : ''}
+          </div>
           <span class="inspector-type">${escapeHtml(comp.ftype || 'COMPONENT')}</span>
         </div>
         ${comp.mpn ? `<div class="prop-row"><span class="prop-key">MPN</span><span class="prop-val">${escapeHtml(comp.mpn)}</span></div>` : ''}
@@ -1186,14 +1323,21 @@
         ${pinsHtml}
       `;
 
-      if (currentView === '3d' && boardGroup) {
+      if (isPinned && currentView === '3d' && boardGroup) {
         boardGroup.children.forEach(obj => {
-          if (obj.userData && obj.userData.name === name && obj.material) {
+          if (obj.userData && obj.userData.name === comp.name && obj.material) {
             obj.material.emissive = new THREE.Color(0x86A881);
             obj.material.emissiveIntensity = 0.8;
           }
         });
       }
+    }
+
+    function selectComponent(idOrName) {
+      const comp = findComponent(idOrName);
+      if (!comp) return;
+      switchSidebarTab('inspector');
+      inspectComponent(comp, true);
     }
 
     function selectNet(netName) {
@@ -1347,11 +1491,20 @@
           }
         }
         showTooltip(e.clientX, e.clientY, hoveredObject.userData);
+        if (hoveredObject.userData && hoveredObject.userData.name) {
+          const comp = findComponent(hoveredObject.userData.name);
+          if (comp) {
+            inspectComponent(comp, false);
+          }
+        }
         container.style.cursor = 'pointer';
       } else {
         clearThreeHighlight();
         hideTooltip();
         container.style.cursor = 'default';
+        if (!pinnedComponent) {
+          resetInspector();
+        }
       }
     }
 
@@ -1369,6 +1522,42 @@
       hoveredObject = null;
     }
 
+    let cameraAnimId = null;
+
+    function smoothAnimateCamera(targetPos, targetLookAt, targetUp, duration = 600) {
+      if (!camera || !controls) return;
+      if (cameraAnimId) cancelAnimationFrame(cameraAnimId);
+
+      const startPos = camera.position.clone();
+      const startLookAt = controls.target.clone();
+      const startUp = camera.up.clone();
+      const startTime = performance.now();
+
+      function step() {
+        const elapsed = performance.now() - startTime;
+        const t = Math.min(1, elapsed / duration);
+        const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+        camera.position.lerpVectors(startPos, targetPos, ease);
+        controls.target.lerpVectors(startLookAt, targetLookAt, ease);
+        if (targetUp) {
+          camera.up.lerpVectors(startUp, targetUp, ease).normalize();
+        }
+        controls.update();
+
+        if (t < 1) {
+          cameraAnimId = requestAnimationFrame(step);
+        } else {
+          camera.position.copy(targetPos);
+          controls.target.copy(targetLookAt);
+          if (targetUp) camera.up.copy(targetUp);
+          controls.update();
+          cameraAnimId = null;
+        }
+      }
+      cameraAnimId = requestAnimationFrame(step);
+    }
+
     function setCameraPreset(preset) {
       if (engine3d === 'cad' && window.cadCameraController) {
         if (preset === 'TOP') {
@@ -1384,19 +1573,15 @@
       const dist = Math.max(boardWidth, boardHeight) * 1.8;
       const tx = boardCenterX;
       const tz = boardCenterZ;
-      controls.target.set(tx, 0, tz);
+      const targetVec = new THREE.Vector3(tx, 0, tz);
 
       if (preset === 'TOP') {
-        camera.position.set(tx, dist, tz + 0.001);
-        camera.up.set(0, 0, -1);
+        smoothAnimateCamera(new THREE.Vector3(tx, dist, tz + 0.001), targetVec, new THREE.Vector3(0, 0, -1));
       } else if (preset === 'FRONT') {
-        camera.position.set(tx, dist * 0.1, tz + dist);
-        camera.up.set(0, 1, 0);
+        smoothAnimateCamera(new THREE.Vector3(tx, dist * 0.1, tz + dist), targetVec, new THREE.Vector3(0, 1, 0));
       } else if (preset === 'ISO' || preset === 'RESET') {
-        camera.position.set(tx + dist * 0.7, dist * 0.8, tz + dist * 0.7);
-        camera.up.set(0, 1, 0);
+        smoothAnimateCamera(new THREE.Vector3(tx + dist * 0.7, dist * 0.8, tz + dist * 0.7), targetVec, new THREE.Vector3(0, 1, 0));
       }
-      controls.update();
     }
 
     function makeTextSprite(message) {
@@ -1873,6 +2058,79 @@
         liveDot.style.background = 'var(--alert)';
         liveStatus.innerHTML = '<iconify-icon icon="pixelarticons:alert"></iconify-icon> [WAIT] RECONNECTING...';
       };
+    }
+
+    const schEl = document.getElementById('schematic-container');
+    if (schEl) {
+      schEl.addEventListener('mousemove', (e) => {
+        const compEl = e.target.closest('[data-schematic-component-id]');
+        if (compEl) {
+          const id = compEl.getAttribute('data-schematic-component-id');
+          const comp = findComponent(id);
+          if (comp) {
+            inspectComponent(comp, false);
+            showTooltip(e.clientX, e.clientY, {
+              name: comp.name,
+              type: comp.ftype || 'component',
+              part: comp.mpn,
+              pos: `(${comp.x.toFixed(2)}, ${comp.y.toFixed(2)}) mm`,
+              layer: comp.layer || 'top',
+              extra: `${comp.pins.length} pins`
+            });
+            return;
+          }
+        }
+        const portEl = e.target.closest('[data-schematic-port-id]');
+        if (portEl) {
+          const portId = portEl.getAttribute('data-schematic-port-id');
+          showTooltip(e.clientX, e.clientY, {
+            name: `PORT: ${portId}`,
+            type: 'PORT'
+          });
+          return;
+        }
+        hideTooltip();
+        if (!pinnedComponent) resetInspector();
+      });
+      schEl.addEventListener('mouseleave', () => {
+        hideTooltip();
+        if (!pinnedComponent) resetInspector();
+      });
+      schEl.addEventListener('click', (e) => {
+        const compEl = e.target.closest('[data-schematic-component-id]');
+        if (compEl) {
+          const id = compEl.getAttribute('data-schematic-component-id');
+          const comp = findComponent(id);
+          if (comp) selectComponent(comp.name);
+        }
+      });
+    }
+
+    const pcbEl = document.getElementById('pcb-container');
+    if (pcbEl) {
+      pcbEl.addEventListener('mousemove', (e) => {
+        const compEl = e.target.closest('[data-pcb-component-id]') || e.target.closest('[data-component-id]');
+        if (compEl) {
+          const id = compEl.getAttribute('data-pcb-component-id') || compEl.getAttribute('data-component-id');
+          const comp = findComponent(id);
+          if (comp) {
+            inspectComponent(comp, false);
+            showTooltip(e.clientX, e.clientY, {
+              name: comp.name,
+              type: comp.ftype || 'component',
+              part: comp.mpn,
+              pos: `(${comp.x.toFixed(2)}, ${comp.y.toFixed(2)}) mm`,
+              layer: comp.layer || 'top',
+              extra: `${comp.pins.length} pins`
+            });
+            return;
+          }
+        }
+      });
+      pcbEl.addEventListener('mouseleave', () => {
+        hideTooltip();
+        if (!pinnedComponent) resetInspector();
+      });
     }
 
     fetchInitialData();
