@@ -30,6 +30,7 @@ fn circuit_fixture() -> Circuit {
             CircuitElement::Pad(Pad {
                 pad_id: Some("P1".to_string()),
                 net_id: Some("ghost_net".to_string()),
+                ..Default::default()
             }),
         ],
     }

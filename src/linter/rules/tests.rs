@@ -54,6 +54,7 @@ fn endpoints_counted_across_ports_pads_and_traces() {
     let pad = CircuitElement::Pad(Pad {
         pad_id: Some("P1".to_string()),
         net_id: Some("n1".to_string()),
+        ..Default::default()
     });
     let one_pad = vec![net(Some("n1"), "+3V3"), pad.clone()];
     assert_eq!(rule_violations(UnconnectedNetRule, one_pad).len(), 1);
@@ -107,6 +108,7 @@ fn referenced_but_undefined_nets_are_reported_once() {
     let pad = CircuitElement::Pad(Pad {
         pad_id: Some("P1".to_string()),
         net_id: Some("missing".to_string()),
+        ..Default::default()
     });
     let trace = CircuitElement::Trace(crate::parser::Trace {
         trace_id: Some("t1".to_string()),
@@ -218,4 +220,118 @@ fn pin_mux_rule_on_example_file() {
     let v = crate::linter::Linter::default().run_with_context(&ctx);
     println!("Violations on example file: {:?}", v);
     assert_eq!(v.len(), 1);
+}
+
+#[test]
+fn decoupling_capacitor_rule_flags_missing_bypass_caps() {
+    use super::BypassCapRule;
+    use crate::parser::Component;
+
+    let chip = CircuitElement::Component(Component {
+        component_id: Some("U1".to_string()),
+        name: Some("STM32G431".to_string()),
+        kind: Some("chip".to_string()),
+    });
+    let vdd_port = CircuitElement::Port(Port {
+        port_id: Some("U1.VDD".to_string()),
+        source_component_id: Some("U1".to_string()),
+        name: Some("VDD".to_string()),
+        net_id: Some("n_3v3".to_string()),
+        ..Default::default()
+    });
+    let power_in = CircuitElement::Port(Port {
+        port_id: Some("J1.VOUT".to_string()),
+        source_component_id: Some("J1".to_string()),
+        name: Some("VOUT".to_string()),
+        net_id: Some("n_3v3".to_string()),
+        ..Default::default()
+    });
+    let net_3v3 = net(Some("n_3v3"), "+3V3");
+
+    // Missing capacitor: fails
+    let v = rule_violations(
+        BypassCapRule,
+        vec![
+            chip.clone(),
+            vdd_port.clone(),
+            power_in.clone(),
+            net_3v3.clone(),
+        ],
+    );
+    assert_eq!(v.len(), 1);
+    assert_eq!(v[0].rule, "decoupling_capacitor");
+    assert!(v[0].message.contains("VDD"));
+    assert!(v[0].message.contains("STM32G431"));
+
+    // Add bypass capacitor C1
+    let cap = CircuitElement::Component(Component {
+        component_id: Some("C1".to_string()),
+        name: Some("C1".to_string()),
+        kind: Some("capacitor".to_string()),
+    });
+    let cap_port = CircuitElement::Port(Port {
+        port_id: Some("C1.1".to_string()),
+        source_component_id: Some("C1".to_string()),
+        name: Some("1".to_string()),
+        net_id: Some("n_3v3".to_string()),
+        ..Default::default()
+    });
+
+    let v_clean = rule_violations(
+        BypassCapRule,
+        vec![chip, vdd_port, power_in, net_3v3, cap, cap_port],
+    );
+    assert!(v_clean.is_empty());
+}
+
+#[test]
+fn trace_clearance_rule_detects_copper_overlap() {
+    use super::TraceClearanceRule;
+
+    let pad1 = CircuitElement::Pad(Pad {
+        pad_id: Some("P1".to_string()),
+        net_id: Some("net_a".to_string()),
+        x: Some(10.0),
+        y: Some(10.0),
+        width: Some(1.0),
+        height: Some(1.0),
+        layer: Some("top".to_string()),
+        ..Default::default()
+    });
+    let pad2 = CircuitElement::Pad(Pad {
+        pad_id: Some("P2".to_string()),
+        net_id: Some("net_b".to_string()),
+        x: Some(10.05), // Overlapping!
+        y: Some(10.05),
+        width: Some(1.0),
+        height: Some(1.0),
+        layer: Some("top".to_string()),
+        ..Default::default()
+    });
+
+    let net_a = net(Some("net_a"), "SIG_A");
+    let net_b = net(Some("net_b"), "SIG_B");
+
+    let v = rule_violations(
+        TraceClearanceRule,
+        vec![pad1.clone(), pad2.clone(), net_a.clone(), net_b.clone()],
+    );
+    assert_eq!(v.len(), 1);
+    assert_eq!(v[0].rule, "trace_clearance");
+    assert!(v[0].message.contains("short-circuit"));
+
+    // Move pad2 far away: clearance passes
+    let pad2_far = CircuitElement::Pad(Pad {
+        pad_id: Some("P2".to_string()),
+        net_id: Some("net_b".to_string()),
+        x: Some(25.0),
+        y: Some(25.0),
+        width: Some(1.0),
+        height: Some(1.0),
+        layer: Some("top".to_string()),
+        ..Default::default()
+    });
+
+    let v_clean = rule_violations(TraceClearanceRule, vec![pad1, pad2_far, net_a, net_b]);
+    assert!(v_clean.is_empty());
 }

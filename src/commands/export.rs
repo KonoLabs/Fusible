@@ -90,6 +90,23 @@ pub fn run(
         std::fs::write(&dest, zip_bytes)?;
         println!("✅ Successfully exported gerbers to {}!", dest.display());
         Ok(())
+    } else if format == "pcb-svg" || format == "pcb_svg" {
+        let circuit_json = load_or_build_circuit_json(&entry, &runner)?;
+        let dest = output.unwrap_or_else(|| PathBuf::from("dist/pcb.svg"));
+        if let Some(parent) = dest.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        println!(
+            "📦 Generating native PCB layout SVG to {}...",
+            dest.display()
+        );
+        let svg = crate::svg::render_pcb_svg(&circuit_json);
+        std::fs::write(&dest, svg)?;
+        println!(
+            "✅ Successfully exported PCB layout SVG to {}!",
+            dest.display()
+        );
+        Ok(())
     } else if format == "kicad_project" || format == "kicad" {
         let dest = output.unwrap_or_else(|| PathBuf::from("dist/cad/kicad"));
         std::fs::create_dir_all(&dest)?;
@@ -204,23 +221,29 @@ fn export_cad(runner: &Runner, entry: &Path, out: Option<&Path>) -> Result<(), E
     Ok(())
 }
 
-fn export_docs(runner: &Runner, entry: &Path, out: Option<&Path>) -> Result<(), ExportError> {
+fn export_docs(
+    _runner: &Runner,
+    _entry: &Path,
+    circuit_json: &str,
+    out: Option<&Path>,
+) -> Result<(), ExportError> {
     let base = out
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("dist/docs"));
     std::fs::create_dir_all(&base).ok();
     println!("📦 Running documentation export preset (docs)...");
-    let sch = base.join("schematic.svg");
-    println!("  • Exporting schematic SVG -> {}", sch.display());
-    runner.export(entry, "schematic-svg", Some(&sch))?;
-    let pcb = base.join("pcb.svg");
-    println!("  • Exporting PCB layout SVG -> {}", pcb.display());
-    runner.export(entry, "pcb-svg", Some(&pcb))?;
-    let pdf = base.join("schematic.pdf");
-    println!("  • Exporting schematic PDF -> {}", pdf.display());
-    runner.export(entry, "schematic-pdf", Some(&pdf))?;
+    println!("  • Exporting schematic SVG & PCB layout SVG via native Rust engine...");
+
+    let circuit = crate::parser::parse(circuit_json, Path::new("circuit.json")).ok();
+    let dummy_circuit = crate::parser::Circuit {
+        elements: Vec::new(),
+    };
+    let c = circuit.as_ref().unwrap_or(&dummy_circuit);
+    let netlist = crate::netlist::Netlist::from_circuit(c);
+
+    crate::svg::export_docs_bundle(circuit_json, c, &netlist, &base)?;
     println!(
-        "✅ Documentation artifacts generated in \"{}\"",
+        "✅ Documentation artifacts generated in \"{}\" (schematic.svg, pcb.svg)",
         base.display()
     );
     Ok(())
@@ -247,13 +270,13 @@ fn run_preset(
     match preset {
         "fab" => export_fab(runner, entry, circuit_json, board_title, custom_output),
         "cad" => export_cad(runner, entry, custom_output),
-        "docs" => export_docs(runner, entry, custom_output),
+        "docs" => export_docs(runner, entry, circuit_json, custom_output),
         "all" => {
             export_fab(runner, entry, circuit_json, board_title, custom_output)?;
             println!();
             export_cad(runner, entry, custom_output)?;
             println!();
-            export_docs(runner, entry, custom_output)?;
+            export_docs(runner, entry, circuit_json, custom_output)?;
             Ok(())
         }
         _ => unreachable!(),

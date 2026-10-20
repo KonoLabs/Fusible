@@ -14,6 +14,7 @@ pub mod linter;
 pub mod netlist;
 pub mod parser;
 pub mod silicon;
+pub mod svg;
 pub mod tscircuit;
 
 use std::path::Path;

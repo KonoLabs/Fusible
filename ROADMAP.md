@@ -62,19 +62,20 @@ Fusible unifies the hardware development workflow by wrapping tscircuit commands
 - [x] **Milestone 6: Bidirectional EDA Collaboration** — KiCad export (`kicad_project`, `.kicad_pro`, `.kicad_sch`, `.kicad_pcb`), KiCad linter integration, tested end-to-end on `FieldCam`.
 - [x] **Milestone 7: Packaging & Release** — Published `fusible v0.3.0` on crates.io with 100% test pass rate and zero clippy warnings.
 
-- [x] **Milestone 8: Pure Rust Fabrication** — RS-274X Gerber and Excellon drill generator in pure Rust (`<5ms` generation time, zero runner dependencies).
+- [x] **Milestone 8: Pure Rust Fabrication** (`v0.4.0`) — RS-274X Gerber and Excellon drill generator in pure Rust (`<5ms` generation time, zero runner dependencies).
 - [x] **Milestone 9: Silicon Pin-Muxing Engine & Alternate Function (AF) Validation** (`v0.5.0`):
   - Silicon database for STM32 (AF0–AF15), RP2040 (F1–F9 function select), and ESP32-S3 (boot strapping and reserved flash pins).
   - Validation of assigned GPIOs against physical silicon capabilities with alternative pin recommendations.
   - Fail-closed fuse contract enforcement (`exit 1`) on AF mismatch, pin collisions, and strapping violations.
+- [x] **Milestone 10: Native SVG Documentation Exporter & Advanced Electrical DRC** (`v0.6.0`):
+  - Pure-Rust vector rendering engine for multi-layer PCB layout (`pcb.svg`) and schematic symbol graphs (`schematic.svg`).
+  - Decoupling capacitor proximity rule (`decoupling_capacitor`): verifies power supply rails on ICs have bypass capacitors.
+  - Physical copper clearance rule (`trace_clearance`): detects copper short-circuits and spacing violations (< 0.15mm).
 
-## 5. Phase 2: Advanced DRC, Native Docs & Sync
+## 5. Phase 2: Autorouting, Sync & Automation
 
-- [ ] **Native Pure-Rust SVG Documentation Exporter (`--preset docs`)**:
-  - Direct vector rendering of schematic symbols, traces, and PCB layout without Node/browser overhead.
-- [ ] **Advanced Electrical DRC**:
-  - Decoupling capacitor proximity rule (detecting floating VDD rails without local bypass caps).
-  - Power rail current capacity & trace clearance heuristics.
+- [ ] **Parallel Multi-Core Autorouter (`fusible route`)**:
+  - Gridless topological pathfinder using spatial R-trees (`rstar`) and parallel route negotiation (`rayon`).
 - [ ] **Bidirectional Syncer (`fusible diff` / `fusible sync`)**:
   - Detecting visual layout edits made in KiCad and reconciling them back into `hardware/index.tsx`.
 - [ ] **Turnkey CI GitHub Action (`fusible-action`)**:

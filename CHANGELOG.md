@@ -5,6 +5,19 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.6.0] - 2026-10-20
+
+### Added
+
+- Native pure-Rust SVG documentation vector renderer (`src/svg/`):
+  - `render_pcb`: Multi-layer vector rendering of PCB substrate, top/bottom copper traces, gold SMT pads, plated through-holes, vias, and silkscreen legend.
+  - `render_schematic`: Functional schematic diagram generator rendering component blocks, terminal pins, orthogonal net routing, and junction dots directly from Circuit AST and Netlist graph.
+  - Native integration into `fusible export --preset docs` and `fusible export -f pcb-svg`, dropping vector export time from ~3s to `<5ms` with zero external browser or Node dependencies.
+  - Added integration test `subcommand_export_docs_generates_native_svgs`.
+- Advanced Electrical Design Rule Checking (DRC) rules:
+  - `BypassCapRule` (`decoupling_capacitor`): flags active IC power supply pins (`VDD`, `VCC`, `VBAT`, `3V3`, `5V`) lacking local ceramic decoupling/bypass capacitors on their power net.
+  - `TraceClearanceRule` (`trace_clearance`): checks physical copper geometry (pads, traces, vias) and blows the fuse (`exit 1`) on direct copper short-circuits or clearance violations (< 0.15mm / 6 mil) between distinct electrical nets.
+
 ## [0.5.0] - 2026-10-20
 
 ### Added

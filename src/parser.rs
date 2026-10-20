@@ -96,7 +96,7 @@ pub enum CircuitElement {
     #[serde(rename = "source_port")]
     Port(Port),
     /// A mount pad (physical solder surface on the PCB).
-    #[serde(rename = "source_pad")]
+    #[serde(rename = "source_pad", alias = "pcb_smtpad")]
     Pad(Pad),
     /// A copper trace joining two ports.
     #[serde(rename = "source_trace")]
@@ -161,10 +161,26 @@ pub struct Port {
 /// A mount pad (the physical analogue of a port).
 #[derive(Debug, Clone, Deserialize, Default)]
 pub struct Pad {
-    #[serde(alias = "source_pad_id", alias = "sourcePadId")]
+    #[serde(
+        alias = "source_pad_id",
+        alias = "sourcePadId",
+        alias = "pcb_smtpad_id"
+    )]
     pub pad_id: Option<String>,
     #[serde(alias = "source_net_id", alias = "sourceNetId", alias = "netId")]
     pub net_id: Option<String>,
+    #[serde(default, alias = "source_port_id", alias = "port_id")]
+    pub port_id: Option<String>,
+    #[serde(default)]
+    pub x: Option<f64>,
+    #[serde(default)]
+    pub y: Option<f64>,
+    #[serde(default)]
+    pub width: Option<f64>,
+    #[serde(default)]
+    pub height: Option<f64>,
+    #[serde(default)]
+    pub layer: Option<String>,
 }
 
 /// A copper trace.

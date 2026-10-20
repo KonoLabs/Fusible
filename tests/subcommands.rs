@@ -172,6 +172,36 @@ fn subcommand_export_fuse_blown_blocks_export() {
 }
 
 #[test]
+fn subcommand_export_docs_generates_native_svgs() {
+    let fixture = TestDir::new("export_docs_native");
+    let out_dir = fixture.path.join("docs");
+
+    let out = fusible()
+        .args([
+            "export",
+            "examples/circuit.json",
+            "--preset",
+            "docs",
+            "-o",
+            out_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("binary should run");
+
+    assert_eq!(out.status.code(), Some(0));
+    assert!(out_dir.join("pcb.svg").exists());
+    assert!(out_dir.join("schematic.svg").exists());
+
+    let pcb_svg = std::fs::read_to_string(out_dir.join("pcb.svg")).unwrap();
+    assert!(pcb_svg.contains("<svg"));
+    assert!(pcb_svg.contains("substrate"));
+
+    let sch_svg = std::fs::read_to_string(out_dir.join("schematic.svg")).unwrap();
+    assert!(sch_svg.contains("<svg"));
+    assert!(sch_svg.contains("components"));
+}
+
+#[test]
 fn subcommand_export_rejects_unknown_preset() {
     let out = fusible()
         .args([
