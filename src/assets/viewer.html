@@ -52,17 +52,17 @@
     }
     :root {
       --bg: #000000;
-      --surface: #131313;
-      --surface-hover: #1a1a1a;
+      --surface: #1E1E1E;
+      --surface-hover: #2A2A2A;
       --border: #353535;
       --border-subtle: #222222;
       --green: #86A881;
       --green-dark: #229147;
       --olive: #A8B365;
       --text: #FFFFFF;
-      --text-body: rgba(255, 255, 255, 0.80);
-      --text-subtle: rgba(255, 255, 255, 0.45);
-      --alert: #f43f5e;
+      --text-body: #FFFFFF;
+      --text-subtle: rgba(255, 255, 255, 0.55);
+      --alert: #C55454;
       --copper: #c87d32;
       --gold: #d4af37;
       --blue: #38bdf8;
@@ -453,7 +453,7 @@
       position: absolute;
       bottom: 16px;
       left: 16px;
-      background: rgba(19, 19, 19, 0.9);
+      background: rgba(30, 30, 30, 0.95);
       border: 1px solid var(--border);
       padding: 6px 12px;
       font-size: 11px;
@@ -473,7 +473,7 @@
       position: fixed;
       z-index: 1000;
       pointer-events: none;
-      background: rgba(19, 19, 19, 0.95);
+      background: rgba(30, 30, 30, 0.95);
       border: 1px solid var(--border);
       padding: 8px 12px;
       font-size: 11px;
@@ -527,7 +527,7 @@
     div[aria-label*="Visibility"],
     .sv-sheet-item,
     [data-radix-popper-content-wrapper] > div {
-      background: rgba(19, 19, 19, 0.96) !important;
+      background: rgba(30, 30, 30, 0.96) !important;
       color: var(--text) !important;
       border: 1px solid var(--border) !important;
       border-radius: 2px !important;
@@ -563,7 +563,7 @@
     #schematic-container div[style*="rgba(255, 255, 255"],
     #schematic-container div[style*="background-color: rgba(255, 255, 255"],
     #schematic-container div[style*="backgroundColor: rgba(255, 255, 255"] {
-      background-color: rgba(19, 19, 19, 0.96) !important;
+      background-color: rgba(30, 30, 30, 0.96) !important;
       color: var(--text) !important;
       border: 1px solid var(--border) !important;
       border-radius: 2px !important;
@@ -589,7 +589,7 @@
     #three-cad div[style*="background-color: rgb(255, 255, 255)"],
     #three-cad div[style*="background: white"],
     #three-cad div[style*="background:white"] {
-      background-color: rgba(19, 19, 19, 0.95) !important;
+      background-color: rgba(30, 30, 30, 0.95) !important;
       color: var(--text) !important;
       border: 1px solid var(--border) !important;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7) !important;
@@ -1407,7 +1407,7 @@
       const height = container.clientHeight || window.innerHeight;
 
       scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x0a0c10);
+      scene.background = new THREE.Color(0x000000);
 
       camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 2000);
       camera.position.set(0, 80, 100);
@@ -1445,7 +1445,7 @@
       camera.add(headlight);
       scene.add(camera);
 
-      const grid = new THREE.GridHelper(200, 40, 0x353535, 0x131313);
+      const grid = new THREE.GridHelper(200, 40, 0x353535, 0x1E1E1E);
       grid.position.y = -1.0;
       scene.add(grid);
 
@@ -1874,7 +1874,7 @@
           baseMesh.userData = userData;
           compGroup.add(baseMesh);
 
-          const ledColor = nameUpper.includes('RED') ? 0xef4444 : nameUpper.includes('BLUE') ? 0x38bdf8 : 0x22c55e;
+          const ledColor = nameUpper.includes('RED') ? 0xc55454 : nameUpper.includes('BLUE') ? 0x38bdf8 : 0x86A881;
           const ledMat = new THREE.MeshStandardMaterial({
             color: ledColor,
             emissive: ledColor,

@@ -5,6 +5,12 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.8.9] - 2026-10-20
+
+### Changed
+
+- Updated color palette across Dev Studio to `#1E1E1E` for gray surfaces and grids, `#C55454` for red alerts and blown fuses, `#86A881` for brand accents, and `#000000` for backgrounds.
+
 ## [0.8.8] - 2026-10-20
 
 ### Fixed
