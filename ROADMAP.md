@@ -54,8 +54,23 @@ Fusible unifies the hardware development workflow by wrapping tscircuit commands
 
 ## 4. Implementation Milestones
 
-- [x] **Milestone 1: MVP Core** — Circuit JSON parser, fail-closed electrical linter, miette diagnostics, exit code contract.
-- [ ] **Milestone 2: Project Manifest (`src/config/`)** — `fusible.yml` schema, auto-discovery, fallback defaults.
-- [ ] **Milestone 3: tscircuit Runner (`src/tscircuit/`)** — Auto-detection (`tsci`, `bun x tscircuit`, `npx tscircuit`), dev viewer, export, and build wrapping.
-- [ ] **Milestone 4: CLI Subcommands (`src/cli.rs`, `src/main.rs`)** — `dev`, `view`, `check`, `export`, `init`, and pipeline `build`.
-- [ ] **Milestone 5: MCU Pin-Muxing & Firmware Codegen** — Pin assignment validation and `pins.rs` generation for Embassy.
+- [x] **Milestone 1: MVP Core** — Circuit JSON parser, fail-closed electrical linter, miette diagnostics, exit code contract (0: intact, 1: blown, 2: tool error).
+- [x] **Milestone 2: Project Manifest (`src/config/`)** — `fusible.yml` schema, auto-discovery, fallback defaults.
+- [x] **Milestone 3: tscircuit Runner (`src/tscircuit/`)** — Auto-detection (`tsci`, `bun x tscircuit`, `npx tscircuit`), dev viewer, export presets (`fab`, `cad`, `docs`), build, add, install, search, and doctor.
+- [x] **Milestone 4: CLI Subcommands (`src/cli.rs`, `src/main.rs`)** — `dev`, `check`, `export`, `init`, `build`, `add`, `install`, `search`, and `doctor`.
+- [x] **Milestone 5: Firmware Pin Binding Codegen (`src/codegen/pins.rs`)** — Extraction of MCU peripheral mappings and typed Rust HAL bindings (`pins.rs`) for firmware monorepos.
+- [x] **Milestone 6: Bidirectional EDA Collaboration** — KiCad export (`kicad_project`, `.kicad_pro`, `.kicad_sch`, `.kicad_pcb`), KiCad linter integration, tested end-to-end on `FieldCam`.
+- [x] **Milestone 7: Packaging & Release** — Published `fusible v0.3.0` on crates.io with 100% test pass rate and zero clippy warnings.
+
+## 5. Phase 2: Advanced DRC, Silicon Pin-Muxing & Sync
+
+- [ ] **Silicon Pin-Muxing Engine & Alternate Function (AF) Validation**:
+  - Silicon database for STM32, ESP32-S3, RP2040.
+  - Verification that assigned GPIOs support requested hardware peripherals (SPI, UART, I2C, DVP, PWM).
+- [ ] **Advanced Electrical DRC**:
+  - Decoupling capacitor proximity rule (detecting floating VDD rails without local bypass caps).
+  - Power rail current capacity & trace clearance heuristics.
+- [ ] **Bidirectional Syncer (`fusible diff` / `fusible sync`)**:
+  - Detecting visual layout edits made in KiCad and reconciling them back into `hardware/index.tsx`.
+- [ ] **Turnkey CI GitHub Action (`fusible-action`)**:
+  - Automated PR checking in CI to prevent defective hardware or breaking pin drifts from reaching main.
