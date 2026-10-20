@@ -89,11 +89,44 @@ pub enum Commands {
         skip_lint: bool,
     },
 
-    /// Initialize a new fusible.yml project manifest in the current directory
+    /// Initialize a new Fusible project and tscircuit hardware workspace
     Init {
+        /// Target directory to initialize in (defaults to current directory)
+        #[arg(value_name = "PATH")]
+        path: Option<PathBuf>,
+
         /// Optional project name
         #[arg(long)]
         name: Option<String>,
+
+        /// Target microcontroller (e.g. esp32-s3, stm32g431, rp2040)
+        #[arg(long)]
+        mcu: Option<String>,
+
+        /// Skip installing hardware npm/bun dependencies
+        #[arg(long)]
+        no_install: bool,
+    },
+
+    /// Add a tscircuit component or registry package to the hardware project
+    Add {
+        /// Packages to install (e.g. @tsci/seveibar.smd-resistor or @tscircuit/core)
+        #[arg(value_name = "PACKAGE", required = true)]
+        packages: Vec<String>,
+    },
+
+    /// Install all hardware dependencies in the project
+    Install {
+        /// Target directory (defaults to hardware/ or current directory)
+        #[arg(value_name = "DIR")]
+        dir: Option<PathBuf>,
+    },
+
+    /// Search the tscircuit registry for components, footprints, and CAD models
+    Search {
+        /// Search terms (e.g. "esp32", "usb-c", "resistor 0603")
+        #[arg(value_name = "QUERY", required = true)]
+        query: Vec<String>,
     },
 
     /// Inspect toolchain health and available tscircuit runners

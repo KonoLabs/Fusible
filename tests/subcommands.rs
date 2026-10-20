@@ -59,16 +59,47 @@ fn subcommand_init_creates_valid_manifest() {
     let fixture = TestDir::new("subcmd_init");
 
     let out = fusible()
-        .args(["init", "--name", "test-project"])
+        .args(["init", "--name", "test-project", "--no-install"])
         .current_dir(&fixture.path)
         .output()
         .expect("binary should run");
 
     assert_eq!(out.status.code(), Some(0));
     assert!(fixture.path.join("fusible.yml").exists());
+    assert!(fixture.path.join("hardware/index.tsx").exists());
+    assert!(fixture.path.join("hardware/package.json").exists());
+    assert!(fixture.path.join("hardware/tsconfig.json").exists());
 
     let content = std::fs::read_to_string(fixture.path.join("fusible.yml")).unwrap();
     assert!(content.contains("name: test-project"));
+}
+
+#[test]
+fn subcommand_init_with_path_and_mcu() {
+    let fixture = TestDir::new("subcmd_init_path");
+    let target = fixture.path.join("sensor_node");
+
+    let out = fusible()
+        .args([
+            "init",
+            target.to_str().unwrap(),
+            "--name",
+            "sensor-node",
+            "--mcu",
+            "stm32g431",
+            "--no-install",
+        ])
+        .output()
+        .expect("binary should run");
+
+    assert_eq!(out.status.code(), Some(0));
+    assert!(target.join("fusible.yml").exists());
+    assert!(target.join("hardware/index.tsx").exists());
+    assert!(target.join("hardware/package.json").exists());
+
+    let manifest = std::fs::read_to_string(target.join("fusible.yml")).unwrap();
+    assert!(manifest.contains("name: sensor-node"));
+    assert!(manifest.contains("chip: stm32g431"));
 }
 
 #[test]

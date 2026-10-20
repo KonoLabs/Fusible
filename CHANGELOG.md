@@ -9,6 +9,15 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ### Added
 
+- Total CLI wrapper for tscircuit hardware development:
+  - `fusible init [path]`: Scaffolds a complete Fusible & tscircuit hardware project (including `fusible.yml`, `hardware/package.json`, `hardware/tsconfig.json`, `hardware/index.tsx`, and dependencies).
+  - `fusible add <packages...>`: Installs and registers tscircuit component packages and footprints directly into the project workspace.
+  - `fusible install`: Installs all hardware dependencies.
+  - `fusible search <query...>`: Searches the tscircuit registry for footprints, parts, and CAD models.
+- Firmware pin binding generator (`codegen::pins`): automatically extracts microcontroller pins and generates typed Rust bindings (`pins.rs`) on `fusible check --pins-rs` and `fusible build`.
+- KiCad bidirectional workflow support:
+  - `fusible export -f kicad_project -o hardware/kicad/` or `fusible export --preset cad`: generates complete editable KiCad project files (`.kicad_pro`, `.kicad_sch`, `.kicad_pcb`).
+  - Dynamic, portable KiCad schematic & PCB conversion with multi-runtime fallback (bun, node).
 - Fuse-gated export pipeline: electrical rules are verified before any artifacts are exported. If rules fail, the process exits with code 1 (`EXIT_VIOLATIONS`) and artifact generation is blocked.
 - Semantic export presets via `fusible export --preset <PRESET>`:
   - `fab`: Bundles RS-274X Gerbers (`gerbers.zip`) and Circuit JSON (`dist/fab/`).

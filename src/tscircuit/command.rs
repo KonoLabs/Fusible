@@ -37,6 +37,33 @@ pub fn build_command(kind: &RunnerKind, file: &Path) -> Command {
     cmd
 }
 
+/// Builds the `Command` for adding tscircuit packages or registry components.
+pub fn add_command(kind: &RunnerKind, packages: &[String]) -> Command {
+    let mut cmd = base_command(kind);
+    cmd.arg("add");
+    for pkg in packages {
+        cmd.arg(pkg);
+    }
+    cmd
+}
+
+/// Builds the `Command` for installing dependencies in a tscircuit project.
+pub fn install_command(kind: &RunnerKind) -> Command {
+    let mut cmd = base_command(kind);
+    cmd.arg("install");
+    cmd
+}
+
+/// Builds the `Command` for searching packages/footprints in the tscircuit registry.
+pub fn search_command(kind: &RunnerKind, query: &[String]) -> Command {
+    let mut cmd = base_command(kind);
+    cmd.arg("search");
+    for q in query {
+        cmd.arg(q);
+    }
+    cmd
+}
+
 /// Constructs a base `Command` with the binary and prefix arguments configured.
 pub fn base_command(kind: &RunnerKind) -> Command {
     let program: &Path = match kind {

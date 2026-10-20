@@ -14,7 +14,9 @@ mod tests;
 use std::path::{Path, PathBuf};
 use std::process::{ExitStatus, Stdio};
 
-pub use command::{build_command, dev_command, export_command};
+pub use command::{
+    add_command, build_command, dev_command, export_command, install_command, search_command,
+};
 pub use detect::detect_runner;
 pub use error::RunnerError;
 
@@ -155,5 +157,80 @@ impl Runner {
         } else {
             Ok(produced)
         }
+    }
+
+    /// Adds packages to the tscircuit project.
+    pub fn add(&self, packages: &[String], cwd: Option<&Path>) -> Result<(), RunnerError> {
+        let mut cmd = command::add_command(&self.kind, packages);
+        if let Some(dir) = cwd {
+            cmd.current_dir(dir);
+        }
+        cmd.stdin(Stdio::inherit())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit());
+
+        let status = cmd.status().map_err(|source| RunnerError::Io {
+            command: command::format_command(&cmd),
+            source,
+        })?;
+
+        if !status.success() {
+            return Err(RunnerError::CommandFailed {
+                command: command::format_command(&cmd),
+                code: status.code(),
+                stderr: "failed to add package(s)".into(),
+                help: "check package names or registry connectivity".into(),
+            });
+        }
+        Ok(())
+    }
+
+    /// Installs dependencies in the project.
+    pub fn install(&self, cwd: Option<&Path>) -> Result<(), RunnerError> {
+        let mut cmd = command::install_command(&self.kind);
+        if let Some(dir) = cwd {
+            cmd.current_dir(dir);
+        }
+        cmd.stdin(Stdio::inherit())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit());
+
+        let status = cmd.status().map_err(|source| RunnerError::Io {
+            command: command::format_command(&cmd),
+            source,
+        })?;
+
+        if !status.success() {
+            return Err(RunnerError::CommandFailed {
+                command: command::format_command(&cmd),
+                code: status.code(),
+                stderr: "failed to install dependencies".into(),
+                help: "check network connection or package.json validity".into(),
+            });
+        }
+        Ok(())
+    }
+
+    /// Searches the tscircuit registry for components, footprints, and CAD models.
+    pub fn search(&self, query: &[String]) -> Result<(), RunnerError> {
+        let mut cmd = command::search_command(&self.kind, query);
+        cmd.stdin(Stdio::inherit())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit());
+
+        let status = cmd.status().map_err(|source| RunnerError::Io {
+            command: command::format_command(&cmd),
+            source,
+        })?;
+
+        if !status.success() {
+            return Err(RunnerError::CommandFailed {
+                command: command::format_command(&cmd),
+                code: status.code(),
+                stderr: "search command failed".into(),
+                help: "check network connection".into(),
+            });
+        }
+        Ok(())
     }
 }

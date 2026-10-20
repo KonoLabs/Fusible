@@ -75,7 +75,24 @@ fn main() -> ExitCode {
             Ok(()) => ExitCode::SUCCESS,
             Err(err) => fail(err, EXIT_TOOL_ERROR),
         },
-        Some(Commands::Init { name }) => match commands::init::run(name) {
+        Some(Commands::Init {
+            path,
+            name,
+            mcu,
+            no_install,
+        }) => match commands::init::run(path, name, mcu, no_install) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(err) => fail(err, EXIT_TOOL_ERROR),
+        },
+        Some(Commands::Add { packages }) => match commands::add::run(&packages) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(err) => fail(err, EXIT_TOOL_ERROR),
+        },
+        Some(Commands::Install { dir }) => match commands::install::run(dir) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(err) => fail(err, EXIT_TOOL_ERROR),
+        },
+        Some(Commands::Search { query }) => match commands::search::run(&query) {
             Ok(()) => ExitCode::SUCCESS,
             Err(err) => fail(err, EXIT_TOOL_ERROR),
         },

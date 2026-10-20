@@ -21,8 +21,9 @@ wrapping tscircuit development servers, viewers, artifact exports, and hardware 
 ## Installation
 
 ```sh
-cargo install --path .
-# or grab an archive from the GitHub releases
+cargo install fusible
+# or build from source:
+# cargo install --path .
 ```
 
 ## Quick Start (Monorepo)
@@ -116,7 +117,22 @@ fusible export -f kicad_zip
 fusible export --preset fab --skip-lint
 ```
 
-### 5. Toolchain Diagnostics (`doctor` / `setup`)
+### 5. Hardware Package Management (`add`, `install`, `search`)
+
+Manage tscircuit packages, community footprints, and components without touching npm or tsci directly:
+
+```sh
+# Search footprints and components in the tscircuit registry:
+fusible search esp32-s3
+
+# Add a community component or registry footprint to hardware/:
+fusible add @tsci/seveibar.smd-resistor
+
+# Install all hardware dependencies:
+fusible install
+```
+
+### 6. Toolchain Diagnostics (`doctor` / `setup`)
 
 Inspects local toolchain health (bun, node, npm, npx, tsci) and verifies tscircuit runner availability:
 

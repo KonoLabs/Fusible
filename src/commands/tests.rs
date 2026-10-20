@@ -49,15 +49,23 @@ fn init_creates_manifest_in_temp_dir() {
     let prev = std::env::current_dir().unwrap();
     std::env::set_current_dir(&fixture.path).unwrap();
 
-    let res = init::run(Some("custom-device".into()));
+    let res = init::run(
+        None,
+        Some("custom-device".into()),
+        Some("esp32-s3".into()),
+        true,
+    );
     assert!(res.is_ok());
     assert!(fixture.path.join("fusible.yml").exists());
+    assert!(fixture.path.join("hardware/index.tsx").exists());
+    assert!(fixture.path.join("hardware/package.json").exists());
 
     let content = std::fs::read_to_string(fixture.path.join("fusible.yml")).unwrap();
     assert!(content.contains("name: custom-device"));
+    assert!(content.contains("chip: esp32-s3"));
 
     // Second init should fail because file already exists
-    let res2 = init::run(None);
+    let res2 = init::run(None, None, None, true);
     assert!(res2.is_err());
 
     std::env::set_current_dir(prev).unwrap();

@@ -171,18 +171,35 @@ fs.writeFileSync("{}", JSON.stringify(out, null, 2));
         out_json_path.display()
     );
 
-    let mut cmd = std::process::Command::new("bun");
-    cmd.arg("-e").arg(&script);
-    cmd.env(
-        "NODE_PATH",
-        "/home/yann/.bun/install/global/node_modules:node_modules",
-    );
+    let mut node_paths = Vec::new();
+    if let Ok(np) = std::env::var("NODE_PATH") {
+        node_paths.push(np);
+    }
+    node_paths.push("node_modules".to_string());
+    node_paths.push("../node_modules".to_string());
+    if let Ok(home) = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")) {
+        node_paths.push(format!("{home}/.bun/install/global/node_modules"));
+        node_paths.push(format!("{home}/.npm-global/lib/node_modules"));
+        node_paths.push(format!("{home}/node_modules"));
+    }
+    let combined_node_path = node_paths.join(":");
 
-    let res = cmd.output();
-    let success = match res {
-        Ok(out) => out.status.success() && out_json_path.is_file(),
-        Err(_) => false,
-    };
+    // Try executing via bun, then fall back to node
+    let runners = ["bun", "node"];
+    let mut success = false;
+
+    for runner_bin in runners {
+        let mut cmd = std::process::Command::new(runner_bin);
+        cmd.arg("-e").arg(&script);
+        cmd.env("NODE_PATH", &combined_node_path);
+
+        if let Ok(out) = cmd.output() {
+            if out.status.success() && out_json_path.is_file() {
+                success = true;
+                break;
+            }
+        }
+    }
 
     if success {
         let content = std::fs::read_to_string(&out_json_path).map_err(|source| ReadError {
