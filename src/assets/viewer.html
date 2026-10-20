@@ -4,9 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Fusible Studio</title>
+  <script src="/studio.bundle.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <style>
+    .tscircuit-schematic {
+      background-color: transparent !important;
+    }
+    .tscircuit-schematic .boundary {
+      fill: #0d1117 !important;
+    }
     @font-face {
       font-family: 'Undefined';
       src: url('/undefined-medium.otf') format('opentype');
@@ -727,9 +734,21 @@
     }
 
     function toggleLayer(layerName, visible) {
-      const groups = canvas.querySelectorAll(`g[id="${layerName}"]`);
-      groups.forEach(g => {
-        g.style.display = visible ? '' : 'none';
+      let selector = `g[id="${layerName}"]`;
+      if (layerName === 'top_copper') {
+        selector += `, .pcb-trace[data-pcb-layer*="top"], [data-pcb-layer*="top"] .pcb-trace, [data-type*="trace"][data-pcb-layer*="top"], [data-pcb-layer*="top"] [data-type*="trace"], [data-type*="copper_pour"][data-pcb-layer*="top"], [data-pcb-layer*="top"] [data-type*="copper_pour"], g.pcb-trace[data-pcb-layer*="top"]`;
+      } else if (layerName === 'bottom_copper') {
+        selector += `, .pcb-trace[data-pcb-layer*="bottom"], [data-pcb-layer*="bottom"] .pcb-trace, [data-type*="trace"][data-pcb-layer*="bottom"], [data-pcb-layer*="bottom"] [data-type*="trace"], [data-type*="copper_pour"][data-pcb-layer*="bottom"], [data-pcb-layer*="bottom"] [data-type*="copper_pour"], g.pcb-trace[data-pcb-layer*="bottom"]`;
+      } else if (layerName === 'pads') {
+        selector += `, .pcb-pad, .pcb-smtpad, [class*="pcb-pad"], [data-type*="pad"]`;
+      } else if (layerName === 'silkscreen') {
+        selector += `, [class*="pcb-silkscreen"], [data-type*="silkscreen"], [data-pcb-layer*="silk"], [data-pcb-layer*="silkscreen"]`;
+      } else if (layerName === 'holes_and_vias') {
+        selector += `, .pcb-via, .pcb-hole, [class*="pcb-hole"], [class*="pcb-via"], [data-type*="hole"], [data-type*="via"], [data-pcb-layer="drill"], [data-pcb-layer="through"]`;
+      }
+      const elements = canvas.querySelectorAll(selector);
+      elements.forEach(el => {
+        el.style.display = visible ? '' : 'none';
       });
     }
 
@@ -1445,8 +1464,23 @@
       if (data.board_name) {
         document.getElementById('board-name').textContent = data.board_name.toUpperCase();
       }
-      if (data.pcb_svg) pcbSvg = data.pcb_svg;
-      if (data.schematic_svg) schematicSvg = data.schematic_svg;
+      if (window.Tscircuit && data.circuit_json) {
+        try {
+          schematicSvg = window.Tscircuit.convertCircuitJsonToSchematicSvg(data.circuit_json);
+          if (!schematicSvg && data.schematic_svg) schematicSvg = data.schematic_svg;
+        } catch (err) {
+          if (data.schematic_svg) schematicSvg = data.schematic_svg;
+        }
+        try {
+          pcbSvg = window.Tscircuit.convertCircuitJsonToPcbSvg(data.circuit_json);
+          if (!pcbSvg && data.pcb_svg) pcbSvg = data.pcb_svg;
+        } catch (err) {
+          if (data.pcb_svg) pcbSvg = data.pcb_svg;
+        }
+      } else {
+        if (data.schematic_svg) schematicSvg = data.schematic_svg;
+        if (data.pcb_svg) pcbSvg = data.pcb_svg;
+      }
       if (data.circuit_json) {
         lastCircuitJson = data.circuit_json;
         parseCircuitGraph();

@@ -5,6 +5,14 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.8.4] - 2026-10-20
+
+### Added
+
+- Embedded upstream `circuit-to-svg` visualization runtime bundled via Bun into `src/assets/studio.bundle.js`.
+- Automatic upstream rendering for schematics and multi-layer PCB layout while retaining Fusible's custom Vitrine dark brutalist theme, layer filters, and inspector.
+- New `studio/` workspace with automated Bun build pipeline (`bun run build`).
+
 ## [0.8.3] - 2026-10-20
 
 ### Fixed
