@@ -237,6 +237,7 @@ fn export_docs(circuit_json: &str, out: Option<&Path>) -> Result<(), ExportError
     let circuit = crate::parser::parse(circuit_json, Path::new("circuit.json")).ok();
     let dummy_circuit = crate::parser::Circuit {
         elements: Vec::new(),
+        raw_elements: Vec::new(),
     };
     let c = circuit.as_ref().unwrap_or(&dummy_circuit);
     let netlist = crate::netlist::Netlist::from_circuit(c);

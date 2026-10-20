@@ -33,6 +33,7 @@ fn circuit_fixture() -> Circuit {
                 ..Default::default()
             }),
         ],
+        raw_elements: Vec::new(),
     }
 }
 
@@ -117,6 +118,7 @@ fn traces_propagate_endpoints_and_bridge_ports() {
                 ..Default::default()
             }),
         ],
+        raw_elements: Vec::new(),
     };
 
     let netlist = Netlist::from_circuit(&circuit);
@@ -147,6 +149,7 @@ fn anonymous_endpoints_are_preserved_for_electrical_soundness() {
                 ..Default::default()
             }),
         ],
+        raw_elements: Vec::new(),
     };
 
     let netlist = Netlist::from_circuit(&circuit);

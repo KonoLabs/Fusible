@@ -25,6 +25,7 @@ fn floating_net() -> Circuit {
                 ..Default::default()
             }),
         ],
+        raw_elements: Vec::new(),
     }
 }
 
@@ -84,6 +85,7 @@ fn rules_run_in_registration_order() {
                 ..Default::default()
             }),
         ],
+        raw_elements: Vec::new(),
     };
 
     let violations = Linter::default().run(&circuit);

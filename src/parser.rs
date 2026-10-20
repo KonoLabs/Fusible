@@ -223,9 +223,10 @@ pub struct Trace {
 /// Instead of `match`ing over `elements` everywhere, the per-type *views*
 /// live here. The linter — and later the `mcu::` module — consume these
 /// iterators without knowing anything about the JSON shape.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Circuit {
     pub elements: Vec<CircuitElement>,
+    pub raw_elements: Vec<serde_json::Value>,
 }
 
 impl Circuit {
@@ -273,7 +274,12 @@ impl Circuit {
 ///
 /// `path` only names the file inside the diagnostic.
 pub fn parse(source: &str, path: &Path) -> Result<Circuit, JsonDiagnostic> {
+    let raw_elements: Vec<serde_json::Value> =
+        serde_json::from_str(source).map_err(|err| JsonDiagnostic::new(err, source, path))?;
     let elements: Vec<CircuitElement> =
         serde_json::from_str(source).map_err(|err| JsonDiagnostic::new(err, source, path))?;
-    Ok(Circuit { elements })
+    Ok(Circuit {
+        elements,
+        raw_elements,
+    })
 }

@@ -35,7 +35,11 @@ pub struct Diagnostic {
 
 impl miette::Diagnostic for Diagnostic {
     fn code(&self) -> Option<Box<dyn fmt::Display + '_>> {
-        Some(Box::new(self.rule.as_str()))
+        if self.rule == "schematic_scale" || self.rule == "E_SCHEMATIC_SCALE_EXCESSIVE" {
+            Some(Box::new("E_SCHEMATIC_SCALE_EXCESSIVE"))
+        } else {
+            Some(Box::new(self.rule.as_str()))
+        }
     }
 
     fn severity(&self) -> Option<miette::Severity> {

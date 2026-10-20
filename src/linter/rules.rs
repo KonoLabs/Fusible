@@ -19,6 +19,7 @@ mod bypass_cap;
 mod ghost_net;
 mod malformed_element;
 mod pin_mux;
+mod schematic_scale;
 #[cfg(test)]
 mod tests;
 mod trace_clearance;
@@ -28,5 +29,6 @@ pub use bypass_cap::BypassCapRule;
 pub use ghost_net::GhostNetRule;
 pub use malformed_element::MalformedElementRule;
 pub use pin_mux::PinMuxRule;
+pub use schematic_scale::SchematicScaleRule;
 pub use trace_clearance::TraceClearanceRule;
 pub use unconnected_net::UnconnectedNetRule;

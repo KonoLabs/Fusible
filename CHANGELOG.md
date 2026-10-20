@@ -5,6 +5,12 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.8.15] - 2026-10-20
+
+### Added
+
+- Added `schematic_scale` linter rule detecting out-of-bounds schematic coordinates exceeding standard sheet bounds.
+
 ## [0.8.14] - 2026-10-20
 
 ### Fixed

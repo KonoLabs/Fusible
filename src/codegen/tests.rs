@@ -58,6 +58,7 @@ fn mcu_circuit_fixture() -> Circuit {
                 ..Default::default()
             }),
         ],
+        raw_elements: Vec::new(),
     }
 }
 

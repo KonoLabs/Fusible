@@ -21,8 +21,8 @@ mod tests;
 pub use context::LintContext;
 pub use diagnostics::{Diagnostic, FuseBlown};
 pub use rules::{
-    BypassCapRule, GhostNetRule, MalformedElementRule, PinMuxRule, TraceClearanceRule,
-    UnconnectedNetRule,
+    BypassCapRule, GhostNetRule, MalformedElementRule, PinMuxRule, SchematicScaleRule,
+    TraceClearanceRule, UnconnectedNetRule,
 };
 
 use crate::netlist::Netlist;
@@ -83,5 +83,6 @@ impl Default for Linter {
             .with_rule(PinMuxRule)
             .with_rule(BypassCapRule)
             .with_rule(TraceClearanceRule)
+            .with_rule(SchematicScaleRule)
     }
 }

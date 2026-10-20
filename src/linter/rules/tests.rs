@@ -7,7 +7,7 @@
 
 use miette::Diagnostic as _;
 
-use super::{GhostNetRule, MalformedElementRule, UnconnectedNetRule};
+use super::{GhostNetRule, MalformedElementRule, SchematicScaleRule, UnconnectedNetRule};
 use crate::linter::{Diagnostic, Linter, Rule};
 use crate::parser::{Circuit, CircuitElement, Net, Pad, Port};
 
@@ -28,7 +28,10 @@ fn port(id: &str, net_id: Option<&str>) -> CircuitElement {
 }
 
 fn rule_violations(rule: impl Rule + 'static, elements: Vec<CircuitElement>) -> Vec<Diagnostic> {
-    let circuit = Circuit { elements };
+    let circuit = Circuit {
+        elements,
+        raw_elements: Vec::new(),
+    };
     Linter::new().with_rule(rule).run(&circuit)
 }
 
@@ -334,4 +337,50 @@ fn trace_clearance_rule_detects_copper_overlap() {
 
     let v_clean = rule_violations(TraceClearanceRule, vec![pad1, pad2_far, net_a, net_b]);
     assert!(v_clean.is_empty());
+}
+
+#[test]
+fn schematic_scale_rule_detects_out_of_bounds_components() {
+    let circuit = Circuit {
+        elements: vec![],
+        raw_elements: vec![serde_json::json!({
+            "type": "schematic_component",
+            "schematic_component_id": "schematic_component_0",
+            "source_component_id": "source_component_0",
+            "refdes": "U1",
+            "center": { "x": 700.0, "y": -1000.0 }
+        })],
+    };
+    let violations = Linter::new().with_rule(SchematicScaleRule).run(&circuit);
+    assert_eq!(violations.len(), 1);
+    assert_eq!(violations[0].rule, "schematic_scale");
+    assert_eq!(
+        violations[0].code().unwrap().to_string(),
+        "E_SCHEMATIC_SCALE_EXCESSIVE"
+    );
+    assert_eq!(
+        violations[0].message,
+        "Component 'U1' placed at (700.0, -1000.0) exceeds standard schematic sheet bounds"
+    );
+    assert!(violations[0]
+        .help()
+        .unwrap()
+        .to_string()
+        .contains("tscircuit schematic coordinates"));
+}
+
+#[test]
+fn schematic_scale_rule_passes_normal_coordinates() {
+    let circuit = Circuit {
+        elements: vec![],
+        raw_elements: vec![serde_json::json!({
+            "type": "schematic_component",
+            "schematic_component_id": "schematic_component_0",
+            "source_component_id": "source_component_0",
+            "refdes": "R1",
+            "center": { "x": 0.0, "y": 5.0 }
+        })],
+    };
+    let violations = Linter::new().with_rule(SchematicScaleRule).run(&circuit);
+    assert!(violations.is_empty());
 }
