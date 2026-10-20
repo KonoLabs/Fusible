@@ -5,6 +5,19 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.8.6] - 2026-10-20
+
+### Added
+
+- Embedded upstream `@tscircuit/pcb-viewer` and `@tscircuit/schematic-viewer` interactive React components in the Dev Studio bundle, enabling interactive trace exploration, component focusing, rats nest toggling, and net hover highlighting.
+- Camera preset transitions (`TOP`, `ISO`, `FRONT`, `RESET`) across both CAD (`CadViewer`) and Native Three.js 3D engines.
+- Offline `iconify-icon` integration with `@iconify-json/pixelarticons`, featuring the `pixelarticons:cpu-sharp` logo and pixel-art iconography across tabs, controls, and status indicators.
+
+### Fixed
+
+- Fixed 3D CAD viewer hover tooltip contrast by overriding inline styles with dark Vitrine theme tokens (`rgba(19, 19, 19, 0.95)` background and readable light text).
+- Replaced the top-left text brand banner with the official CPU sharp logo icon.
+
 ## [0.8.5] - 2026-10-20
 
 ### Added

@@ -481,43 +481,76 @@
       color: var(--text-body);
       font-family: monospace;
     }
+    iconify-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      vertical-align: middle;
+      font-size: 13px;
+    }
+    .brand-logo {
+      font-size: 20px;
+      color: var(--green);
+      display: inline-flex;
+      align-items: center;
+    }
+    #three-cad div[style*="background-color: white"],
+    #three-cad div[style*="background-color: rgb(255, 255, 255)"],
+    #three-cad div[style*="background: white"],
+    #three-cad div[style*="background:white"] {
+      background-color: rgba(19, 19, 19, 0.95) !important;
+      color: var(--text) !important;
+      border: 1px solid var(--border) !important;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7) !important;
+      font-family: 'Undefined', monospace !important;
+      font-size: 11px !important;
+      padding: 6px 10px !important;
+      border-radius: 2px !important;
+      backdrop-filter: blur(4px) !important;
+    }
+    #three-cad div[style*="background-color: white"] *,
+    #three-cad div[style*="background-color: rgb(255, 255, 255)"] * {
+      color: var(--text) !important;
+    }
   </style>
 </head>
 <body>
   <header>
     <div class="brand">
-      <span class="brand-title">FUSIBLE</span>
-      <span class="brand-sub">// STUDIO</span>
+      <iconify-icon icon="pixelarticons:cpu-sharp" class="brand-logo"></iconify-icon>
       <span class="board-name" id="board-name">BOARD PREVIEW</span>
       <div id="fuse-status" class="fuse-badge fuse-intact">
+        <span id="fuse-icon"><iconify-icon icon="pixelarticons:zap"></iconify-icon></span>
         <span id="fuse-text">[OK] FUSE INTACT</span>
       </div>
     </div>
 
     <div class="tabs">
-      <button class="tab-btn active" data-view="pcb" onclick="switchView('pcb')">01 // PCB LAYOUT</button>
-      <button class="tab-btn" data-view="schematic" onclick="switchView('schematic')">02 // SCHEMATIC</button>
-      <button class="tab-btn" data-view="3d" onclick="switchView('3d')">03 // 3D VIEW</button>
+      <button class="tab-btn active" data-view="pcb" onclick="switchView('pcb')"><iconify-icon icon="pixelarticons:grid"></iconify-icon> 01 // PCB LAYOUT</button>
+      <button class="tab-btn" data-view="schematic" onclick="switchView('schematic')"><iconify-icon icon="pixelarticons:git-commit"></iconify-icon> 02 // SCHEMATIC</button>
+      <button class="tab-btn" data-view="3d" onclick="switchView('3d')"><iconify-icon icon="pixelarticons:cube"></iconify-icon> 03 // 3D VIEW</button>
     </div>
 
     <div class="controls" id="controls-2d">
-      <button class="btn" onclick="zoomIn()">[ZOOM +]</button>
-      <button class="btn" onclick="zoomOut()">[ZOOM -]</button>
-      <button class="btn" onclick="resetZoom()">[RESET]</button>
+      <button class="btn" onclick="zoomIn()"><iconify-icon icon="pixelarticons:zoom-in"></iconify-icon> [ZOOM +]</button>
+      <button class="btn" onclick="zoomOut()"><iconify-icon icon="pixelarticons:zoom-out"></iconify-icon> [ZOOM -]</button>
+      <button class="btn" onclick="resetZoom()"><iconify-icon icon="pixelarticons:undo"></iconify-icon> [RESET]</button>
     </div>
 
     <div class="controls" id="controls-3d" style="display: none;">
-      <button class="btn" onclick="setCameraPreset('TOP')">[TOP]</button>
-      <button class="btn" onclick="setCameraPreset('ISO')">[ISO]</button>
-      <button class="btn" onclick="setCameraPreset('FRONT')">[FRONT]</button>
-      <button class="btn" onclick="setCameraPreset('RESET')">[RESET]</button>
-      <button class="btn" id="btn-engine-toggle" onclick="toggle3dEngine()">[ENGINE: CAD]</button>
+      <button class="btn" onclick="setCameraPreset('TOP')"><iconify-icon icon="pixelarticons:arrow-up"></iconify-icon> [TOP]</button>
+      <button class="btn" onclick="setCameraPreset('ISO')"><iconify-icon icon="pixelarticons:corner-up-right"></iconify-icon> [ISO]</button>
+      <button class="btn" onclick="setCameraPreset('FRONT')"><iconify-icon icon="pixelarticons:arrow-down"></iconify-icon> [FRONT]</button>
+      <button class="btn" onclick="setCameraPreset('RESET')"><iconify-icon icon="pixelarticons:reload"></iconify-icon> [RESET]</button>
+      <button class="btn" id="btn-engine-toggle" onclick="toggle3dEngine()"><iconify-icon icon="pixelarticons:switch"></iconify-icon> <span id="engine-label">[ENGINE: CAD]</span></button>
     </div>
   </header>
 
   <main>
     <div id="viewport-container">
       <div id="viewport-grid"></div>
+      <div id="pcb-container" style="position:absolute;inset:0;width:100%;height:100%;z-index:2;display:none;"></div>
+      <div id="schematic-container" style="position:absolute;inset:0;width:100%;height:100%;z-index:2;display:none;"></div>
       <div id="canvas-content"></div>
       <div id="three-container">
         <div id="three-native" style="width:100%;height:100%;position:absolute;inset:0;"></div>
@@ -525,18 +558,18 @@
       </div>
       <div class="hud-toast">
         <div class="status-dot" id="live-dot"></div>
-        <span id="live-status">[LIVE] SSE CONNECTED</span>
+        <span id="live-status"><iconify-icon icon="pixelarticons:radio-signal"></iconify-icon> [LIVE] SSE CONNECTED</span>
       </div>
       <div id="hover-tooltip" class="hover-tooltip"></div>
     </div>
 
     <aside id="sidebar">
       <div class="sidebar-tabs">
-        <button class="sidebar-tab-btn active" onclick="switchSidebarTab('inspector')">INSPECT</button>
-        <button class="sidebar-tab-btn" onclick="switchSidebarTab('components')">PARTS</button>
-        <button class="sidebar-tab-btn" onclick="switchSidebarTab('nets')">NETS</button>
-        <button class="sidebar-tab-btn" onclick="switchSidebarTab('layers')">LAYERS</button>
-        <button class="sidebar-tab-btn" onclick="switchSidebarTab('checks')">CHECKS</button>
+        <button class="sidebar-tab-btn active" onclick="switchSidebarTab('inspector')"><iconify-icon icon="pixelarticons:eye"></iconify-icon> INSPECT</button>
+        <button class="sidebar-tab-btn" onclick="switchSidebarTab('components')"><iconify-icon icon="pixelarticons:list"></iconify-icon> PARTS</button>
+        <button class="sidebar-tab-btn" onclick="switchSidebarTab('nets')"><iconify-icon icon="pixelarticons:git-pull-request"></iconify-icon> NETS</button>
+        <button class="sidebar-tab-btn" onclick="switchSidebarTab('layers')"><iconify-icon icon="pixelarticons:layers"></iconify-icon> LAYERS</button>
+        <button class="sidebar-tab-btn" onclick="switchSidebarTab('checks')"><iconify-icon icon="pixelarticons:checklist"></iconify-icon> CHECKS</button>
       </div>
 
       <div class="sidebar-pane active" id="pane-inspector">
@@ -647,12 +680,44 @@
       canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomLevel})`;
     }
 
+    function isInteractive2dActive() {
+      return (currentView === 'pcb' || currentView === 'schematic') && !!window.Tscircuit;
+    }
+
     function zoomIn() {
+      if (isInteractive2dActive()) {
+        const container = currentView === 'pcb' ? document.getElementById('pcb-container') : document.getElementById('schematic-container');
+        if (container) {
+          const rect = container.getBoundingClientRect();
+          const target = container.querySelector('canvas') || container.querySelector('svg') || container;
+          target.dispatchEvent(new WheelEvent('wheel', {
+            deltaY: -120,
+            clientX: rect.left + rect.width / 2,
+            clientY: rect.top + rect.height / 2,
+            bubbles: true,
+          }));
+          return;
+        }
+      }
       zoomLevel *= 1.25;
       applyTransform();
     }
 
     function zoomOut() {
+      if (isInteractive2dActive()) {
+        const container = currentView === 'pcb' ? document.getElementById('pcb-container') : document.getElementById('schematic-container');
+        if (container) {
+          const rect = container.getBoundingClientRect();
+          const target = container.querySelector('canvas') || container.querySelector('svg') || container;
+          target.dispatchEvent(new WheelEvent('wheel', {
+            deltaY: 120,
+            clientX: rect.left + rect.width / 2,
+            clientY: rect.top + rect.height / 2,
+            bubbles: true,
+          }));
+          return;
+        }
+      }
       zoomLevel /= 1.25;
       applyTransform();
     }
@@ -662,10 +727,13 @@
       panX = 0;
       panY = 0;
       applyTransform();
+      if (isInteractive2dActive()) {
+        renderCurrentView();
+      }
     }
 
     viewport.addEventListener('wheel', (e) => {
-      if (currentView === '3d') return;
+      if (currentView === '3d' || isInteractive2dActive()) return;
       e.preventDefault();
       const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
       zoomLevel *= zoomFactor;
@@ -673,7 +741,7 @@
     }, { passive: false });
 
     viewport.addEventListener('mousedown', (e) => {
-      if (currentView === '3d') return;
+      if (currentView === '3d' || isInteractive2dActive()) return;
       if (e.button === 0) {
         isDragging = true;
         startX = e.clientX - panX;
@@ -682,7 +750,7 @@
     });
 
     window.addEventListener('mousemove', (e) => {
-      if (currentView === '3d') return;
+      if (currentView === '3d' || isInteractive2dActive()) return;
       if (isDragging) {
         panX = e.clientX - startX;
         panY = e.clientY - startY;
@@ -702,8 +770,8 @@
     }
 
     function updateEngineUI() {
-      const btn = document.getElementById('btn-engine-toggle');
-      if (btn) btn.textContent = engine3d === 'cad' ? '[ENGINE: CAD]' : '[ENGINE: NATIVE]';
+      const label = document.getElementById('engine-label');
+      if (label) label.textContent = engine3d === 'cad' ? '[ENGINE: CAD]' : '[ENGINE: NATIVE]';
       const nativeEl = document.getElementById('three-native');
       const cadEl = document.getElementById('three-cad');
       if (engine3d === 'cad' && window.Tscircuit && window.Tscircuit.render3dViewer && lastCircuitJson) {
@@ -734,20 +802,29 @@
       });
 
       const is3d = view === '3d';
-      document.getElementById('canvas-content').style.display = is3d ? 'none' : 'inline-block';
-      document.getElementById('three-container').style.display = is3d ? 'block' : 'none';
+      const pcbEl = document.getElementById('pcb-container');
+      const schEl = document.getElementById('schematic-container');
+      const threeEl = document.getElementById('three-container');
+      const canvasEl = document.getElementById('canvas-content');
+
       document.getElementById('controls-2d').style.display = is3d ? 'none' : 'flex';
       document.getElementById('controls-3d').style.display = is3d ? 'flex' : 'none';
 
       hideTooltip();
 
       if (is3d) {
+        if (pcbEl) pcbEl.style.display = 'none';
+        if (schEl) schEl.style.display = 'none';
+        if (canvasEl) canvasEl.style.display = 'none';
+        if (threeEl) threeEl.style.display = 'block';
+
         initThree();
         build3DScene();
         updateEngineUI();
         setTimeout(onThreeResize, 10);
         setCameraPreset('ISO');
       } else {
+        if (threeEl) threeEl.style.display = 'none';
         renderCurrentView();
       }
     }
@@ -762,12 +839,42 @@
     }
 
     function renderCurrentView() {
+      const pcbEl = document.getElementById('pcb-container');
+      const schEl = document.getElementById('schematic-container');
+      const canvasEl = document.getElementById('canvas-content');
+
       if (currentView === 'pcb') {
-        canvas.innerHTML = pcbSvg || '<div class="empty-state">NO PCB LAYOUT AVAILABLE</div>';
-        setup2DInteractivity();
+        if (schEl) schEl.style.display = 'none';
+        if (window.Tscircuit && window.Tscircuit.renderPcbViewer && lastCircuitJson) {
+          if (canvasEl) canvasEl.style.display = 'none';
+          if (pcbEl) {
+            pcbEl.style.display = 'block';
+            window.Tscircuit.renderPcbViewer(pcbEl, lastCircuitJson, (ref) => selectComponent(ref));
+          }
+        } else {
+          if (pcbEl) pcbEl.style.display = 'none';
+          if (canvasEl) {
+            canvasEl.style.display = 'inline-block';
+            canvasEl.innerHTML = pcbSvg || '<div class="empty-state">NO PCB LAYOUT AVAILABLE</div>';
+            setup2DInteractivity();
+          }
+        }
       } else if (currentView === 'schematic') {
-        canvas.innerHTML = schematicSvg || '<div class="empty-state">NO SCHEMATIC AVAILABLE</div>';
-        setup2DInteractivity();
+        if (pcbEl) pcbEl.style.display = 'none';
+        if (window.Tscircuit && window.Tscircuit.renderSchematicViewer && lastCircuitJson) {
+          if (canvasEl) canvasEl.style.display = 'none';
+          if (schEl) {
+            schEl.style.display = 'block';
+            window.Tscircuit.renderSchematicViewer(schEl, lastCircuitJson, (ref) => selectComponent(ref));
+          }
+        } else {
+          if (schEl) schEl.style.display = 'none';
+          if (canvasEl) {
+            canvasEl.style.display = 'inline-block';
+            canvasEl.innerHTML = schematicSvg || '<div class="empty-state">NO SCHEMATIC AVAILABLE</div>';
+            setup2DInteractivity();
+          }
+        }
       }
     }
 
@@ -1103,11 +1210,13 @@
     function updateDiagnostics(fuseBlown, diagnostics) {
       const statusEl = document.getElementById('fuse-status');
       const textEl = document.getElementById('fuse-text');
+      const iconEl = document.getElementById('fuse-icon');
       const diagPanel = document.getElementById('diagnostics-panel');
 
       if (fuseBlown) {
         statusEl.className = 'fuse-badge fuse-blown';
         textEl.textContent = `[BLOWN] FUSE BLOWN (${diagnostics.length})`;
+        if (iconEl) iconEl.innerHTML = '<iconify-icon icon="pixelarticons:alert"></iconify-icon>';
 
         if (diagnostics.length > 0) {
           diagPanel.innerHTML = diagnostics.map(d => `
@@ -1121,6 +1230,7 @@
       } else {
         statusEl.className = 'fuse-badge fuse-intact';
         textEl.textContent = '[OK] FUSE INTACT';
+        if (iconEl) iconEl.innerHTML = '<iconify-icon icon="pixelarticons:zap"></iconify-icon>';
         diagPanel.innerHTML = '<div class="empty-state"><span>NO ELECTRICAL VIOLATIONS DETECTED.</span></div>';
       }
     }
@@ -1259,6 +1369,16 @@
     }
 
     function setCameraPreset(preset) {
+      if (engine3d === 'cad' && window.cadCameraController) {
+        if (preset === 'TOP') {
+          window.cadCameraController.animateToPreset('Top Down');
+        } else if (preset === 'FRONT') {
+          window.cadCameraController.animateToPreset('Front');
+        } else if (preset === 'ISO' || preset === 'RESET') {
+          window.cadCameraController.animateToPreset('Top Left Corner');
+        }
+        return;
+      }
       if (!controls || !camera) return;
       const dist = Math.max(boardWidth, boardHeight) * 1.8;
       const tx = boardCenterX;
@@ -1709,6 +1829,16 @@
       }
     }
 
+    window.addEventListener('tscircuit-ready', () => {
+      if (lastCircuitJson) {
+        if (currentView === '3d') {
+          updateEngineUI();
+        } else {
+          renderCurrentView();
+        }
+      }
+    });
+
     function fetchInitialData() {
       fetch('/api/circuit')
         .then(res => {
@@ -1726,7 +1856,7 @@
 
       eventSource.onopen = () => {
         liveDot.style.background = 'var(--green)';
-        liveStatus.textContent = '[LIVE] SSE CONNECTED';
+        liveStatus.innerHTML = '<iconify-icon icon="pixelarticons:radio-signal"></iconify-icon> [LIVE] SSE CONNECTED';
       };
 
       eventSource.onmessage = (event) => {
@@ -1740,7 +1870,7 @@
 
       eventSource.onerror = () => {
         liveDot.style.background = 'var(--alert)';
-        liveStatus.textContent = '[WAIT] RECONNECTING...';
+        liveStatus.innerHTML = '<iconify-icon icon="pixelarticons:alert"></iconify-icon> [WAIT] RECONNECTING...';
       };
     }
 

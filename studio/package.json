@@ -6,13 +6,17 @@
     "build": "bun build src/index.ts --target=browser --outfile=../src/assets/studio.bundle.js --minify"
   },
   "dependencies": {
+    "@iconify-json/pixelarticons": "^1.2.10",
     "@tscircuit/3d-viewer": "0.0.627",
     "@tscircuit/checks": "0.0.257",
     "@tscircuit/circuit-json-util": "^0.0.123",
-    "@tscircuit/core": "0.0.2178",
+    "@tscircuit/core": "0.0.2180",
     "@tscircuit/math-utils": "0.0.36",
+    "@tscircuit/pcb-viewer": "^1.11.429",
     "@tscircuit/props": "0.0.704",
+    "@tscircuit/schematic-viewer": "^2.0.105",
     "circuit-to-svg": "^0.0.450",
+    "iconify-icon": "^3.0.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
