@@ -1,7 +1,10 @@
 //! `pin_mux`: validates MCU pin assignments against physical silicon Alternate Functions.
 
 use crate::linter::{Diagnostic, LintContext, Rule};
-use crate::silicon::{find_target, validate_pin_assignments, AssignedPin, PinConflict};
+use crate::silicon::{
+    find_target, model::is_gpio_designator, validate_pin_assignments, AssignedPin, PinConflict,
+    SiliconTarget,
+};
 
 /// Checks that assigned MCU pins are electrically supported by the target
 /// microcontroller's Alternate Function (AF) matrix, strapping pins, and memory bus limits.
@@ -13,23 +16,18 @@ impl Rule for PinMuxRule {
     }
 
     fn check(&self, ctx: &LintContext<'_>) -> Vec<Diagnostic> {
-        let chip_name = match ctx.mcu {
-            Some(m) => m,
-            None => {
-                // Try detecting MCU name from circuit components
-                match detect_mcu_chip(ctx.circuit) {
-                    Some(m) => m,
-                    None => return Vec::new(),
-                }
-            }
+        let target = match ctx.mcu {
+            Some(chip) => match find_target(chip) {
+                Some(t) => t,
+                None => return vec![unknown_mcu(chip)],
+            },
+            None => match detect_mcu_chip(ctx.circuit) {
+                Some(t) => t,
+                None => return Vec::new(),
+            },
         };
 
-        let target = match find_target(chip_name) {
-            Some(t) => t,
-            None => return Vec::new(),
-        };
-
-        let assignments = extract_assigned_pins(ctx, target, chip_name);
+        let assignments = extract_assigned_pins(ctx, target, target.name);
         if assignments.is_empty() {
             return Vec::new();
         }
@@ -72,6 +70,19 @@ impl Rule for PinMuxRule {
                             .to_string(),
                     ),
                 },
+                PinConflict::UnknownPin {
+                    pin_name,
+                    chip_name,
+                } => Diagnostic {
+                    rule: self.name().to_string(),
+                    message: format!(
+                        "pin \"{pin_name}\" does not exist in the {chip_name} silicon database"
+                    ),
+                    help: Some(
+                        "rename the port to a pin that exists on this chip, or add the pin to the silicon database"
+                            .to_string(),
+                    ),
+                },
                 PinConflict::ReservedPinUsed { pin_name, reason } => Diagnostic {
                     rule: self.name().to_string(),
                     message: format!("pin \"{pin_name}\" is reserved: {reason}"),
@@ -109,26 +120,30 @@ impl Rule for PinMuxRule {
     }
 }
 
-fn detect_mcu_chip(circuit: &crate::parser::Circuit) -> Option<&'static str> {
-    for c in circuit.components() {
-        let name = c.name.as_deref().unwrap_or("").to_ascii_lowercase();
-        let kind = c.kind.as_deref().unwrap_or("").to_ascii_lowercase();
-        if name.contains("stm32") || kind.contains("stm32") {
-            return Some("stm32g431");
-        }
-        if name.contains("rp2040") || kind.contains("rp2040") {
-            return Some("rp2040");
-        }
-        if name.contains("esp32") || kind.contains("esp32") {
-            return Some("esp32-s3");
-        }
+/// Diagnostic for an explicitly configured chip the silicon database does not know.
+fn unknown_mcu(chip: &str) -> Diagnostic {
+    Diagnostic {
+        rule: "unknown_mcu".to_string(),
+        message: format!(
+            "mcu \"{chip}\" is not in the silicon database; pin assignments cannot be verified"
+        ),
+        help: Some("use a supported chip id: esp32-s3, rp2040, stm32g431".to_string()),
     }
-    None
+}
+
+/// Finds a component whose name or kind is an exact known chip id.
+fn detect_mcu_chip(circuit: &crate::parser::Circuit) -> Option<&'static SiliconTarget> {
+    circuit.components().find_map(|c| {
+        [c.name.as_deref(), c.kind.as_deref()]
+            .into_iter()
+            .flatten()
+            .find_map(find_target)
+    })
 }
 
 fn extract_assigned_pins(
     ctx: &LintContext<'_>,
-    target: &crate::silicon::SiliconTarget,
+    target: &SiliconTarget,
     chip_name: &str,
 ) -> Vec<AssignedPin> {
     let mut assignments = Vec::new();
@@ -161,7 +176,7 @@ fn extract_assigned_pins(
             None => continue,
         };
 
-        if target.find_pin(pin_name).is_none() {
+        if target.find_pin(pin_name).is_none() && !is_gpio_designator(pin_name) {
             continue;
         }
 
@@ -192,15 +207,72 @@ fn extract_assigned_pins(
             })
             .unwrap_or_else(|| net_name.clone());
 
-        let is_pulled_to_gnd = net_name.to_ascii_uppercase().contains("GND");
+        let net_upper = net_name.to_ascii_uppercase();
+        let is_pulled_to_gnd = net_upper.contains("GND");
+        let is_pulled_high = ["3V3", "VCC", "VDD", "VBAT", "VBUS", "5V"]
+            .iter()
+            .any(|rail| net_upper.contains(rail));
 
         assignments.push(AssignedPin {
             pin_name: pin_name.to_string(),
             net_name,
             signal_name,
             is_pulled_to_gnd,
+            is_pulled_high,
         });
     }
 
     assignments
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::netlist::Netlist;
+    use crate::parser::{Circuit, CircuitElement, Component, Port};
+
+    fn esp_circuit(pin: &str) -> Circuit {
+        Circuit {
+            elements: vec![
+                CircuitElement::Component(Component {
+                    component_id: Some("U1".to_string()),
+                    kind: Some("chip".to_string()),
+                    name: Some("ESP32-S3".to_string()),
+                }),
+                CircuitElement::Port(Port {
+                    port_id: Some(format!("U1.{pin}")),
+                    source_component_id: Some("U1".to_string()),
+                    name: Some(pin.to_string()),
+                    ..Default::default()
+                }),
+            ],
+            raw_elements: Vec::new(),
+        }
+    }
+
+    fn violations(circuit: &Circuit, mcu: Option<&str>) -> Vec<Diagnostic> {
+        let netlist = Netlist::from_circuit(circuit);
+        let ctx = LintContext::new(circuit, &netlist).with_mcu(mcu);
+        PinMuxRule.check(&ctx)
+    }
+
+    #[test]
+    fn explicit_unknown_mcu_blows_the_fuse() {
+        let v = violations(&esp_circuit("GPIO4"), Some("stm32f103"));
+        assert_eq!(v.len(), 1);
+        assert_eq!(v[0].rule, "unknown_mcu");
+        assert!(v[0].message.contains("stm32f103"));
+    }
+
+    #[test]
+    fn gpio_designator_missing_from_database_is_reported() {
+        let v = violations(&esp_circuit("GPIO22"), Some("esp32-s3"));
+        assert_eq!(v.len(), 1);
+        assert!(v[0].message.contains("GPIO22"));
+    }
+
+    #[test]
+    fn non_gpio_package_pins_are_ignored() {
+        assert!(violations(&esp_circuit("VDD3V3"), Some("esp32-s3")).is_empty());
+    }
 }

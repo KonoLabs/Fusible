@@ -28,10 +28,24 @@ const STM32_ANALOG_CAP: PinCapabilities = PinCapabilities {
     is_reserved_flash: false,
 };
 
-static PA0_FUNCS: &[MuxFunction] = &[mux!(PeripheralSignal::UartTx(2), 7, "AF7")];
-static PA1_FUNCS: &[MuxFunction] = &[mux!(PeripheralSignal::UartRx(2), 7, "AF7")];
-static PA2_FUNCS: &[MuxFunction] = &[mux!(PeripheralSignal::UartTx(2), 7, "AF7")];
-static PA3_FUNCS: &[MuxFunction] = &[mux!(PeripheralSignal::UartRx(2), 7, "AF7")];
+static PA0_FUNCS: &[MuxFunction] = &[
+    mux!(PeripheralSignal::UartTx(2), 7, "AF7"),
+    mux!(PeripheralSignal::AdcChannel(1, 1), 0, "ADC"),
+    mux!(PeripheralSignal::AdcChannel(2, 1), 0, "ADC"),
+];
+static PA1_FUNCS: &[MuxFunction] = &[
+    mux!(PeripheralSignal::UartRx(2), 7, "AF7"),
+    mux!(PeripheralSignal::AdcChannel(1, 2), 0, "ADC"),
+    mux!(PeripheralSignal::AdcChannel(2, 2), 0, "ADC"),
+];
+static PA2_FUNCS: &[MuxFunction] = &[
+    mux!(PeripheralSignal::UartTx(2), 7, "AF7"),
+    mux!(PeripheralSignal::AdcChannel(1, 3), 0, "ADC"),
+];
+static PA3_FUNCS: &[MuxFunction] = &[
+    mux!(PeripheralSignal::UartRx(2), 7, "AF7"),
+    mux!(PeripheralSignal::AdcChannel(1, 4), 0, "ADC"),
+];
 static PA5_FUNCS: &[MuxFunction] = &[mux!(PeripheralSignal::SpiSck(1), 5, "AF5")];
 static PA6_FUNCS: &[MuxFunction] = &[mux!(PeripheralSignal::SpiMiso(1), 5, "AF5")];
 static PA7_FUNCS: &[MuxFunction] = &[mux!(PeripheralSignal::SpiMosi(1), 5, "AF5")];
