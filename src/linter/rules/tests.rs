@@ -386,3 +386,15 @@ fn schematic_scale_passes_normal_coordinates() {
     let violations = Linter::new().with_rule(SchematicScaleRule).run(&circuit);
     assert!(violations.is_empty());
 }
+
+#[test]
+fn trace_clearance_measures_diagonal_gaps_corner_to_corner() {
+    let a = r#""pcb_port_id": "pp_a", "shape": "rect", "x": 0, "y": 0, "width": 1, "height": 1"#;
+    let diagonal =
+        r#""pcb_port_id": "pp_b", "shape": "rect", "x": 1.15, "y": 1.15, "width": 1, "height": 1"#;
+    assert!(lint(TraceClearanceRule, &two_pads(a, diagonal)).is_empty());
+
+    let close =
+        r#""pcb_port_id": "pp_b", "shape": "rect", "x": 1.1, "y": 0, "width": 1, "height": 1"#;
+    assert_eq!(lint(TraceClearanceRule, &two_pads(a, close)).len(), 1);
+}

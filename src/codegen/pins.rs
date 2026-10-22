@@ -110,7 +110,13 @@ pub fn extract_mcu_pins(
                         && ep.component_id.as_deref() != Some(mcu_name)
                 });
 
-                let r_comp = remote.and_then(|ep| ep.component_id.clone());
+                let r_comp = remote.and_then(|ep| ep.component_id.as_deref()).map(|id| {
+                    circuit
+                        .components()
+                        .find(|c| c.component_id.as_deref() == Some(id))
+                        .and_then(|c| c.name.clone())
+                        .unwrap_or_else(|| id.to_string())
+                });
                 let r_port = remote.and_then(|ep| ep.name.clone());
 
                 let signal =

@@ -42,13 +42,10 @@ impl Rule for TraceClearanceRule {
                 let dx = (f1.x - f2.x).abs();
                 let dy = (f1.y - f2.y).abs();
 
-                let required_x = f1.half_w + f2.half_w + MIN_CLEARANCE_MM;
-                let required_y = f1.half_h + f2.half_h + MIN_CLEARANCE_MM;
+                let clearance_gap = ((dx - (f1.half_w + f2.half_w)).max(0.0))
+                    .hypot((dy - (f1.half_h + f2.half_h)).max(0.0));
 
-                if dx < required_x && dy < required_y {
-                    let clearance_gap = ((dx - (f1.half_w + f2.half_w)).max(0.0))
-                        .hypot((dy - (f1.half_h + f2.half_h)).max(0.0));
-
+                if clearance_gap < MIN_CLEARANCE_MM {
                     let is_direct_short =
                         dx < (f1.half_w + f2.half_w) && dy < (f1.half_h + f2.half_h);
 
