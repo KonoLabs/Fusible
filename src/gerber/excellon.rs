@@ -73,22 +73,7 @@ impl ExcellonWriter {
     /// Serializes the complete Excellon drill file.
     pub fn finish(self) -> String {
         let mut buf = String::with_capacity(4096);
-        let _ = writeln!(buf, "M48");
-        let _ = writeln!(buf, "; DRILL file {{{}}}", self.title);
-        let _ = writeln!(
-            buf,
-            "; #@! TF.GenerationSoftware,Fusible,Fusible,{}",
-            env!("CARGO_PKG_VERSION")
-        );
-        let _ = writeln!(buf, "; #@! TF.FileFunction,{}", self.file_function);
-        let _ = writeln!(buf, "METRIC");
-
-        for (id, dia) in &self.tools {
-            let _ = writeln!(buf, "T{:02}C{}", id, dia.format_drill());
-        }
-
-        let _ = writeln!(buf, "%");
-        let _ = writeln!(buf, "G05");
+        self.write_header(&mut buf);
 
         for (tool, hits) in &self.hits {
             let _ = writeln!(buf, "T{:02}", tool);
@@ -110,6 +95,26 @@ impl ExcellonWriter {
 
         let _ = writeln!(buf, "M30");
         buf
+    }
+
+    /// Writes the M48 header: title, attributes, units and the tool table.
+    fn write_header(&self, buf: &mut String) {
+        let _ = writeln!(buf, "M48");
+        let _ = writeln!(buf, "; DRILL file {{{}}}", self.title);
+        let _ = writeln!(
+            buf,
+            "; #@! TF.GenerationSoftware,Fusible,Fusible,{}",
+            env!("CARGO_PKG_VERSION")
+        );
+        let _ = writeln!(buf, "; #@! TF.FileFunction,{}", self.file_function);
+        let _ = writeln!(buf, "METRIC");
+
+        for (id, dia) in &self.tools {
+            let _ = writeln!(buf, "T{:02}C{}", id, dia.format_drill());
+        }
+
+        let _ = writeln!(buf, "%");
+        let _ = writeln!(buf, "G05");
     }
 }
 
