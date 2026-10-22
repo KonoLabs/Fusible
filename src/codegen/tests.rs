@@ -1,6 +1,7 @@
 //! Tests for firmware pin bindings generator.
 
 mod fixtures;
+mod select;
 
 use super::*;
 use crate::netlist::Netlist;

@@ -1,51 +1,72 @@
 //! MCU component selection and pin number resolution.
 
 use crate::parser::{Circuit, Component};
+mod fields;
+
 use crate::silicon::model::{parse_gpio_index, parse_port_pin};
+use fields::{descriptors, matches_target, names_database_part};
 
-const MCU_KEYWORDS: [&str; 6] = ["esp", "stm", "mcu", "soc", "rp2040", "u1"];
-
-/// Picks the MCU component: the one matching `target_chip`, else the first
-/// whose name or id holds an MCU keyword, else the first chip.
+/// Picks the MCU component among the board's chips, never a passive.
+///
+/// Order: the chip matching `target_chip` by part number, kind, name or id;
+/// else the only chip naming a part of the silicon database; else the only
+/// chip. With several candidates and no way to choose, returns `None` and
+/// prints a hint naming them.
 pub(crate) fn select_mcu_component<'a>(
     circuit: &'a Circuit,
     target_chip: Option<&str>,
 ) -> Option<&'a Component> {
-    let comps: Vec<_> = circuit.components().collect();
-    if comps.is_empty() {
-        return None;
-    }
-    target_chip
-        .and_then(|target| find_by_target(&comps, target))
-        .or_else(|| find_by_keyword(&comps))
+    let chips: Vec<&Component> = circuit.components().filter(|c| is_chip(c)).collect();
+    let fields = |c: &Component| descriptors(circuit, c);
+    let picked = target_chip
+        .and_then(|target| {
+            chips
+                .iter()
+                .copied()
+                .find(|c| fields(c).iter().any(|f| matches_target(f, target)))
+        })
         .or_else(|| {
-            comps.into_iter().find(|c| {
-                c.kind.as_deref() == Some("chip") || c.kind.as_deref() == Some("simple_chip")
-            })
+            only(
+                chips
+                    .iter()
+                    .copied()
+                    .filter(|c| fields(c).iter().any(|f| names_database_part(f))),
+            )
         })
+        .or_else(|| only(chips.iter().copied()));
+    if picked.is_none() && chips.len() > 1 {
+        print_hint(&chips);
+    }
+    picked
 }
 
-fn contains_lower(field: Option<&str>, needle: &str) -> bool {
-    field
-        .map(|v| v.to_ascii_lowercase().contains(needle))
-        .unwrap_or(false)
+fn is_chip(component: &Component) -> bool {
+    matches!(
+        component.kind.as_deref(),
+        Some("chip") | Some("simple_chip")
+    )
 }
 
-fn find_by_target<'a>(comps: &[&'a Component], target: &str) -> Option<&'a Component> {
-    let target_lower = target.to_ascii_lowercase();
-    comps.iter().copied().find(|c| {
-        contains_lower(c.name.as_deref(), &target_lower)
-            || contains_lower(c.kind.as_deref(), &target_lower)
-            || contains_lower(c.component_id.as_deref(), &target_lower)
-    })
+fn only<'a>(mut candidates: impl Iterator<Item = &'a Component>) -> Option<&'a Component> {
+    let first = candidates.next()?;
+    candidates.next().is_none().then_some(first)
 }
 
-fn find_by_keyword<'a>(comps: &[&'a Component]) -> Option<&'a Component> {
-    MCU_KEYWORDS.iter().find_map(|kw| {
-        comps.iter().copied().find(|c| {
-            contains_lower(c.name.as_deref(), kw) || contains_lower(c.component_id.as_deref(), kw)
+fn print_hint(chips: &[&Component]) {
+    let names: Vec<&str> = chips
+        .iter()
+        .map(|c| {
+            c.name
+                .as_deref()
+                .or(c.component_id.as_deref())
+                .unwrap_or("?")
         })
-    })
+        .collect();
+    eprintln!(
+        "hint: several chips on the board ({}), none picked as the MCU; \
+         set `mcu.chip` in fusible.yml or pass --mcu",
+        names.join(", ")
+    );
 }
 
 /// Resolves the emitted pin number for a port label. See
