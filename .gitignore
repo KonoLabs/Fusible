@@ -4,3 +4,4 @@ dist/
 node_modules/
 src/assets/studio.bundle.js
 graft/
+.claude/worktrees/

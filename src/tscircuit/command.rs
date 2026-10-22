@@ -64,24 +64,6 @@ pub fn search_command(kind: &RunnerKind, query: &[String]) -> Command {
     cmd
 }
 
-/// Builds the `Command` for running the mechanical/enclosure generation script via a TS runner.
-///
-/// The script is executed with a detected TS runner (bun > npx > node).
-/// `script_path` points to the TypeScript generator script.
-/// `args` are the script-specific arguments (format, output, wall-thickness, etc.).
-pub fn mechanical_command(ts_runner: &Path, script_path: &Path, args: &[String]) -> Command {
-    let mut cmd = Command::new(ts_runner);
-    // If the runner is npx, we need to pass `tsx` as the command
-    if ts_runner.file_name().and_then(|s| s.to_str()) == Some("npx") {
-        cmd.arg("tsx");
-    }
-    cmd.arg(script_path);
-    for arg in args {
-        cmd.arg(arg);
-    }
-    cmd
-}
-
 /// Constructs a base `Command` with the binary configured.
 pub fn base_command(kind: &RunnerKind) -> Command {
     let program: &Path = match kind {

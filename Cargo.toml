@@ -21,5 +21,3 @@ serde_yaml = "0.9"
 thiserror = "2"
 tiny_http = "0.12.0"
 zip = { version = "9.0.5", default-features = false, features = ["deflate"] }
-wasmtime = "21"
-anyhow = "1"

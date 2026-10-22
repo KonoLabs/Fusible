@@ -93,46 +93,42 @@ pub enum Commands {
         skip_lint: bool,
     },
 
-    /// Generate mechanical models from board outlines and components
+    /// Generate a 3D enclosure model (base + lid) from the board outline
     #[command(alias = "case", alias = "housing")]
     Mechanical {
         /// Path to Circuit JSON, TSX, or KiCad entry file
         #[arg(value_name = "FILE")]
         file: Option<PathBuf>,
 
-        /// Output format: step, iges, stl, glb, brep, or all
-        #[arg(short = 'f', long, default_value = "step")]
-        format: String,
+        /// Output format: step, stl, glb, brep, or all [default: step]
+        #[arg(short = 'f', long)]
+        format: Option<String>,
 
-        /// Output destination path or directory
+        /// Output directory [default: dist/mechanical]
         #[arg(short = 'o', long)]
         output: Option<PathBuf>,
 
-        /// Board outline source: auto, pcb, kicad, or explicit SVG path
-        #[arg(long, value_name = "SOURCE", default_value = "auto")]
-        outline: String,
+        /// Wall, floor, and lid thickness in mm [default: 2.0]
+        #[arg(long)]
+        wall_thickness: Option<f64>,
 
-        /// Enclosure wall thickness in mm
-        #[arg(long, default_value = "2.0")]
-        wall_thickness: f64,
-
-        /// Enclosure height in mm (auto-calculated if omitted)
+        /// Total external base height in mm [default: derived from the board stack]
         #[arg(long)]
         height: Option<f64>,
 
-        /// Include component cutouts (USB, headers, buttons, etc.)
+        /// Lid ventilation pattern: none, grid, or slots [default: none]
         #[arg(long)]
-        component_cutouts: bool,
+        ventilation: Option<String>,
 
-        /// Ventilation hole pattern: none, grid, honeycomb, slots
-        #[arg(long, default_value = "none")]
-        ventilation: String,
+        /// Do not notch walls where components reach the board edge
+        #[arg(long)]
+        no_cutouts: bool,
 
-        /// Mounting holes: none, m2, m3, m4, or custom CSV "x1,y1,d1;x2,y2,d2"
-        #[arg(long, default_value = "none")]
-        mounting: String,
+        /// Do not add screw bosses under the board's mounting holes
+        #[arg(long)]
+        no_mounting: bool,
 
-        /// Skip electrical rule verification before generating mechanical model
+        /// Skip electrical rule verification before generating the model
         #[arg(long)]
         skip_lint: bool,
     },

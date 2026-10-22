@@ -287,3 +287,45 @@ fn subcommand_diff_and_sync_kicad() {
     let edits_content = std::fs::read_to_string(&manual_edits).unwrap();
     assert!(edits_content.contains("\"selector\": \"R1\""));
 }
+
+#[test]
+fn subcommand_mechanical_fuse_blown_writes_nothing() {
+    let dir = TestDir::new("mechanical_blown");
+    let out_dir = dir.path.join("mech");
+    let out = fusible()
+        .args(["mechanical", "examples/circuit-floating.json", "-o"])
+        .arg(&out_dir)
+        .output()
+        .expect("binary should run");
+
+    assert_eq!(out.status.code(), Some(1));
+    assert!(!out_dir.exists());
+}
+
+#[test]
+fn subcommand_mechanical_rejects_bad_input_as_tool_error() {
+    for args in [
+        vec!["mechanical", "examples/circuit.json", "-f", "iges"],
+        vec!["mechanical", "examples/circuit.json", "--skip-lint", "-o"],
+    ] {
+        let dir = TestDir::new("mechanical_bad");
+        let out = fusible()
+            .args(&args)
+            .args(args.ends_with(&["-o"]).then(|| dir.path.join("mech")))
+            .output()
+            .expect("binary should run");
+
+        assert_eq!(out.status.code(), Some(2), "args: {args:?}");
+    }
+}
+
+#[test]
+fn bare_invocation_without_manifest_is_a_tool_error() {
+    let dir = TestDir::new("bare");
+    let out = fusible()
+        .current_dir(&dir.path)
+        .output()
+        .expect("binary should run");
+
+    assert_eq!(out.status.code(), Some(2));
+}

@@ -19,6 +19,49 @@ pub struct PcbBoardElm {
     pub height: Option<f64>,
     pub center: Option<PcbPoint>,
     pub outline: Option<Vec<PcbPoint>>,
+    pub thickness: Option<f64>,
+}
+
+impl PcbBoardElm {
+    /// Returns the closed board outline, deriving a rectangle from `width`, `height`, and `center` when no explicit outline is set.
+    pub fn outline_points(&self) -> Vec<PcbPoint> {
+        if let Some(outline) = &self.outline {
+            return outline.clone();
+        }
+        let w = self.width.unwrap_or(80.0) / 2.0;
+        let h = self.height.unwrap_or(60.0) / 2.0;
+        let cx = self.center.as_ref().map(|c| c.x).unwrap_or(0.0);
+        let cy = self.center.as_ref().map(|c| c.y).unwrap_or(0.0);
+        vec![
+            PcbPoint {
+                x: cx - w,
+                y: cy - h,
+            },
+            PcbPoint {
+                x: cx + w,
+                y: cy - h,
+            },
+            PcbPoint {
+                x: cx + w,
+                y: cy + h,
+            },
+            PcbPoint {
+                x: cx - w,
+                y: cy + h,
+            },
+            PcbPoint {
+                x: cx - w,
+                y: cy - h,
+            },
+        ]
+    }
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct PcbHoleElm {
+    pub x: f64,
+    pub y: f64,
+    pub hole_diameter: Option<f64>,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -112,6 +155,7 @@ pub struct PcbModel {
     pub silkscreen_paths: Vec<PcbSilkscreenPathElm>,
     pub silkscreen_texts: Vec<PcbSilkscreenTextElm>,
     pub components: Vec<PcbComponentElm>,
+    pub holes: Vec<PcbHoleElm>,
 }
 
 impl PcbModel {
@@ -165,6 +209,11 @@ impl PcbModel {
                         model.components.push(c);
                     }
                 }
+                "pcb_hole" => {
+                    if let Ok(h) = serde_json::from_value(val) {
+                        model.holes.push(h);
+                    }
+                }
                 _ => {}
             }
         }
@@ -182,34 +231,7 @@ impl PcbModel {
         writer.select_aperture(border_ap);
 
         for board in &self.boards {
-            let outline = board.outline.clone().unwrap_or_else(|| {
-                let w = board.width.unwrap_or(80.0) / 2.0;
-                let h = board.height.unwrap_or(60.0) / 2.0;
-                let cx = board.center.as_ref().map(|c| c.x).unwrap_or(0.0);
-                let cy = board.center.as_ref().map(|c| c.y).unwrap_or(0.0);
-                vec![
-                    PcbPoint {
-                        x: cx - w,
-                        y: cy - h,
-                    },
-                    PcbPoint {
-                        x: cx + w,
-                        y: cy - h,
-                    },
-                    PcbPoint {
-                        x: cx + w,
-                        y: cy + h,
-                    },
-                    PcbPoint {
-                        x: cx - w,
-                        y: cy + h,
-                    },
-                    PcbPoint {
-                        x: cx - w,
-                        y: cy - h,
-                    },
-                ]
-            });
+            let outline = board.outline_points();
 
             if let Some(first) = outline.first() {
                 writer.move_to(Coord::from_mm(first.x), Coord::from_mm(first.y));

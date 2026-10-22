@@ -62,30 +62,12 @@ fn dispatch_export(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 fn dispatch_mechanical(
     file: Option<std::path::PathBuf>,
-    format: String,
-    output: Option<std::path::PathBuf>,
-    outline: String,
-    wall_thickness: f64,
-    height: Option<f64>,
-    component_cutouts: bool,
-    ventilation: String,
-    mounting: String,
+    overrides: MechanicalConfig,
     skip_lint: bool,
 ) -> ExitCode {
-    let cfg = MechanicalConfig {
-        format: Some(format),
-        out_dir: output,
-        wall_thickness: Some(wall_thickness),
-        height,
-        component_cutouts: Some(component_cutouts),
-        ventilation: Some(ventilation),
-        mounting: Some(mounting),
-        outline_source: Some(outline),
-    };
-    match commands::mechanical::run(file, cfg, skip_lint) {
+    match commands::mechanical::run(file, overrides, skip_lint) {
         Ok(()) => ExitCode::SUCCESS,
         Err(MechanicalError::Check(CheckError::FuseBlown(blown))) => fail(blown, EXIT_VIOLATIONS),
         Err(err) => fail(err, EXIT_TOOL_ERROR),
@@ -194,23 +176,23 @@ fn main() -> ExitCode {
             file,
             format,
             output,
-            outline,
             wall_thickness,
             height,
-            component_cutouts,
             ventilation,
-            mounting,
+            no_cutouts,
+            no_mounting,
             skip_lint,
         }) => dispatch_mechanical(
             file,
-            format,
-            output,
-            outline,
-            wall_thickness,
-            height,
-            component_cutouts,
-            ventilation,
-            mounting,
+            MechanicalConfig {
+                format,
+                out_dir: output,
+                wall_thickness,
+                height,
+                cutouts: no_cutouts.then_some(false),
+                ventilation,
+                mounting: no_mounting.then_some(false),
+            },
             skip_lint,
         ),
         None => handle_default_invocation(cli),
@@ -228,7 +210,7 @@ fn handle_default_invocation(cli: Cli) -> ExitCode {
     } else {
         let _ = Cli::command().print_help();
         println!();
-        ExitCode::SUCCESS
+        ExitCode::from(EXIT_TOOL_ERROR)
     }
 }
 

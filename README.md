@@ -24,6 +24,7 @@ wrapping development servers, dark-theme web previewers, artifact exports, and f
 | 2.2 | Pure-Rust vector documentation exporter (PCB & schematic SVGs) | shipped |
 | 2.3 | Native Fusible Studio dev server with dark theme and live SSE reload | shipped |
 | 2.4 | Parallel multi-core autorouter and bidirectional KiCad syncer | shipped |
+| 2.5 | Fuse-gated 3D enclosure generator (`mechanical`) on OpenCascade | shipped |
 
 ## Prerequisites
 
@@ -178,7 +179,25 @@ fusible export -f kicad_zip
 fusible export --preset fab --skip-lint
 ```
 
-### 7. Hardware package management (`add`, `install`, `search`)
+### 7. 3D enclosure (`mechanical` / `case`)
+
+Generates a two-part enclosure (base + lid) around the board outline in Circuit JSON. The command is fuse-gated like `export`.
+
+```sh
+fusible mechanical                       # STEP into dist/mechanical/
+fusible mechanical -f all                # step, stl, glb, and brep
+fusible mechanical --ventilation grid    # vent holes in the lid (grid | slots)
+fusible mechanical --wall-thickness 2.5 --height 25
+fusible mechanical --no-cutouts --no-mounting
+```
+
+- The outline comes from `pcb_board` (`outline` points, or `width` x `height`).
+- Each `pcb_hole` gets a screw boss with a pilot hole, and the board sits on the bosses.
+- Components that reach the board edge get a wall notch from the board surface up.
+- CLI flags override the `mechanical:` section of `fusible.yml`, which overrides defaults.
+- Requires `bun`. The first run installs `occt-wasm` into `~/.cache/fusible/`. IGES is not supported.
+
+### 8. Hardware package management (`add`, `install`, `search`)
 
 Manage tscircuit packages, community footprints, and components without touching npm or tsci directly:
 
@@ -193,7 +212,7 @@ fusible add @tsci/seveibar.smd-resistor
 fusible install
 ```
 
-### 8. Toolchain diagnostics (`doctor`)
+### 9. Toolchain diagnostics (`doctor`)
 
 Inspects local toolchain health (`bun`, `node`, `npm`, `npx`, `tsci`) and verifies tscircuit runner availability:
 

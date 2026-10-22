@@ -64,33 +64,30 @@ pub struct FirmwareConfig {
     pub build_cmd: Option<String>,
 }
 
-/// Mechanical CAD generation configuration.
+/// Mechanical enclosure generation settings for `fusible mechanical`.
 #[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]
 pub struct MechanicalConfig {
-    /// Export format(s) – e.g. "step", "iges", "stl", "glb", "brep", or "all".
+    /// Export format: `step`, `stl`, `glb`, `brep`, or `all`.
     #[serde(default)]
     pub format: Option<String>,
-    /// Destination directory for generated files.
+    /// Directory receiving the generated models.
     #[serde(default, alias = "out-dir")]
     pub out_dir: Option<PathBuf>,
-    /// Wall thickness in millimetres.
-    #[serde(default)]
+    /// Wall, floor, and lid thickness in millimetres.
+    #[serde(default, alias = "wall-thickness")]
     pub wall_thickness: Option<f64>,
-    /// Overall height in millimetres; auto‑calculated if omitted.
+    /// Total external height of the base in millimetres.
     #[serde(default)]
     pub height: Option<f64>,
-    /// Include component cutouts (USB, headers, etc.).
+    /// Cut wall notches for components that reach the board edge.
     #[serde(default)]
-    pub component_cutouts: Option<bool>,
-    /// Ventilation pattern: "none", "grid", "honeycomb", "slots".
+    pub cutouts: Option<bool>,
+    /// Lid ventilation pattern: `none`, `grid`, or `slots`.
     #[serde(default)]
     pub ventilation: Option<String>,
-    /// Mounting hole spec – "none", "m2", "m3", "m4", or CSV "x1,y1,d1;x2,y2,d2".
+    /// Add screw bosses under every `pcb_hole` of the board.
     #[serde(default)]
-    pub mounting: Option<String>,
-    /// Board outline source – "auto", "pcb", "kicad", or path to an SVG.
-    #[serde(default, alias = "outline-source")]
-    pub outline_source: Option<String>,
+    pub mounting: Option<bool>,
 }
 
 impl FusibleConfig {
@@ -179,24 +176,14 @@ firmware:
   # Optional command to build firmware
   build_cmd: cargo build
 
-mechanical:
-  # Mechanical CAD generation configuration
-  # Export format(s) – e.g. "step", "iges", "stl", "glb", "brep", or "all"
-  # format: step
-  # Destination directory for generated files
-  # out_dir: dist/mechanical
-  # Wall thickness in millimetres
-  # wall_thickness: 2.0
-  # Overall height in millimetres; auto‑calculated if omitted
-  # height: 10.0
-  # Include component cutouts (USB, headers, etc.)
-  # component_cutouts: true
-  # Ventilation pattern: "none", "grid", "honeycomb", "slots"
-  # ventilation: none
-  # Mounting hole spec – "none", "m2", "m3", "m4", or CSV "x1,y1,d1;x2,y2,d2"
-  # mounting: none
-  # Board outline source – "auto", "pcb", "kicad", or path to an SVG
-  # outline_source: auto
+# mechanical:
+#   format: step            # step | stl | glb | brep | all
+#   out_dir: dist/mechanical
+#   wall_thickness: 2.0
+#   height: 20.0            # derived from the board stack when omitted
+#   cutouts: true           # notch walls where components reach the board edge
+#   ventilation: none       # none | grid | slots
+#   mounting: true          # screw bosses under each pcb_hole
 "#
     }
 }

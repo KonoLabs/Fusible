@@ -5,13 +5,23 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
-## [0.8.18] - 2026-10-23
+## [Unreleased]
 
 ### Added
 
-- Implemented robust outline extraction for the mechanical command, supporting SVG, KiCad, and JSON sources.
-- Added OCCT WASM bindings for 3D CAD primitives and Boolean operations.
-- Updated documentation and CLI help for new mechanical options.
+- `fusible mechanical` (alias `case`) generates a base + lid enclosure from the `pcb_board` outline and writes STEP, STL, GLB, or BREP through OpenCascade (`occt-wasm` 5.7.1 under bun).
+- Screw bosses with pilot holes under every `pcb_hole`, wall notches for components that reach the board edge, and `grid` or `slots` lid ventilation.
+- `mechanical:` section in `fusible.yml`; CLI flags override it.
+
+### Fixed
+
+- Bare `fusible` with no target and no manifest exits `2` again instead of `0`, so CI cannot read "nothing checked" as "fuse intact".
+- Restored `ROADMAP.md` and `HANDOFF.md`, which v0.8.18 overwrote with unrelated content.
+
+### Removed
+
+- Non-functional wasmtime OCCT bindings, the `wasmtime` and `anyhow` dependencies, the committed `occt-wasm` tarball, and the root `package.json`.
+- The v0.8.18 and v0.8.19 tags never built and were never released; this version replaces them.
 
 ## [0.8.17] - 2026-10-22
 
