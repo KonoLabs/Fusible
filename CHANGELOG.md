@@ -5,6 +5,13 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [Unreleased]
+
+### Fixed
+
+- `fusible dev` shows the upstream PCB and 3D viewers again. Since 0.8.17 both crashed with React "Invalid hook call" and rendered empty.
+- `fusible dev` warns at startup when the binary has no studio bundle. The crates.io package now ships the bundle, so `cargo install fusible` gets the full studio.
+
 ## [0.9.0] - 2026-10-22
 
 ### Changed

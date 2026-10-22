@@ -8,6 +8,7 @@ repository = "https://github.com/KonoLabs/Fusible"
 readme = "README.md"
 keywords = ["eda", "hardware", "kicad", "tscircuit", "linter"]
 categories = ["command-line-utilities", "development-tools"]
+include = ["/src/**/*", "/tests/**/*", "/examples/**/*", "/studio/src/**/*", "/studio/package.json", "/studio/bun.lock", "/build.rs", "/README.md", "/CHANGELOG.md", "/LICENSE"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }

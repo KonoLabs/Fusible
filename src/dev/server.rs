@@ -96,6 +96,12 @@ pub fn run_dev_server(entry: PathBuf, port: u16) -> Result<(), Box<dyn std::erro
     let initial_payload = execute_pipeline(&entry);
     let cached_payload = Arc::new(Mutex::new(serde_json::to_string(&initial_payload)?));
     let cached_bundle = Arc::new(Mutex::new(load_studio_bundle()));
+    if cached_bundle.lock().is_ok_and(|bundle| bundle.is_none()) {
+        eprintln!(
+            "⚠ This fusible build has no studio bundle: schematic, PCB and 3D fall back to native previews. \
+Install a GitHub release binary, or run `bun install && bun run build` in studio/ and rebuild."
+        );
+    }
 
     println!("⚡ Fusible Dev Server running at http://localhost:{port} (press Ctrl+C to quit)");
 

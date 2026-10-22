@@ -257,6 +257,7 @@ export function CadViewer({
 }: any) {
   const containerRef = useRef<HTMLDivElement>(null);
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  useContextMenuIntercept(circuitJson || [], onSelectComponent);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -319,8 +320,6 @@ export function CadViewer({
     container.addEventListener("pointerdown", handlePointerDown, true);
     container.addEventListener("click", handleClick, true);
     container.addEventListener("contextmenu", handleContextMenu, true);
-
-    useContextMenuIntercept(circuitJson || [], onSelectComponent);
 
     return () => {
       container.removeEventListener("pointerdown", handlePointerDown, true);
@@ -407,11 +406,7 @@ function ResponsivePcbViewer({
     };
   }, []);
 
-  useEffect(() => {
-    if (!onSelectComponent) return;
-
-    useContextMenuIntercept(circuitJson || [], onSelectComponent);
-  }, [circuitJson, onSelectComponent]);
+  useContextMenuIntercept(circuitJson || [], onSelectComponent);
 
   return React.createElement(
     "div",
