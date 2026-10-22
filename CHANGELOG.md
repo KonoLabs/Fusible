@@ -5,6 +5,27 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.10.0] - 2026-10-22
+
+### Added
+
+- `fusible dev` has a `MECHANICAL` tab that shows the generated base and lid, with lid and explode toggles.
+- The studio 3D view has a `MECHANICAL` toggle that draws the shell translucent around the board, in both the CAD and native engines.
+- The dev server serves `/api/mechanical` (frame metadata) and `/api/mechanical.glb`. It builds the model on demand from the `mechanical:` section of `fusible.yml`, caches it per circuit revision, and does not apply the fuse gate.
+- The studio payload carries a `revision` hash of the circuit source.
+
+### Changed
+
+- The filet config is now `filet.yml`. The old `.filet.yml` was never read, so its bundle exclude had no effect. The whole codebase now passes `filet check .` with no findings. Output is unchanged: Gerber, SVG, router and `--help` output were compared byte for byte.
+- The studio frontend is split into modules and type-checks with `tsc --noEmit`.
+
+### Fixed
+
+- The TOP camera preset moves in one continuous orbit instead of two separate motions, in both 3D engines and the mechanical tab.
+- The studio render capture works with three r165. Before, it never ran, and CAD click-picking fell back to a global scene reference.
+- Toolbar labels stay on one line, and the camera preset buttons collapse to icons below 1440 px.
+- The KiCad tokenizer no longer hangs on non-ASCII whitespace such as a form feed or a non-breaking space.
+
 ## [0.9.1] - 2026-10-22
 
 ### Changed
