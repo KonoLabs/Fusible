@@ -124,16 +124,12 @@ pub fn load_circuit_source(entry: &Path) -> Result<(PathBuf, String), CheckError
     }
 }
 
-/// Runs the electrical linter on a target file or project manifest.
-pub fn run(
-    file: Option<PathBuf>,
-    mcu: Option<String>,
-    pins_rs: Option<PathBuf>,
-) -> Result<(), CheckError> {
-    let entry = resolve_entry(file)?;
+/// Loads, parses and lints the circuit at `entry` without writing any file.
+///
+/// Returns the path and text of the Circuit JSON that passed the fuse check.
+pub fn lint_source(entry: &Path, mcu: Option<String>) -> Result<(PathBuf, String), CheckError> {
     let target_mcu = resolve_mcu(mcu);
-    let (json_path, source) = load_circuit_source(&entry)?;
-
+    let (json_path, source) = load_circuit_source(entry)?;
     let circuit = parser::parse(&source, &json_path)?;
     let netlist = Netlist::from_circuit(&circuit);
     let ctx = LintContext::new(&circuit, &netlist).with_mcu(target_mcu.as_deref());
@@ -144,12 +140,29 @@ pub fn run(
     }
 
     println!("✅ Circuit validated (fuse intact)");
-    if let Some(ref mcu) = target_mcu {
+    if let Some(mcu) = target_mcu {
         println!("   silicon target: {mcu}");
     }
+    Ok((json_path, source))
+}
+
+/// Runs the electrical linter on a target file or project manifest.
+pub fn run(
+    file: Option<PathBuf>,
+    mcu: Option<String>,
+    pins_rs: Option<PathBuf>,
+) -> Result<(), CheckError> {
+    let entry = resolve_entry(file)?;
+    let target_mcu = resolve_mcu(mcu);
+    let (json_path, source) = lint_source(&entry, target_mcu.clone())?;
 
     match resolve_pins_rs(pins_rs) {
-        Some(pins_path) => write_pins_rs(&ctx, &pins_path),
+        Some(pins_path) => {
+            let circuit = parser::parse(&source, &json_path)?;
+            let netlist = Netlist::from_circuit(&circuit);
+            let ctx = LintContext::new(&circuit, &netlist).with_mcu(target_mcu.as_deref());
+            write_pins_rs(&ctx, &pins_path)
+        }
         None => Ok(()),
     }
 }

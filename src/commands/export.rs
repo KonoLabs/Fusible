@@ -1,6 +1,7 @@
 //! Subcommand: `fusible export` — export circuit artifacts.
 
 mod formats;
+mod pdf;
 mod presets;
 
 use std::path::{Path, PathBuf};
@@ -41,6 +42,7 @@ struct ExportJob {
     entry: PathBuf,
     board_title: String,
     output: Option<PathBuf>,
+    source: Option<String>,
 }
 
 impl ExportJob {
@@ -56,9 +58,12 @@ impl ExportJob {
             .unwrap_or_else(|| PathBuf::from(default))
     }
 
-    /// Loads the Circuit JSON for the job's entry file.
+    /// Returns the Circuit JSON loaded by the fuse gate, loading it when the gate was skipped.
     fn circuit_json(&self) -> Result<String, ExportError> {
-        Ok(check::load_circuit_source(&self.entry)?.1)
+        match &self.source {
+            Some(source) => Ok(source.clone()),
+            None => Ok(check::load_circuit_source(&self.entry)?.1),
+        }
     }
 }
 
@@ -77,14 +82,14 @@ pub fn run(
         presets::validate_preset(preset_name)?;
     }
 
-    let entry = resolve_entry(file.clone()).unwrap_or_else(|_| PathBuf::from("index.tsx"));
-    fuse_gate(file, skip_lint)?;
+    let (entry, source) = fuse_gate(file, skip_lint)?;
 
     let job = ExportJob {
         runner: Runner::detect().ok(),
         entry,
         board_title: check::resolve_board_name(),
         output,
+        source,
     };
 
     match preset {
@@ -94,15 +99,22 @@ pub fn run(
 }
 
 /// Runs the electrical check unless the user asked to skip it.
-fn fuse_gate(file: Option<PathBuf>, skip_lint: bool) -> Result<(), ExportError> {
+///
+/// Returns the entry file and, when the check ran, the Circuit JSON it validated.
+fn fuse_gate(
+    file: Option<PathBuf>,
+    skip_lint: bool,
+) -> Result<(PathBuf, Option<String>), ExportError> {
     if skip_lint {
         println!("⚠️  Skipping electrical rule verification (--skip-lint requested).\n");
-        return Ok(());
+        let entry = resolve_entry(file).unwrap_or_else(|_| PathBuf::from("index.tsx"));
+        return Ok((entry, None));
     }
     println!("🔍 Verifying electrical rules before export (fuse check)...");
-    check::run(file, None, None)?;
+    let entry = resolve_entry(file).map_err(CheckError::from)?;
+    let (_, source) = check::lint_source(&entry, None)?;
     println!("⚡ Fuse intact — proceeding with artifact export.\n");
-    Ok(())
+    Ok((entry, Some(source)))
 }
 
 /// Extracts every entry of `zip_path` into `target_dir`.
