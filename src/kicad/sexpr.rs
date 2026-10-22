@@ -20,23 +20,15 @@ impl Sexpr {
     }
 }
 
+const MAX_DEPTH: usize = 512;
+
 pub fn parse_sexpr(input: &str) -> Result<Sexpr, String> {
     let tokens = tokenize(input)?;
     let mut pos = 0;
     if tokens.is_empty() {
         return Err("empty S-expression input".to_string());
     }
-    parse_expr(&tokens, &mut pos)
-}
-
-pub fn parse_all_sexpr(input: &str) -> Result<Vec<Sexpr>, String> {
-    let tokens = tokenize(input)?;
-    let mut pos = 0;
-    let mut exprs = Vec::new();
-    while pos < tokens.len() {
-        exprs.push(parse_expr(&tokens, &mut pos)?);
-    }
-    Ok(exprs)
+    parse_expr(&tokens, &mut pos, 0)
 }
 
 fn tokenize(input: &str) -> Result<Vec<String>, String> {
@@ -94,7 +86,12 @@ fn tokenize(input: &str) -> Result<Vec<String>, String> {
     Ok(tokens)
 }
 
-fn parse_expr(tokens: &[String], pos: &mut usize) -> Result<Sexpr, String> {
+fn parse_expr(tokens: &[String], pos: &mut usize, depth: usize) -> Result<Sexpr, String> {
+    if depth > MAX_DEPTH {
+        return Err(format!(
+            "S-expression nested deeper than {MAX_DEPTH} levels"
+        ));
+    }
     if *pos >= tokens.len() {
         return Err("unexpected end of tokens".to_string());
     }
@@ -104,7 +101,7 @@ fn parse_expr(tokens: &[String], pos: &mut usize) -> Result<Sexpr, String> {
         *pos += 1;
         let mut list = Vec::new();
         while *pos < tokens.len() && tokens[*pos] != ")" {
-            list.push(parse_expr(tokens, pos)?);
+            list.push(parse_expr(tokens, pos, depth + 1)?);
         }
         if *pos >= tokens.len() {
             return Err("unclosed parenthesis".to_string());

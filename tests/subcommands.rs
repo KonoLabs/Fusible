@@ -251,7 +251,8 @@ fn subcommand_diff_and_sync_kicad() {
 
     let circuit_file = fixture.path.join("circuit.json");
     let circuit = r#"[
-        { "type": "source_component", "name": "R1", "x": 0.0, "y": 0.0, "rotation": 0.0, "layer": "top" }
+        { "type": "source_component", "source_component_id": "sc_r1", "name": "R1" },
+        { "type": "pcb_component", "pcb_component_id": "pc_r1", "source_component_id": "sc_r1", "center": { "x": 0.0, "y": 0.0 }, "rotation": 0.0, "layer": "top" }
     ]"#;
     std::fs::write(&circuit_file, circuit).unwrap();
 
