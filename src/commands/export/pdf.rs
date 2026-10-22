@@ -1,9 +1,11 @@
 //! Prints the schematic SVG to PDF with a locally installed Chromium.
 
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Stdio};
+use std::time::{Duration, Instant};
 
 const PATH_BROWSERS: [&str; 3] = ["chromium", "chromium-browser", "google-chrome"];
+const PRINT_TIMEOUT: Duration = Duration::from_secs(60);
 
 /// Returns the newest Chromium binary in the Playwright cache under `home`.
 fn playwright_chromium(home: &Path) -> Option<PathBuf> {
@@ -45,10 +47,59 @@ fn find_chromium() -> Option<PathBuf> {
         .or_else(|| find_on_path(&PATH_BROWSERS))
 }
 
+/// Waits up to [`PRINT_TIMEOUT`] for `child` to exit successfully, killing it otherwise.
+fn finished_in_time(child: &mut Child) -> bool {
+    let start = Instant::now();
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) => return status.success(),
+            Ok(None) if start.elapsed() < PRINT_TIMEOUT => {
+                std::thread::sleep(Duration::from_millis(100))
+            }
+            _ => break,
+        }
+    }
+    let _ = child.kill();
+    let _ = child.wait();
+    false
+}
+
+/// Returns the `file://` URL of `path`, percent-encoding every byte that is
+/// not unreserved, so `#`, `?`, `%` and spaces stay part of the path.
+fn file_url(path: &Path) -> String {
+    let encoded: String = path
+        .to_string_lossy()
+        .bytes()
+        .map(|b| match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' | b'/' => {
+                char::from(b).to_string()
+            }
+            other => format!("%{other:02X}"),
+        })
+        .collect();
+    format!("file://{encoded}")
+}
+
+/// Runs `chromium` headless to print `svg` into `pdf`.
+fn print_with(chromium: &Path, svg: &Path, pdf: &Path) -> bool {
+    let child = Command::new(chromium)
+        .args(["--headless", "--no-sandbox", "--no-pdf-header-footer"])
+        .arg(format!("--print-to-pdf={}", pdf.display()))
+        .arg(file_url(svg))
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn();
+    child.is_ok_and(|mut child| finished_in_time(&mut child)) && pdf.is_file()
+}
+
 /// Prints `svg` to `pdf`, returning whether the PDF was written.
 ///
-/// Prints a warning and returns `false` when no Chromium is found or printing fails.
+/// Removes any earlier `pdf` first, so a failed print never leaves a stale
+/// file behind. Prints a warning and returns `false` when no Chromium is
+/// found, printing fails, or Chromium runs past [`PRINT_TIMEOUT`].
 pub(super) fn print_svg_to_pdf(svg: &Path, pdf: &Path) -> bool {
+    let _ = std::fs::remove_file(pdf);
     let Some(chromium) = find_chromium() else {
         println!("⚠️  No Chromium found; wrote SVG only, skipped schematic.pdf.");
         return false;
@@ -57,14 +108,7 @@ pub(super) fn print_svg_to_pdf(svg: &Path, pdf: &Path) -> bool {
         println!("⚠️  Cannot resolve the schematic paths; skipped schematic.pdf.");
         return false;
     };
-    let status = Command::new(&chromium)
-        .args(["--headless", "--no-sandbox", "--no-pdf-header-footer"])
-        .arg(format!("--print-to-pdf={}", pdf.display()))
-        .arg(format!("file://{}", svg.display()))
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status();
-    let written = matches!(status, Ok(s) if s.success()) && pdf.is_file();
+    let written = print_with(&chromium, &svg, &pdf);
     if !written {
         println!(
             "⚠️  {} could not print the schematic; skipped schematic.pdf.",
@@ -72,4 +116,18 @@ pub(super) fn print_svg_to_pdf(svg: &Path, pdf: &Path) -> bool {
         );
     }
     written
+}
+
+#[cfg(test)]
+mod tests {
+    use super::file_url;
+    use std::path::Path;
+
+    #[test]
+    fn file_url_escapes_reserved_characters() {
+        assert_eq!(
+            file_url(Path::new("/tmp/a b#c?d%e/s.svg")),
+            "file:///tmp/a%20b%23c%3Fd%25e/s.svg"
+        );
+    }
 }

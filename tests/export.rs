@@ -129,6 +129,8 @@ fn subcommand_export_docs_does_not_write_pins_rs() {
 fn subcommand_export_docs_without_chromium_warns_and_writes_svg_only() {
     let dir = TestDir::new("export_no_chromium");
     let out_dir = dir.path.join("docs");
+    std::fs::create_dir_all(&out_dir).unwrap();
+    std::fs::write(out_dir.join("schematic.pdf"), b"%PDF stale").unwrap();
 
     let out = fusible()
         .env("HOME", &dir.path)
