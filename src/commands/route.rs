@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use miette::Diagnostic;
 use thiserror::Error;
@@ -33,27 +33,16 @@ pub enum RouteCommandError {
     UnroutedNets { count: usize, nets: Vec<String> },
 }
 
+/// Autoroutes the target circuit and writes the routed Circuit JSON unless `options.dry_run`.
 pub fn run(
     file: Option<PathBuf>,
     output: Option<PathBuf>,
-    clearance: f64,
-    trace_width: f64,
-    layers: u8,
-    dry_run: bool,
+    options: RouteOptions,
 ) -> Result<(), RouteCommandError> {
     let entry = resolve_entry(file)?;
     println!("⚡ Initializing autorouter for \"{}\"...", entry.display());
 
     let (_json_path, source) = load_circuit_source(&entry)?;
-
-    let options = RouteOptions {
-        clearance,
-        trace_width,
-        layers,
-        dry_run,
-        ..Default::default()
-    };
-
     let result = route_circuit(&source, &options).map_err(RouteCommandError::Engine)?;
 
     println!(
@@ -68,27 +57,33 @@ pub fn run(
         });
     }
 
-    if !dry_run {
-        let dest = output.unwrap_or_else(|| {
-            if entry.extension().and_then(|e| e.to_str()) == Some("json") {
-                entry.clone()
-            } else {
-                PathBuf::from("dist").join("circuit.routed.json")
-            }
-        });
-
-        if let Some(parent) = dest.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-
-        std::fs::write(&dest, result.output_json)?;
-        println!(
-            "✅ Successfully exported routed circuit to \"{}\"!",
-            dest.display()
-        );
-    } else {
+    if options.dry_run {
         println!("🔍 Dry run complete — verified all nets routable (fuse intact).");
+        return Ok(());
     }
 
+    let dest = output.unwrap_or_else(|| default_destination(&entry));
+    write_routed(&dest, &result.output_json)
+}
+
+/// Writes the routed Circuit JSON to `dest`, creating its parent directory.
+fn write_routed(dest: &Path, json: &str) -> Result<(), RouteCommandError> {
+    if let Some(parent) = dest.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(dest, json)?;
+    println!(
+        "✅ Successfully exported routed circuit to \"{}\"!",
+        dest.display()
+    );
     Ok(())
+}
+
+/// Overwrites a JSON entry in place; other entries go to `dist/circuit.routed.json`.
+fn default_destination(entry: &Path) -> PathBuf {
+    if entry.extension().and_then(|e| e.to_str()) == Some("json") {
+        entry.to_path_buf()
+    } else {
+        PathBuf::from("dist").join("circuit.routed.json")
+    }
 }

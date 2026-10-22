@@ -3,7 +3,9 @@
 //! Provides types for project configuration, discovery via ancestor directory
 //! traversal, parsing via `serde_yaml`, and starter templates for `fusible init`.
 
+mod discovery;
 pub mod error;
+mod template;
 #[cfg(test)]
 mod tests;
 
@@ -11,6 +13,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
+use discovery::{check_file_target, find_in_dir};
 pub use error::ConfigError;
 
 /// Recognized filenames for the Fusible manifest, in order of precedence.
@@ -173,68 +176,6 @@ impl std::str::FromStr for FusibleConfig {
 impl FusibleConfig {
     /// Returns an annotated, clean template string for `fusible init`.
     pub fn default_manifest() -> &'static str {
-        r#"# Fusible project manifest
-# Docs: https://github.com/KonoLabs/Fusible
-
-name: sensor-node
-
-hardware:
-  # Top-level board entry point (.tsx or circuit.json)
-  entry: hardware/index.tsx
-  # Output directory for circuit artifacts
-  out_dir: dist
-  # Dev server port for interactive previewer
-  port: 3020
-
-mcu:
-  # Target silicon identifier (e.g., stm32g431, esp32s3, rp2040)
-  chip: stm32g431
-
-firmware:
-  # Directory containing firmware crate or code
-  path: firmware
-  # Firmware framework: embassy | cortex-m | esp-idf
-  framework: embassy
-  # Destination for auto-generated pin bindings
-  pins_rs: firmware/src/pins.rs
-  # Optional command to build firmware
-  build_cmd: cargo build
-
-# mechanical:
-#   format: step            # step | stl | glb | brep | all
-#   out_dir: dist/mechanical
-#   wall_thickness: 2.0
-#   height: 20.0            # derived from the board stack when omitted
-#   cutouts: true           # notch walls where components reach the board edge
-#   ventilation: none       # none | grid | slots
-#   mounting: true          # screw bosses under each pcb_hole
-"#
+        template::DEFAULT_MANIFEST
     }
-}
-
-/// Checks if a direct file path points to a known Fusible manifest.
-fn check_file_target(path: &Path) -> Result<Option<(PathBuf, FusibleConfig)>, ConfigError> {
-    if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-        if CONFIG_FILENAMES.contains(&name) {
-            let config = FusibleConfig::from_file(path)?;
-            return Ok(Some((path.to_path_buf(), config)));
-        }
-    }
-    Ok(None)
-}
-
-/// Inspects a directory for `fusible.yml` or `fusible.yaml`.
-fn find_in_dir(dir: &Path) -> Result<Option<(PathBuf, FusibleConfig)>, ConfigError> {
-    for filename in CONFIG_FILENAMES {
-        let candidate = if dir.as_os_str().is_empty() {
-            PathBuf::from(filename)
-        } else {
-            dir.join(filename)
-        };
-        if candidate.is_file() {
-            let config = FusibleConfig::from_file(&candidate)?;
-            return Ok(Some((candidate, config)));
-        }
-    }
-    Ok(None)
 }

@@ -22,18 +22,8 @@ pub enum AddError {
 
 /// Discovers the hardware workspace directory.
 pub fn find_hardware_dir() -> PathBuf {
-    if let Ok(Some((manifest_path, config))) = FusibleConfig::find_and_load(Path::new(".")) {
-        if let Some(hw) = config.hardware {
-            if let Some(entry) = hw.entry {
-                let manifest_dir = manifest_path.parent().unwrap_or(Path::new("."));
-                let resolved = manifest_dir.join(&entry);
-                if let Some(parent) = resolved.parent() {
-                    if parent.exists() {
-                        return parent.to_path_buf();
-                    }
-                }
-            }
-        }
+    if let Some(dir) = manifest_hardware_dir() {
+        return dir;
     }
 
     if Path::new("hardware/package.json").exists() || Path::new("hardware").is_dir() {
@@ -41,6 +31,15 @@ pub fn find_hardware_dir() -> PathBuf {
     }
 
     PathBuf::from(".")
+}
+
+/// Returns the existing parent directory of the manifest's hardware entry, if any.
+fn manifest_hardware_dir() -> Option<PathBuf> {
+    let (manifest_path, config) = FusibleConfig::find_and_load(Path::new(".")).ok()??;
+    let entry = config.hardware?.entry?;
+    let manifest_dir = manifest_path.parent().unwrap_or(Path::new("."));
+    let parent = manifest_dir.join(&entry).parent()?.to_path_buf();
+    parent.exists().then_some(parent)
 }
 
 /// Installs the given packages into the project's hardware workspace.

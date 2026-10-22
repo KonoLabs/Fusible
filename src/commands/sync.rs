@@ -54,26 +54,31 @@ pub fn run(
 
     let report = compare_kicad_with_circuit(&footprints, &source);
 
-    let manual_edits_path = target.unwrap_or_else(|| {
-        if Path::new("hardware/manual-edits.json").is_file()
-            || Path::new("hardware/package.json").is_file()
-        {
-            PathBuf::from("hardware/manual-edits.json")
-        } else if let Some(parent) = entry.parent() {
-            if !parent.as_os_str().is_empty() {
-                parent.join("manual-edits.json")
-            } else {
-                PathBuf::from("manual-edits.json")
-            }
-        } else {
-            PathBuf::from("manual-edits.json")
-        }
-    });
+    let manual_edits_path = target.unwrap_or_else(|| default_manual_edits_path(&entry));
 
     let is_dry = dry_run || !write;
     let result_msg =
         apply_kicad_sync(&report, &manual_edits_path, is_dry).map_err(SyncCommandError::Sync)?;
 
+    report_sync(&result_msg, &manual_edits_path, is_dry);
+    Ok(())
+}
+
+/// Picks `hardware/manual-edits.json` in a hardware workspace, else one beside `entry`.
+fn default_manual_edits_path(entry: &Path) -> PathBuf {
+    if Path::new("hardware/manual-edits.json").is_file()
+        || Path::new("hardware/package.json").is_file()
+    {
+        return PathBuf::from("hardware/manual-edits.json");
+    }
+    match entry.parent() {
+        Some(parent) if !parent.as_os_str().is_empty() => parent.join("manual-edits.json"),
+        _ => PathBuf::from("manual-edits.json"),
+    }
+}
+
+/// Prints the sync outcome and the suggested next step.
+fn report_sync(result_msg: &str, manual_edits_path: &Path, is_dry: bool) {
     if is_dry {
         println!("🔍 Dry-run: {result_msg}");
         println!(
@@ -84,6 +89,4 @@ pub fn run(
         println!("✅ {result_msg}");
         println!("💡 Run `fusible check` to verify design rules with the updated placement.");
     }
-
-    Ok(())
 }
