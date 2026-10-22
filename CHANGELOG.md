@@ -5,9 +5,15 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
-## [Unreleased]
+## [0.9.1] - 2026-10-22
+
+### Changed
+
+- The tscircuit compile limit is now 120 seconds instead of 30, and `FUSIBLE_BUILD_TIMEOUT_SECS` overrides it.
 
 ### Fixed
+
+- Native Gerber export supports multilayer boards again: traces on `innerN` layers go to `In1_Cu.gbr`, `In2_Cu.gbr`, and so on, with `Copper,Ln,Inr` attributes, and the bottom layer is numbered from the board's `num_layers`. 0.9.0 rejected them with `unsupported copper layer 'inner2'`.
 
 - `fusible dev` shows the upstream PCB and 3D viewers again. Since 0.8.17 both crashed with React "Invalid hook call" and rendered empty.
 - `fusible dev` warns at startup when the binary has no studio bundle. The crates.io package now ships the bundle, so `cargo install fusible` gets the full studio.
