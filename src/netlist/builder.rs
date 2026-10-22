@@ -2,116 +2,80 @@
 
 use std::collections::HashMap;
 
+use super::connectivity::{Connectivity, PortMap};
+use super::groups::collect;
 use super::pads::index_pad;
-use super::registry::{attach_port, register_net};
-use super::{DanglingRef, Netlist};
-use crate::parser::{Circuit, PcbPort, Port, Trace};
+use super::registry::{attach_port, insert_net};
+use super::Netlist;
+use crate::parser::{Circuit, PcbPort, Port};
 
-pub(super) type PortMap<'a> = HashMap<&'a str, &'a Port>;
-
-/// Lowers the AST in dependency order: declared nets, port nets, traces,
-/// then pads, which resolve their net through the ports traces connected.
+/// Lowers the AST in two stages: connectivity (a union-find over nets,
+/// ports and traces), then one net per connected component. Pads come last,
+/// since they resolve their net through the ports traces connected.
 pub fn build_netlist(circuit: &Circuit) -> Netlist {
     let mut netlist = Netlist::default();
     let ports: PortMap<'_> = circuit
         .ports()
         .filter_map(|p| p.port_id.as_deref().map(|id| (id, p)))
         .collect();
-    index_defined_nets(&mut netlist, circuit);
-    index_ports(&mut netlist, circuit);
-    for (index, trace) in circuit.traces().enumerate() {
-        index_trace(&mut netlist, index, trace, &ports);
+    let (mut graph, joined) = Connectivity::from_circuit(circuit, &ports);
+    let mut root_to_net = HashMap::new();
+    for group in collect(&mut graph) {
+        let idx = insert_net(&mut netlist, group.node(&graph));
+        for id in &group.net_ids {
+            netlist.by_id.insert(id.clone(), idx);
+        }
+        netlist.ghosts.extend(group.ghosts(&graph));
+        netlist.shorts.extend(group.short(&graph));
+        root_to_net.insert(group.root, idx);
     }
+    let order = attach_order(circuit, joined, &ports);
+    attach_ports(&mut netlist, &mut graph, order, &root_to_net);
+    netlist.dangling_refs = std::mem::take(&mut graph.dangling);
+    index_pads(&mut netlist, circuit, &ports);
+    netlist
+}
+
+fn index_pads(netlist: &mut Netlist, circuit: &Circuit, ports: &PortMap<'_>) {
     let pcb_ports: HashMap<&str, &PcbPort> = circuit
         .pcb_ports()
         .filter_map(|p| p.pcb_port_id.as_deref().map(|id| (id, p)))
         .collect();
     for (index, pad) in circuit.pads().enumerate() {
-        index_pad(&mut netlist, index, pad, &ports, &pcb_ports);
-    }
-    netlist
-}
-
-fn index_defined_nets(netlist: &mut Netlist, circuit: &Circuit) {
-    for net in circuit.nets() {
-        if let Some(net_id) = net.net_id.as_deref() {
-            register_net(netlist, net_id, net.name.as_deref(), true);
-        }
+        index_pad(netlist, index, pad, ports, &pcb_ports);
     }
 }
 
-fn index_ports(netlist: &mut Netlist, circuit: &Circuit) {
-    for port in circuit.ports() {
-        let Some(net_id) = port.net_id.as_deref() else {
-            continue;
-        };
-        let idx = register_net(netlist, net_id, None, false);
-        netlist.nets[idx].reference_count += 1;
-        attach_port(netlist, idx, port);
-    }
+type Attachment<'a> = (&'a Port, Option<usize>);
+
+/// Ports attach in the order the old lowering used: ports carrying a
+/// `net_id` first, then each trace's ports, so endpoint order is stable.
+fn attach_order<'a>(
+    circuit: &'a Circuit,
+    joined: Vec<Option<usize>>,
+    ports: &PortMap<'a>,
+) -> Vec<Attachment<'a>> {
+    let on_nets = circuit
+        .ports()
+        .zip(joined)
+        .filter(|(port, _)| port.net_id.is_some());
+    let on_traces = circuit
+        .traces()
+        .flat_map(|trace| &trace.connected_source_port_ids)
+        .filter_map(|id| ports.get(id.as_str()).map(|port| (*port, None)));
+    on_nets.chain(on_traces).collect()
 }
 
-/// `source_trace "<id>"`, or the trace's position when it has no id.
-fn trace_label(trace: &Trace, index: usize) -> String {
-    match trace.trace_id.as_deref() {
-        Some(id) => format!("source_trace \"{id}\""),
-        None => format!("source_trace #{index}"),
-    }
-}
-
-fn index_trace(netlist: &mut Netlist, index: usize, trace: &Trace, ports: &PortMap<'_>) {
-    let mut resolved = Vec::new();
-    for port_id in &trace.connected_source_port_ids {
-        match ports.get(port_id.as_str()) {
-            Some(port) => resolved.push(*port),
-            None => netlist.dangling_refs.push(DanglingRef {
-                owner: trace_label(trace, index),
-                target: format!("source_port \"{port_id}\""),
-            }),
-        }
-    }
-
-    let net_indices: Vec<usize> = if trace.connected_source_net_ids.is_empty() {
-        port_only_net(netlist, index, trace, &resolved)
-            .into_iter()
-            .collect()
-    } else {
-        trace
-            .connected_source_net_ids
-            .iter()
-            .map(|net_id| register_net(netlist, net_id, None, false))
-            .collect()
-    };
-
-    for idx in net_indices {
-        netlist.nets[idx].reference_count += 1;
-        for port in &resolved {
-            attach_port(netlist, idx, port);
-        }
-    }
-}
-
-/// The net a trace without `connected_source_net_ids` joins: the net one of
-/// its ports already belongs to, or a synthetic net unique to this trace.
-fn port_only_net(
+fn attach_ports(
     netlist: &mut Netlist,
-    index: usize,
-    trace: &Trace,
-    resolved: &[&Port],
-) -> Option<usize> {
-    if resolved.is_empty() {
-        return None;
+    graph: &mut Connectivity,
+    order: Vec<Attachment<'_>>,
+    root_to_net: &HashMap<usize, usize>,
+) {
+    for (port, joined) in order {
+        if let Some(node) = graph.port_node(port, joined) {
+            let root = graph.sets.find(node);
+            attach_port(netlist, root_to_net[&root], port);
+        }
     }
-    let existing = resolved
-        .iter()
-        .filter_map(|p| p.port_id.as_deref())
-        .find_map(|id| netlist.port_to_net.get(id).copied());
-    Some(existing.unwrap_or_else(|| {
-        let synthetic_id = trace
-            .connectivity_key
-            .clone()
-            .or_else(|| trace.trace_id.clone())
-            .unwrap_or_else(|| format!("source_trace#{index}"));
-        register_net(netlist, &synthetic_id, trace.name.as_deref(), true)
-    }))
 }

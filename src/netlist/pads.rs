@@ -2,9 +2,9 @@
 
 use std::collections::HashMap;
 
-use super::builder::PortMap;
+use super::connectivity::PortMap;
 use super::endpoint::Endpoint;
-use super::registry::{attach_endpoint, register_net};
+use super::registry::attach_endpoint;
 use super::{DanglingRef, Netlist};
 use crate::parser::{Pad, PcbPort};
 
@@ -66,11 +66,7 @@ pub(super) fn index_pad(
 ) {
     let port_id = linked_port_id(netlist, index, pad, ports, pcb_ports);
     let idx = match pad.net_id.as_deref() {
-        Some(net_id) => {
-            let idx = register_net(netlist, net_id, None, false);
-            netlist.nets[idx].reference_count += 1;
-            Some(idx)
-        }
+        Some(net_id) => netlist.by_id.get(net_id).copied(),
         None => port_id.and_then(|id| netlist.port_to_net.get(id).copied()),
     };
     let Some(idx) = idx else {

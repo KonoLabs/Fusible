@@ -1,4 +1,4 @@
-//! Net registration and endpoint attachment shared by every lowering step.
+//! Net insertion and endpoint attachment shared by every lowering step.
 
 use std::collections::HashSet;
 
@@ -14,49 +14,10 @@ pub(super) fn attach_port(netlist: &mut Netlist, idx: usize, port: &Port) {
     }
 }
 
-pub(super) fn register_net(
-    netlist: &mut Netlist,
-    net_id: &str,
-    name: Option<&str>,
-    is_defined: bool,
-) -> usize {
-    match netlist.by_id.get(net_id).copied() {
-        Some(idx) => {
-            promote_defined_net(netlist, idx, name, is_defined);
-            idx
-        }
-        None => insert_new_net(netlist, net_id, name, is_defined),
-    }
-}
-
-fn promote_defined_net(netlist: &mut Netlist, idx: usize, name: Option<&str>, is_defined: bool) {
-    if !is_defined {
-        return;
-    }
-    let node = &mut netlist.nets[idx];
-    node.is_defined = true;
-    if node.name.is_none() {
-        node.name = name.map(str::to_string);
-    }
-}
-
-fn insert_new_net(
-    netlist: &mut Netlist,
-    net_id: &str,
-    name: Option<&str>,
-    is_defined: bool,
-) -> usize {
-    let idx = netlist.nets.len();
-    netlist.nets.push(NetNode {
-        id: net_id.to_string(),
-        name: name.map(str::to_string),
-        endpoints: Vec::new(),
-        is_defined,
-        reference_count: 0,
-    });
+pub(super) fn insert_net(netlist: &mut Netlist, node: NetNode) -> usize {
+    netlist.nets.push(node);
     netlist.endpoint_ids_per_net.push(HashSet::new());
-    netlist.by_id.insert(net_id.to_string(), idx);
-    idx
+    netlist.nets.len() - 1
 }
 
 pub(super) fn attach_endpoint(netlist: &mut Netlist, net_idx: usize, endpoint: Endpoint) {
