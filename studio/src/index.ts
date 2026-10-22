@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { createRoot, Root } from "react-dom/client";
+import { rootSlot, renderIntoSlot } from "./roots";
 import * as THREE from "three";
 import { OrbitControls } from "three-stdlib";
 import {
@@ -15,8 +15,11 @@ import { addCollection } from "iconify-icon";
 import pixelarticons from "@iconify-json/pixelarticons/icons.json";
 import { Mechanical } from "./mechanical";
 import { animateCameraPreset } from "./orbit";
-import { animateCadCameraPreset } from "./cadCamera";
-import { installRenderCapture } from "./capture";
+import { animateCadCameraPreset, type CadCameraController } from "./cadCamera";
+import { installRenderCapture, mainCapturedCanvas } from "./capture";
+import { useContextMenuIntercept } from "./contextMenu";
+import { determineRefdesFrom3dObject, resolveComponentRefdes } from "./refdes";
+import { FUSIBLE_SCHEMATIC_PALETTE, normalizeCircuitJsonForSchematic, renderFusibleSchematicSvg } from "./schematic";
 
 addCollection(pixelarticons as any);
 
@@ -25,217 +28,6 @@ if (typeof window !== "undefined") {
 }
 
 if (typeof window !== "undefined") installRenderCapture();
-
-export const FUSIBLE_SCHEMATIC_PALETTE = {
-  background: "#000000",
-  component_body: "#1F1F1F",
-  component_outline: "#86A881",
-  wire: "#38bdf8",
-  wire_crossing: "#7dd3fc",
-  junction: "#38bdf8",
-  pin: "#86A881",
-  pin_name: "#FFFFFF",
-  pin_number: "#A8B365",
-  reference: "#86A881",
-  value: "#FFFFFF",
-  label_local: "#FFFFFF",
-  label_global: "#f59e0b",
-  label_hier: "#A8B365",
-  label_background: "#1F1F1F",
-  net_name: "#38bdf8",
-  bus: "#818cf8",
-  bus_junction: "#818cf8",
-  grid: "#1F1F1F",
-  grid_axes: "#353535",
-  fields: "#cbd5e1",
-  note: "#93c5fd",
-  sheet: "#353535",
-  sheet_background: "#000000",
-  sheet_fields: "#94a3b8",
-  sheet_filename: "#FFFFFF",
-  sheet_label: "#FFFFFF",
-  sheet_name: "#FFFFFF",
-  cursor: "#86A881",
-  aux_items: "#64748b",
-  erc_error: "#C55454",
-  erc_warning: "#f59e0b",
-};
-
-export function normalizeCircuitJsonForSchematic(circuitJson: any) {
-  if (!Array.isArray(circuitJson)) return circuitJson || [];
-  const sheets = circuitJson.filter((e: any) => e?.type === "schematic_sheet");
-  if (!sheets.length) return circuitJson;
-
-  const components = circuitJson.filter((e: any) => e?.type === "schematic_component");
-  const componentsWithSheet = components.filter((e: any) => !!e.schematic_sheet_id);
-
-  if (components.length > 0 && componentsWithSheet.length === 0) {
-    return circuitJson.filter((e: any) => e?.type !== "schematic_sheet");
-  }
-
-  return circuitJson;
-}
-
-export function renderFusibleSchematicSvg(circuitJson: any, options: any = {}) {
-  const normalized = normalizeCircuitJsonForSchematic(circuitJson);
-  return convertCircuitJsonToSchematicSvg(normalized, {
-    ...options,
-    colorOverrides: {
-      schematic: FUSIBLE_SCHEMATIC_PALETTE,
-      ...(options?.colorOverrides || {}),
-    },
-  });
-}
-
-function resolveComponentRefdes(circuitJson: any[], id: string): string {
-  if (!id) return "";
-  if (!Array.isArray(circuitJson)) return id;
-  const directSource = circuitJson.find(
-    (e: any) => e.type === "source_component" && (e.name === id || e.source_component_id === id)
-  );
-  if (directSource?.name) return directSource.name;
-
-  const schComp = circuitJson.find(
-    (e: any) => e.type === "schematic_component" && (e.schematic_component_id === id || e.source_component_id === id)
-  );
-  if (schComp?.source_component_id) {
-    const src = circuitJson.find(
-      (e: any) => e.type === "source_component" && e.source_component_id === schComp.source_component_id
-    );
-    if (src?.name) return src.name;
-  }
-
-  const pcbComp = circuitJson.find(
-    (e: any) => e.type === "pcb_component" && (e.pcb_component_id === id || e.source_component_id === id)
-  );
-  if (pcbComp?.source_component_id) {
-    const src = circuitJson.find(
-      (e: any) => e.type === "source_component" && e.source_component_id === pcbComp.source_component_id
-    );
-    if (src?.name) return src.name;
-  }
-
-  const cadComp = circuitJson.find(
-    (e: any) => e.type === "cad_component" && (e.cad_component_id === id || e.source_component_id === id || e.pcb_component_id === id)
-  );
-  if (cadComp?.source_component_id) {
-    const src = circuitJson.find(
-      (e: any) => e.type === "source_component" && e.source_component_id === cadComp.source_component_id
-    );
-    if (src?.name) return src.name;
-  }
-  if (cadComp?.pcb_component_id) {
-    const pcb = circuitJson.find(
-      (e: any) => e.type === "pcb_component" && e.pcb_component_id === cadComp.pcb_component_id
-    );
-    if (pcb?.source_component_id) {
-      const src = circuitJson.find(
-        (e: any) => e.type === "source_component" && e.source_component_id === pcb.source_component_id
-      );
-      if (src?.name) return src.name;
-    }
-  }
-
-  return id;
-}
-
-function determineRefdesFrom3dObject(circuitJson: any[], object: any): string {
-  let curr: any = object;
-  let pcbId = "";
-  let cadId = "";
-  let srcId = "";
-  let refdes = "";
-  while (curr) {
-    if (curr.visible === false) return "";
-    if (curr.userData?.isReferenceObject) return "";
-    if (!pcbId && curr.userData?.pcb_component_id) pcbId = curr.userData.pcb_component_id;
-    if (!cadId && curr.userData?.cad_component_id) cadId = curr.userData.cad_component_id;
-    if (!srcId && curr.userData?.source_component_id) srcId = curr.userData.source_component_id;
-    if (!refdes && curr.userData?.refdes) refdes = curr.userData.refdes;
-    if (!refdes && curr.userData?.name) refdes = curr.userData.name;
-    curr = curr.parent;
-  }
-  const candidate = srcId || pcbId || cadId || refdes;
-  if (!candidate) return "";
-  const resolved = resolveComponentRefdes(circuitJson, candidate);
-  if (resolved && circuitJson.some((e: any) => e.type === "source_component" && e.name === resolved)) {
-    return resolved;
-  }
-  if (resolved && !resolved.startsWith("cad_") && !resolved.startsWith("pcb_") && !resolved.startsWith("source_") && !resolved.startsWith("schematic_")) {
-    return resolved;
-  }
-  return "";
-}
-
-function useContextMenuIntercept(
-  circuitJson: any[],
-  onSelectComponent?: (name: string) => void
-) {
-  useEffect(() => {
-    if (!onSelectComponent) return;
-
-    const handleDocumentClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement | null;
-      const btn = target?.closest('button, [role="menuitem"]');
-      if (btn) {
-        const text = btn.textContent || "";
-        if (text.includes("on Schematic")) {
-          const refdes = text.replace("on Schematic", "").replace(/[↗︎\s]/g, "").trim();
-          if (refdes) {
-            const resolved = resolveComponentRefdes(circuitJson || [], refdes);
-            if (resolved) onSelectComponent(resolved);
-          }
-        }
-        const match = text.match(/Hide\s*"([^"]+)"/);
-        if (match && match[1]) {
-          const resolved = resolveComponentRefdes(circuitJson || [], match[1]);
-          if (resolved) onSelectComponent(resolved);
-        }
-      }
-    };
-    document.addEventListener("click", handleDocumentClick, true);
-
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        for (const node of Array.from(mutation.addedNodes)) {
-          if (node instanceof HTMLElement) {
-            const menu = node.getAttribute("role") === "menu" ? node : node.querySelector('[role="menu"]');
-            if (menu) {
-              const buttons = menu.querySelectorAll("button, [role=\"menuitem\"]");
-              for (const btn of Array.from(buttons)) {
-                const text = btn.textContent || "";
-                if (text.includes("on Schematic")) {
-                  const refdes = text.replace("on Schematic", "").replace(/[↗︎\s]/g, "").trim();
-                  if (refdes) {
-                    const resolved = resolveComponentRefdes(circuitJson || [], refdes);
-                    if (resolved) {
-                      onSelectComponent(resolved);
-                      return;
-                    }
-                  }
-                }
-                const match = text.match(/Hide\s*"([^"]+)"/);
-                if (match && match[1]) {
-                  const resolved = resolveComponentRefdes(circuitJson || [], match[1]);
-                  if (resolved) {
-                    onSelectComponent(resolved);
-                    return;
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    return () => {
-      document.removeEventListener("click", handleDocumentClick, true);
-      observer.disconnect();
-    };
-  }, [circuitJson, onSelectComponent]);
-}
 
 export function CadViewer({
   circuitJson,
@@ -259,10 +51,10 @@ export function CadViewer({
     };
 
     const handleRaycast = (clientX: number, clientY: number) => {
-      const canvas = container.querySelector("canvas");
+      const canvas = mainCapturedCanvas(container);
       if (!canvas) return;
-      const camera = (canvas as any).__threeCamera || (window as any).__lastThreeCamera;
-      const scene = (canvas as any).__threeScene || (window as any).__lastThreeScene || (window as any).__TSCIRCUIT_THREE_OBJECT?.parent;
+      const camera = canvas.__threeCamera;
+      const scene = canvas.__threeScene;
       if (!camera || !scene) return;
 
       const rect = canvas.getBoundingClientRect();
@@ -286,14 +78,9 @@ export function CadViewer({
       raycaster.setFromCamera(mouse, camera);
       const hits = raycaster.intersectObjects(scene.children, true);
 
-      for (const hit of hits) {
-        if (!(hit.object instanceof THREE.Mesh)) continue;
-        const refdes = determineRefdesFrom3dObject(circuitJson || [], hit.object);
-        if (refdes) {
-          onSelectComponent(refdes);
-          break;
-        }
-      }
+      const meshes = hits.filter((hit) => hit.object instanceof THREE.Mesh);
+      const refdes = meshes.map((hit) => determineRefdesFrom3dObject(circuitJson || [], hit.object)).find(Boolean);
+      if (refdes) onSelectComponent(refdes);
     };
 
     const handleClick = (e: MouseEvent) => {
@@ -339,27 +126,9 @@ export function CadViewer({
           onViewSchematicComponent(event);
         }
       },
-      onCameraControllerReady: (controller: any) => {
-        if (!controller) {
-          if (onCameraControllerReady) onCameraControllerReady(controller);
-          return;
-        }
-        const wrappedController = {
-          ...controller,
-          animateToPreset: (preset: string) => {
-            if (preset === "TOP" || preset === "Top Down") {
-              controller.animateToPreset("Top Down");
-              return;
-            }
-            controller.animateToPreset(preset);
-          },
-        };
-        if (typeof window !== "undefined") {
-          (window as any).cadCameraController = wrappedController;
-        }
-        if (onCameraControllerReady) {
-          onCameraControllerReady(wrappedController);
-        }
+      onCameraControllerReady: (controller: CadCameraController | null) => {
+        window.cadCameraController = controller ?? undefined;
+        if (onCameraControllerReady) onCameraControllerReady(controller);
       },
     })
   );
@@ -420,40 +189,17 @@ function ResponsivePcbViewer({
   );
 }
 
-let active3dRoot: Root | null = null;
-let active3dContainer: HTMLElement | null = null;
-
-let activePcbRoot: Root | null = null;
-let activePcbContainer: HTMLElement | null = null;
-
-let activeSchematicRoot: Root | null = null;
-let activeSchematicContainer: HTMLElement | null = null;
+const cadSlot = rootSlot();
+const pcbSlot = rootSlot();
+const schematicSlot = rootSlot();
 
 export function render3dViewer(
   container: HTMLElement,
   circuitJson: any,
   onSelectComponent?: (name: string) => void
 ) {
-  if (!container) return;
-  if (active3dContainer !== container) {
-    if (active3dRoot) {
-      active3dRoot.unmount();
-      active3dRoot = null;
-    }
-    container.innerHTML = "";
-    active3dRoot = createRoot(container);
-    active3dContainer = container;
-  }
-  if (!active3dRoot) {
-    active3dRoot = createRoot(container);
-    active3dContainer = container;
-  }
-  active3dRoot.render(
-    React.createElement(CadViewer, {
-      circuitJson: circuitJson || [],
-      onSelectComponent,
-    })
-  );
+  const props = { circuitJson: circuitJson || [], onSelectComponent };
+  renderIntoSlot(cadSlot, container, React.createElement(CadViewer, props));
 }
 
 export function renderPcbViewer(
@@ -461,26 +207,8 @@ export function renderPcbViewer(
   circuitJson: any,
   onSelectComponent?: (name: string) => void
 ) {
-  if (!container) return;
-  if (activePcbContainer !== container) {
-    if (activePcbRoot) {
-      activePcbRoot.unmount();
-      activePcbRoot = null;
-    }
-    container.innerHTML = "";
-    activePcbRoot = createRoot(container);
-    activePcbContainer = container;
-  }
-  if (!activePcbRoot) {
-    activePcbRoot = createRoot(container);
-    activePcbContainer = container;
-  }
-  activePcbRoot.render(
-    React.createElement(ResponsivePcbViewer, {
-      circuitJson: circuitJson || [],
-      onSelectComponent,
-    })
-  );
+  const props = { circuitJson: circuitJson || [], onSelectComponent };
+  renderIntoSlot(pcbSlot, container, React.createElement(ResponsivePcbViewer, props));
 }
 
 function ResponsiveSchematicViewer({
@@ -551,29 +279,14 @@ export function renderSchematicViewer(
   circuitJson: any,
   onSelectComponent?: (name: string) => void
 ) {
-  if (!container) return;
-  if (activeSchematicContainer !== container) {
-    if (activeSchematicRoot) {
-      activeSchematicRoot.unmount();
-      activeSchematicRoot = null;
-    }
-    container.innerHTML = "";
-    activeSchematicRoot = createRoot(container);
-    activeSchematicContainer = container;
-  }
-  if (!activeSchematicRoot) {
-    activeSchematicRoot = createRoot(container);
-    activeSchematicContainer = container;
-  }
-  activeSchematicRoot.render(
-    React.createElement(ResponsiveSchematicViewer, {
-      circuitJson: circuitJson || [],
-      onSelectComponent,
-    })
-  );
+  const props = { circuitJson: circuitJson || [], onSelectComponent };
+  renderIntoSlot(schematicSlot, container, React.createElement(ResponsiveSchematicViewer, props));
 }
 
 export {
+  FUSIBLE_SCHEMATIC_PALETTE,
+  normalizeCircuitJsonForSchematic,
+  renderFusibleSchematicSvg,
   convertCircuitJsonToSchematicSvg,
   convertCircuitJsonToPcbSvg,
   colorMap,
@@ -599,7 +312,7 @@ export const Tscircuit = {
 declare global {
   interface Window {
     Tscircuit: typeof Tscircuit;
-    cadCameraController?: any;
+    cadCameraController?: CadCameraController;
   }
 }
 
