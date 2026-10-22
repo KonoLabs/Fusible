@@ -29,6 +29,30 @@ pub fn detect_runner(current_dir: &Path, path_var: Option<&OsStr>) -> Result<Run
     Err(RunnerError::NotFound)
 }
 
+/// Detects a TypeScript runner for executing mechanical/enclosure scripts.
+///
+/// Order of precedence:
+/// 1. `bun` on PATH (preferred – fastest, built-in TypeScript support)
+/// 2. `npx tsx` on PATH (Node with tsx loader)
+/// 3. `node` with `--loader ts-node/esm` (fallback)
+pub fn detect_ts_runner(path_var: Option<&OsStr>) -> Option<PathBuf> {
+    if let Some(path_var) = path_var {
+        // 1. bun
+        if let Some(bun) = find_binary_in_path("bun", path_var) {
+            return Some(bun);
+        }
+        // 2. npx (which runs tsx)
+        if let Some(npx) = find_binary_in_path("npx", path_var) {
+            return Some(npx);
+        }
+        // 3. node
+        if let Some(node) = find_binary_in_path("node", path_var) {
+            return Some(node);
+        }
+    }
+    None
+}
+
 /// Checks for local tsci/tscircuit relative to the given directory or hardware subdirectory.
 fn find_local_tsci(dir: &Path) -> Option<PathBuf> {
     let dirs = [

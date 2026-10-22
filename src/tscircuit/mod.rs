@@ -16,9 +16,10 @@ use std::path::{Path, PathBuf};
 use std::process::{ExitStatus, Stdio};
 
 pub use command::{
-    add_command, build_command, dev_command, export_command, install_command, search_command,
+    add_command, build_command, dev_command, export_command, install_command, mechanical_command,
+    search_command,
 };
-pub use detect::detect_runner;
+pub use detect::{detect_runner, detect_ts_runner};
 pub use error::RunnerError;
 pub use kicad::{convert_kicad, is_kicad_target};
 
@@ -314,6 +315,39 @@ impl Runner {
                 code: status.code(),
                 stderr: "search command failed".into(),
                 help: "check network connection".into(),
+            });
+        }
+        Ok(())
+    }
+
+    /// Runs the mechanical/enclosure generation script via a TypeScript runner.
+    ///
+    /// Uses `detect_ts_runner()` to find a suitable TS executor (bun > npx > node).
+    /// The script at `script_path` is executed with `args`.
+    pub fn mechanical(
+        &self,
+        script_path: &Path,
+        args: &[String],
+    ) -> Result<(), RunnerError> {
+        let path_var = std::env::var_os("PATH");
+        let ts_runner = detect_ts_runner(path_var.as_deref()).ok_or(RunnerError::NotFound)?;
+
+        let mut cmd = command::mechanical_command(&ts_runner, script_path, args);
+        cmd.stdin(Stdio::inherit())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit());
+
+        let status = cmd.status().map_err(|source| RunnerError::Io {
+            command: command::format_command(&cmd),
+            source,
+        })?;
+
+        if !status.success() {
+            return Err(RunnerError::CommandFailed {
+                command: command::format_command(&cmd),
+                code: status.code(),
+                stderr: "mechanical script failed".into(),
+                help: "check script arguments and dependencies".into(),
             });
         }
         Ok(())

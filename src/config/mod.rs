@@ -17,7 +17,7 @@ pub use error::ConfigError;
 pub const CONFIG_FILENAMES: &[&str] = &["fusible.yml", "fusible.yaml"];
 
 /// Root configuration schema for a Fusible project.
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]
 pub struct FusibleConfig {
     #[serde(default)]
     pub name: Option<String>,
@@ -27,6 +27,8 @@ pub struct FusibleConfig {
     pub mcu: Option<McuConfig>,
     #[serde(default)]
     pub firmware: Option<FirmwareConfig>,
+    #[serde(default)]
+    pub mechanical: Option<MechanicalConfig>,
 }
 
 /// Hardware-specific settings including entry points and artifact output directory.
@@ -60,6 +62,35 @@ pub struct FirmwareConfig {
     pub pins_rs: Option<PathBuf>,
     #[serde(default, alias = "build-cmd")]
     pub build_cmd: Option<String>,
+}
+
+/// Mechanical CAD generation configuration.
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]
+pub struct MechanicalConfig {
+    /// Export format(s) – e.g. "step", "iges", "stl", "glb", "brep", or "all".
+    #[serde(default)]
+    pub format: Option<String>,
+    /// Destination directory for generated files.
+    #[serde(default, alias = "out-dir")]
+    pub out_dir: Option<PathBuf>,
+    /// Wall thickness in millimetres.
+    #[serde(default)]
+    pub wall_thickness: Option<f64>,
+    /// Overall height in millimetres; auto‑calculated if omitted.
+    #[serde(default)]
+    pub height: Option<f64>,
+    /// Include component cutouts (USB, headers, etc.).
+    #[serde(default)]
+    pub component_cutouts: Option<bool>,
+    /// Ventilation pattern: "none", "grid", "honeycomb", "slots".
+    #[serde(default)]
+    pub ventilation: Option<String>,
+    /// Mounting hole spec – "none", "m2", "m3", "m4", or CSV "x1,y1,d1;x2,y2,d2".
+    #[serde(default)]
+    pub mounting: Option<String>,
+    /// Board outline source – "auto", "pcb", "kicad", or path to an SVG.
+    #[serde(default, alias = "outline-source")]
+    pub outline_source: Option<String>,
 }
 
 impl FusibleConfig {
@@ -147,6 +178,25 @@ firmware:
   pins_rs: firmware/src/pins.rs
   # Optional command to build firmware
   build_cmd: cargo build
+
+mechanical:
+  # Mechanical CAD generation configuration
+  # Export format(s) – e.g. "step", "iges", "stl", "glb", "brep", or "all"
+  # format: step
+  # Destination directory for generated files
+  # out_dir: dist/mechanical
+  # Wall thickness in millimetres
+  # wall_thickness: 2.0
+  # Overall height in millimetres; auto‑calculated if omitted
+  # height: 10.0
+  # Include component cutouts (USB, headers, etc.)
+  # component_cutouts: true
+  # Ventilation pattern: "none", "grid", "honeycomb", "slots"
+  # ventilation: none
+  # Mounting hole spec – "none", "m2", "m3", "m4", or CSV "x1,y1,d1;x2,y2,d2"
+  # mounting: none
+  # Board outline source – "auto", "pcb", "kicad", or path to an SVG
+  # outline_source: auto
 "#
     }
 }

@@ -93,6 +93,50 @@ pub enum Commands {
         skip_lint: bool,
     },
 
+    /// Generate mechanical models from board outlines and components
+    #[command(alias = "case", alias = "housing")]
+    Mechanical {
+        /// Path to Circuit JSON, TSX, or KiCad entry file
+        #[arg(value_name = "FILE")]
+        file: Option<PathBuf>,
+
+        /// Output format: step, iges, stl, glb, brep, or all
+        #[arg(short = 'f', long, default_value = "step")]
+        format: String,
+
+        /// Output destination path or directory
+        #[arg(short = 'o', long)]
+        output: Option<PathBuf>,
+
+        /// Board outline source: auto, pcb, kicad, or explicit SVG path
+        #[arg(long, value_name = "SOURCE", default_value = "auto")]
+        outline: String,
+
+        /// Enclosure wall thickness in mm
+        #[arg(long, default_value = "2.0")]
+        wall_thickness: f64,
+
+        /// Enclosure height in mm (auto-calculated if omitted)
+        #[arg(long)]
+        height: Option<f64>,
+
+        /// Include component cutouts (USB, headers, buttons, etc.)
+        #[arg(long)]
+        component_cutouts: bool,
+
+        /// Ventilation hole pattern: none, grid, honeycomb, slots
+        #[arg(long, default_value = "none")]
+        ventilation: String,
+
+        /// Mounting holes: none, m2, m3, m4, or custom CSV "x1,y1,d1;x2,y2,d2"
+        #[arg(long, default_value = "none")]
+        mounting: String,
+
+        /// Skip electrical rule verification before generating mechanical model
+        #[arg(long)]
+        skip_lint: bool,
+    },
+
     /// Run the parallel autorouter to solve circuit traces
     Route {
         /// Path to Circuit JSON or TSX file

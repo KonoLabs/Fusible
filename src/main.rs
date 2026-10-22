@@ -28,6 +28,7 @@ use miette::Diagnostic;
 
 use crate::cli::{Cli, Commands};
 use crate::commands::check::CheckError;
+use crate::commands::mechanical::MechanicalError;
 
 /// Exit code: electrical violations (the fuse blew).
 pub const EXIT_VIOLATIONS: u8 = 1;
@@ -56,6 +57,36 @@ fn dispatch_export(
         Err(commands::export::ExportError::Check(CheckError::FuseBlown(blown))) => {
             fail(blown, EXIT_VIOLATIONS)
         }
+        Err(err) => fail(err, EXIT_TOOL_ERROR),
+    }
+}
+
+fn dispatch_mechanical(
+    file: Option<std::path::PathBuf>,
+    format: String,
+    output: Option<std::path::PathBuf>,
+    outline: String,
+    wall_thickness: f64,
+    height: Option<f64>,
+    component_cutouts: bool,
+    ventilation: String,
+    mounting: String,
+    skip_lint: bool,
+) -> ExitCode {
+    match commands::mechanical::run(
+        file,
+        &format,
+        output,
+        outline,
+        wall_thickness,
+        height,
+        component_cutouts,
+        ventilation,
+        mounting,
+        skip_lint,
+    ) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(MechanicalError::Check(CheckError::FuseBlown(blown))) => fail(blown, EXIT_VIOLATIONS),
         Err(err) => fail(err, EXIT_TOOL_ERROR),
     }
 }
@@ -158,6 +189,29 @@ fn main() -> ExitCode {
             Ok(()) => ExitCode::SUCCESS,
             Err(err) => fail(err, EXIT_TOOL_ERROR),
         },
+        Some(Commands::Mechanical {
+            file,
+            format,
+            output,
+            outline,
+            wall_thickness,
+            height,
+            component_cutouts,
+            ventilation,
+            mounting,
+            skip_lint,
+        }) => dispatch_mechanical(
+            file,
+            format,
+            output,
+            outline,
+            wall_thickness,
+            height,
+            component_cutouts,
+            ventilation,
+            mounting,
+            skip_lint,
+        ),
         None => handle_default_invocation(cli),
     }
 }
