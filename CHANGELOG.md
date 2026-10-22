@@ -5,6 +5,14 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.8.18] - 2026-10-23
+
+### Added
+
+- Implemented robust outline extraction for the mechanical command, supporting SVG, KiCad, and JSON sources.
+- Added OCCT WASM bindings for 3D CAD primitives and Boolean operations.
+- Updated documentation and CLI help for new mechanical options.
+
 ## [0.8.17] - 2026-10-22
 
 ### Fixed
