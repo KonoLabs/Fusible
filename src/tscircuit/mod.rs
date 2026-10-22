@@ -168,7 +168,7 @@ impl Runner {
         });
 
         let start = std::time::Instant::now();
-        let timeout = std::time::Duration::from_secs(30);
+        let timeout = build_timeout();
         let status = loop {
             match child.try_wait() {
                 Ok(Some(s)) => break s,
@@ -179,8 +179,8 @@ impl Runner {
                         return Err(RunnerError::CommandFailed {
                             command: cmd_str,
                             code: None,
-                            stderr: "compilation timed out after 30 seconds".to_string(),
-                            help: "the circuit took longer than 30 seconds to compile; try `routingDisabled` on <board>".to_string(),
+                            stderr: format!("compilation timed out after {} seconds", timeout.as_secs()),
+                            help: "raise FUSIBLE_BUILD_TIMEOUT_SECS or set `routingDisabled` on <board>".to_string(),
                         });
                     }
                     std::thread::sleep(std::time::Duration::from_millis(50));
@@ -309,6 +309,16 @@ impl Runner {
         }
         Ok(())
     }
+}
+
+/// Returns the tscircuit build timeout: `FUSIBLE_BUILD_TIMEOUT_SECS` when set to a positive integer, else 120 seconds.
+fn build_timeout() -> std::time::Duration {
+    let secs = std::env::var("FUSIBLE_BUILD_TIMEOUT_SECS")
+        .ok()
+        .and_then(|v| v.parse::<u64>().ok())
+        .filter(|s| *s > 0)
+        .unwrap_or(120);
+    std::time::Duration::from_secs(secs)
 }
 
 fn resolve_hardware_context(file: &Path) -> (Option<PathBuf>, PathBuf) {

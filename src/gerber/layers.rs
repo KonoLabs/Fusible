@@ -56,6 +56,55 @@ pub struct PcbBoardElm {
     pub center: Option<PcbPoint>,
     pub outline: Option<Vec<PcbPoint>>,
     pub thickness: Option<f64>,
+    pub num_layers: Option<u8>,
+}
+
+/// A copper layer in stack order: `Top` is L1, `Inner(n)` is L(n+1), `Bottom` is the last layer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum CopperLayer {
+    Top,
+    Inner(u8),
+    Bottom,
+}
+
+impl CopperLayer {
+    /// Parses a tscircuit layer name: `top`, `bottom`, or `innerN` with N >= 1.
+    pub fn parse(name: Option<&str>) -> Result<Self, String> {
+        match name {
+            Some("top") => Ok(Self::Top),
+            Some("bottom") => Ok(Self::Bottom),
+            Some(other) => other
+                .strip_prefix("inner")
+                .and_then(|n| n.parse::<u8>().ok())
+                .filter(|n| *n >= 1)
+                .map(Self::Inner)
+                .ok_or_else(|| format!("unsupported copper layer '{other}'")),
+            None => Err("missing layer".to_string()),
+        }
+    }
+
+    /// Returns the KiCad-style file name, e.g. `F_Cu.gbr`, `In1_Cu.gbr`, `B_Cu.gbr`.
+    pub fn file_name(self) -> String {
+        match self {
+            Self::Top => "F_Cu.gbr".to_string(),
+            Self::Inner(n) => format!("In{n}_Cu.gbr"),
+            Self::Bottom => "B_Cu.gbr".to_string(),
+        }
+    }
+
+    fn title_and_function(self, layer_count: u8) -> (String, String) {
+        match self {
+            Self::Top => ("Top Copper (F_Cu)".to_string(), "Copper,L1,Top".to_string()),
+            Self::Inner(n) => (
+                format!("Inner Copper {n} (In{n}_Cu)"),
+                format!("Copper,L{},Inr", n + 1),
+            ),
+            Self::Bottom => (
+                "Bottom Copper (B_Cu)".to_string(),
+                format!("Copper,L{layer_count},Bot"),
+            ),
+        }
+    }
 }
 
 impl PcbBoardElm {
@@ -245,7 +294,7 @@ struct ViaSite {
 
 #[derive(Debug)]
 struct TraceSegment {
-    is_top: bool,
+    layer: CopperLayer,
     width: f64,
     from: [f64; 2],
     to: [f64; 2],
@@ -323,12 +372,37 @@ impl PcbModel {
         Ok(writer.finish())
     }
 
+    /// Returns every copper layer of the stack, from the board's `num_layers` and the inner layers traces use.
+    pub fn copper_layers(&self) -> Result<Vec<CopperLayer>, GerberError> {
+        let declared = self
+            .boards
+            .iter()
+            .filter_map(|b| b.num_layers)
+            .max()
+            .unwrap_or(2)
+            .max(2);
+        for (i, seg) in self.trace_segments()?.into_iter().enumerate() {
+            if let CopperLayer::Inner(n) = seg.layer {
+                if n > declared - 2 {
+                    return Err(invalid("pcb_trace segment", i)(format!(
+                        "uses inner{n} but the board declares {declared} layers"
+                    )));
+                }
+            }
+        }
+        let mut layers = vec![CopperLayer::Top];
+        layers.extend((1..=declared - 2).map(CopperLayer::Inner));
+        layers.push(CopperLayer::Bottom);
+        Ok(layers)
+    }
+
     /// Builds a copper layer: SMT pads, plated hole rings, via pads and trace strokes.
-    pub fn build_copper_layer(&self, is_top: bool) -> Result<String, GerberError> {
+    pub fn build_copper_layer(&self, layer: CopperLayer) -> Result<String, GerberError> {
+        let layer_count = self.copper_layers()?.len() as u8;
         let mut features = Vec::new();
         for (i, pad) in self.smt_pads.iter().enumerate() {
             let feature = (|| {
-                if pad_is_top(pad)? != is_top {
+                if CopperLayer::parse(pad.layer.as_deref())? != layer {
                     return Ok(None);
                 }
                 smtpad_shape(pad)?.feature([pad.x, pad.y], 0.0).map(Some)
@@ -351,18 +425,14 @@ impl PcbModel {
             );
         }
         for (i, seg) in self.trace_segments()?.into_iter().enumerate() {
-            if seg.is_top == is_top {
+            if seg.layer == layer {
                 let ap = Aperture::circle(seg.width).map_err(invalid("pcb_trace segment", i))?;
                 features.push(Feature::Stroke(ap, seg.from, seg.to));
             }
         }
 
-        let (title, func) = if is_top {
-            ("Top Copper (F_Cu)", "Copper,L1,Top")
-        } else {
-            ("Bottom Copper (B_Cu)", "Copper,L2,Bot")
-        };
-        Ok(render(title, func, FilePolarity::Positive, &features))
+        let (title, func) = layer.title_and_function(layer_count);
+        Ok(render(&title, &func, FilePolarity::Positive, &features))
     }
 
     /// Builds a negative-polarity solder mask layer whose image is the set of mask openings.
@@ -813,10 +883,10 @@ fn hole_drill(hole: &PcbHoleElm) -> Result<Drill, String> {
 }
 
 fn trace_segment(p1: &PcbTracePoint, p2: &PcbTracePoint) -> Result<TraceSegment, String> {
-    let wire = |p: &PcbTracePoint| -> Result<Option<(bool, f64)>, String> {
+    let wire = |p: &PcbTracePoint| -> Result<Option<(CopperLayer, f64)>, String> {
         match p.route_type.as_deref() {
             Some("wire") => Ok(Some((
-                layer_is_top(p.layer.as_deref())?,
+                CopperLayer::parse(p.layer.as_deref())?,
                 required(p.width, "wire width")?,
             ))),
             Some("via") => Ok(None),
@@ -824,14 +894,14 @@ fn trace_segment(p1: &PcbTracePoint, p2: &PcbTracePoint) -> Result<TraceSegment,
             None => Err("route point missing route_type".to_string()),
         }
     };
-    let (is_top, width) = match (wire(p1)?, wire(p2)?) {
+    let (layer, width) = match (wire(p1)?, wire(p2)?) {
         (Some((l1, w)), Some((l2, _))) if l1 == l2 => (l1, w),
         (Some(_), Some(_)) => return Err("wire changes layer without a via".to_string()),
         (Some(a), None) | (None, Some(a)) => a,
         (None, None) => return Err("segment between two vias has no layer".to_string()),
     };
     Ok(TraceSegment {
-        is_top,
+        layer,
         width,
         from: [p1.x, p1.y],
         to: [p2.x, p2.y],

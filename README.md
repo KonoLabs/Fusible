@@ -87,6 +87,8 @@ fusible --input circuit.json      # direct Circuit JSON input
 fusible check --mcu stm32g431     # validates alternate functions against silicon
 ```
 
+Compiling `.tsx` through tscircuit stops after 120 seconds. Set `FUSIBLE_BUILD_TIMEOUT_SECS` to change the limit for boards that take longer to route.
+
 Clean circuit (exit code 0):
 
 ```

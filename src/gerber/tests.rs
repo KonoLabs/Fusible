@@ -251,7 +251,7 @@ fn solder_mask_is_negative_and_copper_positive() {
         .unwrap()
         .contains("%TF.FilePolarity,Negative*%"));
     assert!(model
-        .build_copper_layer(true)
+        .build_copper_layer(crate::gerber::layers::CopperLayer::Top)
         .unwrap()
         .contains("%TF.FilePolarity,Positive*%"));
 }
@@ -266,7 +266,7 @@ fn rotated_pads_honor_ccw_rotation() {
     );
     let cu = PcbModel::try_parse(&json)
         .unwrap()
-        .build_copper_layer(true)
+        .build_copper_layer(crate::gerber::layers::CopperLayer::Top)
         .unwrap();
     assert!(cu.contains("R,1.000000X2.000000*%"));
     assert!(cu.contains("G36*"));
@@ -379,4 +379,26 @@ fn test_mounting_holes_get_their_own_npth_drill_file() {
     )
     .unwrap();
     assert!(!without.contains_key("drill_npth.drl"));
+}
+
+#[test]
+fn four_layer_boards_get_inner_copper_files() {
+    let board = |inner: &str| {
+        format!(
+            r#"[
+            {{ "type": "pcb_board", "width": 20.0, "height": 20.0, "num_layers": 4 }},
+            {{ "type": "pcb_trace", "route": [
+                {{ "route_type": "wire", "x": 0.0, "y": 0.0, "width": 0.2, "layer": "{inner}" }},
+                {{ "route_type": "wire", "x": 5.0, "y": 0.0, "width": 0.2, "layer": "{inner}" }}
+            ] }}
+        ]"#
+        )
+    };
+    let files = generate_gerber_files(&board("inner2"), "t").unwrap();
+    assert!(files["In1_Cu.gbr"].contains("Copper,L2,Inr"));
+    assert!(files["In2_Cu.gbr"].contains("Copper,L3,Inr"));
+    assert!(files["In2_Cu.gbr"].contains("D01*"));
+    assert!(!files["In1_Cu.gbr"].contains("D01*"));
+    assert!(files["B_Cu.gbr"].contains("Copper,L4,Bot"));
+    assert!(generate_gerber_files(&board("inner3"), "t").is_err());
 }

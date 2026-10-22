@@ -22,8 +22,9 @@ pub fn generate_gerber_files(
     let mut files = BTreeMap::new();
 
     files.insert("Edge_Cuts.gbr".to_string(), model.build_edge_cuts()?);
-    files.insert("F_Cu.gbr".to_string(), model.build_copper_layer(true)?);
-    files.insert("B_Cu.gbr".to_string(), model.build_copper_layer(false)?);
+    for layer in model.copper_layers()? {
+        files.insert(layer.file_name(), model.build_copper_layer(layer)?);
+    }
     files.insert("F_Mask.gbr".to_string(), model.build_mask_layer(true)?);
     files.insert("B_Mask.gbr".to_string(), model.build_mask_layer(false)?);
     files.insert("F_Paste.gbr".to_string(), model.build_paste_layer(true)?);
