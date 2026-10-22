@@ -118,6 +118,7 @@
       letter-spacing: 0.05em;
     }
     .fuse-badge {
+      white-space: nowrap;
       display: inline-flex;
       align-items: center;
       gap: 6px;
@@ -146,6 +147,7 @@
       gap: 4px;
     }
     .tab-btn {
+      white-space: nowrap;
       background: transparent;
       border: none;
       color: var(--text-subtle);
@@ -174,6 +176,7 @@
       gap: 8px;
     }
     .btn {
+      white-space: nowrap;
       background: var(--surface);
       border: none;
       color: var(--text-body);
@@ -189,6 +192,11 @@
     .btn:hover {
       background: var(--surface-hover);
       color: var(--text);
+    }
+    @media (max-width: 1440px) {
+      .btn .btn-label {
+        display: none;
+      }
     }
     .btn.is-on {
       color: var(--green);
@@ -798,19 +806,19 @@
     </div>
 
     <div class="controls" id="controls-3d" style="display: none;">
-      <button class="btn" onclick="setCameraPreset('TOP')"><iconify-icon icon="pixelarticons:arrow-up"></iconify-icon> TOP</button>
-      <button class="btn" onclick="setCameraPreset('ISO')"><iconify-icon icon="pixelarticons:corner-up-right"></iconify-icon> ISO</button>
-      <button class="btn" onclick="setCameraPreset('FRONT')"><iconify-icon icon="pixelarticons:arrow-down"></iconify-icon> FRONT</button>
-      <button class="btn" onclick="setCameraPreset('RESET')"><iconify-icon icon="pixelarticons:reload"></iconify-icon> RESET</button>
+      <button class="btn" onclick="setCameraPreset('TOP')" title="TOP VIEW"><iconify-icon icon="pixelarticons:arrow-up"></iconify-icon> <span class="btn-label">TOP</span></button>
+      <button class="btn" onclick="setCameraPreset('ISO')" title="ISO VIEW"><iconify-icon icon="pixelarticons:corner-up-right"></iconify-icon> <span class="btn-label">ISO</span></button>
+      <button class="btn" onclick="setCameraPreset('FRONT')" title="FRONT VIEW"><iconify-icon icon="pixelarticons:arrow-down"></iconify-icon> <span class="btn-label">FRONT</span></button>
+      <button class="btn" onclick="setCameraPreset('RESET')" title="RESET VIEW"><iconify-icon icon="pixelarticons:reload"></iconify-icon> <span class="btn-label">RESET</span></button>
       <button class="btn" id="btn-engine-toggle" onclick="toggle3dEngine()"><iconify-icon icon="pixelarticons:switch"></iconify-icon> <span id="engine-label">ENGINE: CAD</span></button>
       <button class="btn" id="btn-mechanical-overlay" onclick="toggleMechanical('overlay')"><iconify-icon icon="pixelarticons:box"></iconify-icon> <span id="mechanical-overlay-label">MECHANICAL: OFF</span></button>
     </div>
 
     <div class="controls" id="controls-mechanical" style="display: none;">
-      <button class="btn" onclick="setCameraPreset('TOP')"><iconify-icon icon="pixelarticons:arrow-up"></iconify-icon> TOP</button>
-      <button class="btn" onclick="setCameraPreset('ISO')"><iconify-icon icon="pixelarticons:corner-up-right"></iconify-icon> ISO</button>
-      <button class="btn" onclick="setCameraPreset('FRONT')"><iconify-icon icon="pixelarticons:arrow-down"></iconify-icon> FRONT</button>
-      <button class="btn" onclick="setCameraPreset('RESET')"><iconify-icon icon="pixelarticons:reload"></iconify-icon> RESET</button>
+      <button class="btn" onclick="setCameraPreset('TOP')" title="TOP VIEW"><iconify-icon icon="pixelarticons:arrow-up"></iconify-icon> <span class="btn-label">TOP</span></button>
+      <button class="btn" onclick="setCameraPreset('ISO')" title="ISO VIEW"><iconify-icon icon="pixelarticons:corner-up-right"></iconify-icon> <span class="btn-label">ISO</span></button>
+      <button class="btn" onclick="setCameraPreset('FRONT')" title="FRONT VIEW"><iconify-icon icon="pixelarticons:arrow-down"></iconify-icon> <span class="btn-label">FRONT</span></button>
+      <button class="btn" onclick="setCameraPreset('RESET')" title="RESET VIEW"><iconify-icon icon="pixelarticons:reload"></iconify-icon> <span class="btn-label">RESET</span></button>
       <button class="btn" id="btn-mechanical-lid" onclick="toggleMechanical('lid')"><iconify-icon icon="pixelarticons:eye"></iconify-icon> <span id="mechanical-lid-label">LID: ON</span></button>
       <button class="btn" id="btn-mechanical-explode" onclick="toggleMechanical('explode')"><iconify-icon icon="pixelarticons:expand"></iconify-icon> <span id="mechanical-explode-label">EXPLODE: OFF</span></button>
     </div>
