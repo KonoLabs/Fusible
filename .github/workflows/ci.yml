@@ -26,3 +26,38 @@ jobs:
 
       - name: Build the release binary
         run: cargo build --release --locked
+
+      - name: Install gerbv
+        run: sudo apt-get update && sudo apt-get install -y gerbv
+
+      - name: Render Gerber layers in gerbv
+        run: |
+          set -euo pipefail
+          rm -rf viewer-out
+          mkdir -p viewer-out
+          for board in $(grep -l "\"pcb_board\"" examples/*.json); do
+            name=$(basename "$board" .json)
+            ./target/release/fusible export "$board" --preset fab -o "viewer-out/$name" --skip-lint
+            mkdir -p "viewer-out/$name/layers"
+            unzip -q "viewer-out/$name/gerbers.zip" -d "viewer-out/$name/layers"
+            for layer in "viewer-out/$name/layers"/*; do
+              out="viewer-out/$name-$(basename "$layer").png"
+              if ! grep -q "^%ADD" "$layer" && ! grep -q "^T[0-9]*C" "$layer"; then continue; fi
+              status=0
+              gerbv -x png -w 1600x1200 -o "$out" "$layer" > "$out.log" 2>&1 || status=$?
+              unexpected=$(grep -vE 'Unknown RS-274X extension found %T[FAD]%|^$' "$out.log" || true)
+              if [ "$status" -ne 0 ] || [ -n "$unexpected" ] || [ ! -s "$out" ]; then
+                echo "gerbv rejected $layer (exit $status)"
+                cat "$out.log"
+                exit 1
+              fi
+            done
+          done
+
+      - name: Upload Gerber renders
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gerber-renders
+          path: viewer-out/*.png
+          if-no-files-found: warn

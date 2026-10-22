@@ -1,6 +1,8 @@
 //! Unit tests for the native Gerber and Excellon generator.
 
 mod layers;
+mod shapes;
+mod silkscreen;
 mod validation;
 mod writers;
 
