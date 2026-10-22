@@ -1,66 +1,21 @@
 //! Tests for firmware pin bindings generator.
 
+mod fixtures;
+
 use super::*;
 use crate::netlist::Netlist;
-use crate::parser::{Circuit, CircuitElement, Component, Net, Port};
+use fixtures::{generate, mcu_circuit_fixture};
 
-fn mcu_circuit_fixture() -> Circuit {
-    Circuit {
-        elements: vec![
-            CircuitElement::Component(Component {
-                component_id: Some("U1".to_string()),
-                kind: Some("chip".to_string()),
-                name: Some("ESP32-S3".to_string()),
-            }),
-            CircuitElement::Component(Component {
-                component_id: Some("CAM1".to_string()),
-                kind: Some("chip".to_string()),
-                name: Some("OV2640".to_string()),
-            }),
-            CircuitElement::Net(Net {
-                net_id: Some("n_cam_d0".to_string()),
-                name: Some("CAM_D0".to_string()),
-            }),
-            CircuitElement::Port(Port {
-                port_id: Some("U1.GPIO4".to_string()),
-                name: Some("GPIO4".to_string()),
-                net_id: Some("n_cam_d0".to_string()),
-                source_component_id: Some("U1".to_string()),
-                pin_number: Some(4),
-                ..Default::default()
-            }),
-            CircuitElement::Port(Port {
-                port_id: Some("CAM1.D0".to_string()),
-                name: Some("D0".to_string()),
-                net_id: Some("n_cam_d0".to_string()),
-                source_component_id: Some("CAM1".to_string()),
-                pin_number: Some(1),
-                ..Default::default()
-            }),
-            CircuitElement::Net(Net {
-                net_id: Some("n_modem_tx".to_string()),
-                name: Some("MODEM_TX".to_string()),
-            }),
-            CircuitElement::Port(Port {
-                port_id: Some("U1.GPIO43".to_string()),
-                name: Some("GPIO43".to_string()),
-                net_id: Some("n_modem_tx".to_string()),
-                source_component_id: Some("U1".to_string()),
-                pin_number: Some(43),
-                ..Default::default()
-            }),
-            CircuitElement::Port(Port {
-                port_id: Some("MODEM1.RXD".to_string()),
-                name: Some("RXD".to_string()),
-                net_id: Some("n_modem_tx".to_string()),
-                source_component_id: Some("MODEM1".to_string()),
-                pin_number: Some(2),
-                ..Default::default()
-            }),
-        ],
-        raw_elements: Vec::new(),
-    }
-}
+const TRICKY_PINS: &[(&str, &str, u32)] = &[
+    ("GPIO1", "3V3_EN", 1),
+    ("GPIO2", "IN", 2),
+    ("GPIO48", "LED_R", 48),
+    ("GPIO8", "LED_G", 8),
+    ("GPIO9", "BATT\nfn evil() {}", 9),
+    ("GPIO10", "SELF", 10),
+    ("GPIO11", "DUP", 11),
+    ("GPIO12", "DUP", 12),
+];
 
 #[test]
 fn extracts_mcu_pins_and_generates_rust_code() {
@@ -96,69 +51,9 @@ fn extracts_mcu_pins_and_generates_rust_code() {
     assert!(rust_code.contains("pub const BOARD_PINS: BoardPins"));
 }
 
-fn mcu_with_nets(chip_name: &str, pins: &[(&str, &str, u32)]) -> Circuit {
-    let mut elements = vec![CircuitElement::Component(Component {
-        component_id: Some("U1".to_string()),
-        kind: Some("chip".to_string()),
-        name: Some(chip_name.to_string()),
-    })];
-    for (i, (label, net_name, pin_number)) in pins.iter().enumerate() {
-        let net_id = format!("n{i}");
-        elements.push(CircuitElement::Net(Net {
-            net_id: Some(net_id.clone()),
-            name: Some(net_name.to_string()),
-        }));
-        elements.push(CircuitElement::Port(Port {
-            port_id: Some(format!("U1.{label}")),
-            name: Some(label.to_string()),
-            net_id: Some(net_id.clone()),
-            source_component_id: Some("U1".to_string()),
-            pin_number: Some(*pin_number),
-            ..Default::default()
-        }));
-        elements.push(CircuitElement::Port(Port {
-            port_id: Some(format!("J{i}.1")),
-            name: Some("A".to_string()),
-            net_id: Some(net_id),
-            source_component_id: Some(format!("J{i}")),
-            pin_number: Some(1),
-            ..Default::default()
-        }));
-    }
-    Circuit {
-        elements,
-        raw_elements: Vec::new(),
-    }
-}
-
-fn generate(
-    chip_name: &str,
-    target: Option<&str>,
-    pins: &[(&str, &str, u32)],
-) -> (McuInfo, String) {
-    let circuit = mcu_with_nets(chip_name, pins);
-    let netlist = Netlist::from_circuit(&circuit);
-    let info = extract_mcu_pins(&circuit, &netlist, target).expect("MCU must be found");
-    let code = generate_pins_rs(&info, "Evil\nfn injected() {}");
-    (info, code)
-}
-
 #[test]
 fn tricky_net_names_produce_valid_unique_identifiers() {
-    let (info, code) = generate(
-        "ESP32-S3",
-        Some("esp32-s3"),
-        &[
-            ("GPIO1", "3V3_EN", 1),
-            ("GPIO2", "IN", 2),
-            ("GPIO48", "LED_R", 48),
-            ("GPIO8", "LED_G", 8),
-            ("GPIO9", "BATT\nfn evil() {}", 9),
-            ("GPIO10", "SELF", 10),
-            ("GPIO11", "DUP", 11),
-            ("GPIO12", "DUP", 12),
-        ],
-    );
+    let (info, code) = generate("ESP32-S3", Some("esp32-s3"), TRICKY_PINS);
 
     let names: Vec<_> = info.pins.iter().map(|p| p.signal_name.as_str()).collect();
     assert_eq!(
@@ -174,7 +69,10 @@ fn tricky_net_names_produce_valid_unique_identifiers() {
             "SELF"
         ]
     );
+    assert_tricky_code_is_safe(&code);
+}
 
+fn assert_tricky_code_is_safe(code: &str) {
     assert!(code.contains("pub const PIN_3V3_EN: u8 = 1;"));
     assert!(code.contains("pub in_: u8,"));
     assert!(code.contains("pub self_: u8,"));

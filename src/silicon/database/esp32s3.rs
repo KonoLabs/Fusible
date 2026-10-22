@@ -1,19 +1,8 @@
 //! Espressif ESP32-S3 IO MUX, boot strapping, and reserved memory pin tables.
 
 use crate::silicon::model::{
-    GpioNum, MuxFunction, PeripheralSignal, PinCapabilities, PinSpec, SiliconTarget,
-    StrappingRequirement,
+    MuxFunction, PeripheralSignal, PinCapabilities, PinSpec, SiliconTarget, StrappingRequirement,
 };
-
-macro_rules! mux {
-    ($sig:expr, $af:expr, $name:expr) => {
-        MuxFunction {
-            signal: $sig,
-            af_number: $af,
-            af_name: $name,
-        }
-    };
-}
 
 const ESP_GPIO_CAP: PinCapabilities = PinCapabilities {
     is_gpio: true,
@@ -46,339 +35,88 @@ static GP45_FUNCS: &[MuxFunction] = &[];
 static GP46_FUNCS: &[MuxFunction] = &[];
 static EMPTY_FUNCS: &[MuxFunction] = &[];
 
-pub static ESP32S3_PINS: &[PinSpec] = &[
-    PinSpec {
-        gpio: Some(GpioNum(0)),
-        name: "GPIO0",
-        capabilities: ESP_GPIO_CAP,
-        strapping: Some(StrappingRequirement::MustBeHigh {
-            purpose: "SPI Flash Boot mode",
-            violation_consequence: "holding GPIO0 LOW at reset forces ROM download bootloader",
-        }),
-        functions: GP0_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(1)),
-        name: "GPIO1",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(2)),
-        name: "GPIO2",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(3)),
-        name: "GPIO3",
-        capabilities: ESP_GPIO_CAP,
-        strapping: Some(StrappingRequirement::MustBeLow {
-            purpose: "JTAG signal selection",
-            violation_consequence: "holding GPIO3 HIGH at reset alters JTAG routing",
-        }),
-        functions: GP3_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(4)),
-        name: "GPIO4",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(5)),
-        name: "GPIO5",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(6)),
-        name: "GPIO6",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(7)),
-        name: "GPIO7",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(8)),
-        name: "GPIO8",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(9)),
-        name: "GPIO9",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(10)),
-        name: "GPIO10",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(11)),
-        name: "GPIO11",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(12)),
-        name: "GPIO12",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(13)),
-        name: "GPIO13",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(14)),
-        name: "GPIO14",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(15)),
-        name: "GPIO15",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(16)),
-        name: "GPIO16",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(17)),
-        name: "GPIO17",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(18)),
-        name: "GPIO18",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(19)),
-        name: "GPIO19",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: GP19_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(20)),
-        name: "GPIO20",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: GP20_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(21)),
-        name: "GPIO21",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    // GPIO 26-32: Reserved for SPI Flash
-    PinSpec {
-        gpio: Some(GpioNum(26)),
-        name: "GPIO26",
-        capabilities: ESP_FLASH_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(27)),
-        name: "GPIO27",
-        capabilities: ESP_FLASH_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(28)),
-        name: "GPIO28",
-        capabilities: ESP_FLASH_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(29)),
-        name: "GPIO29",
-        capabilities: ESP_FLASH_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(30)),
-        name: "GPIO30",
-        capabilities: ESP_FLASH_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(31)),
-        name: "GPIO31",
-        capabilities: ESP_FLASH_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(32)),
-        name: "GPIO32",
-        capabilities: ESP_FLASH_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    // GPIO 33-37: Reserved for Octal Flash / PSRAM
-    PinSpec {
-        gpio: Some(GpioNum(33)),
-        name: "GPIO33",
-        capabilities: ESP_FLASH_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(34)),
-        name: "GPIO34",
-        capabilities: ESP_FLASH_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(35)),
-        name: "GPIO35",
-        capabilities: ESP_FLASH_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(36)),
-        name: "GPIO36",
-        capabilities: ESP_FLASH_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(37)),
-        name: "GPIO37",
-        capabilities: ESP_FLASH_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(38)),
-        name: "GPIO38",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(39)),
-        name: "GPIO39",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(40)),
-        name: "GPIO40",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(41)),
-        name: "GPIO41",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(42)),
-        name: "GPIO42",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(43)),
-        name: "GPIO43",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: GP43_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(44)),
-        name: "GPIO44",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: GP44_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(45)),
-        name: "GPIO45",
-        capabilities: ESP_GPIO_CAP,
-        strapping: Some(StrappingRequirement::MustBeLow {
-            purpose: "VDD_SPI Flash voltage selection",
-            violation_consequence:
-                "holding GPIO45 HIGH selects 1.8V flash and browns out standard 3.3V modules",
-        }),
-        functions: GP45_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(46)),
-        name: "GPIO46",
-        capabilities: ESP_INPUT_ONLY,
-        strapping: Some(StrappingRequirement::MustBeLow {
+pub static ESP32S3_PINS: &[PinSpec] =
+    &[
+        gpio_pin!(
+            0,
+            "GPIO0",
+            ESP_GPIO_CAP,
+            GP0_FUNCS,
+            StrappingRequirement::MustBeHigh {
+                purpose: "SPI Flash Boot mode",
+                violation_consequence: "holding GPIO0 LOW at reset forces ROM download bootloader",
+            }
+        ),
+        gpio_pin!(1, "GPIO1", ESP_GPIO_CAP, EMPTY_FUNCS),
+        gpio_pin!(2, "GPIO2", ESP_GPIO_CAP, EMPTY_FUNCS),
+        gpio_pin!(
+            3,
+            "GPIO3",
+            ESP_GPIO_CAP,
+            GP3_FUNCS,
+            StrappingRequirement::MustBeLow {
+                purpose: "JTAG signal selection",
+                violation_consequence: "holding GPIO3 HIGH at reset alters JTAG routing",
+            }
+        ),
+        gpio_pin!(4, "GPIO4", ESP_GPIO_CAP, EMPTY_FUNCS),
+        gpio_pin!(5, "GPIO5", ESP_GPIO_CAP, EMPTY_FUNCS),
+        gpio_pin!(6, "GPIO6", ESP_GPIO_CAP, EMPTY_FUNCS),
+        gpio_pin!(7, "GPIO7", ESP_GPIO_CAP, EMPTY_FUNCS),
+        gpio_pin!(8, "GPIO8", ESP_GPIO_CAP, EMPTY_FUNCS),
+        gpio_pin!(9, "GPIO9", ESP_GPIO_CAP, EMPTY_FUNCS),
+        gpio_pin!(10, "GPIO10", ESP_GPIO_CAP, EMPTY_FUNCS),
+        gpio_pin!(11, "GPIO11", ESP_GPIO_CAP, EMPTY_FUNCS),
+        gpio_pin!(12, "GPIO12", ESP_GPIO_CAP, EMPTY_FUNCS),
+        gpio_pin!(13, "GPIO13", ESP_GPIO_CAP, EMPTY_FUNCS),
+        gpio_pin!(14, "GPIO14", ESP_GPIO_CAP, EMPTY_FUNCS),
+        gpio_pin!(15, "GPIO15", ESP_GPIO_CAP, EMPTY_FUNCS),
+        gpio_pin!(16, "GPIO16", ESP_GPIO_CAP, EMPTY_FUNCS),
+        gpio_pin!(17, "GPIO17", ESP_GPIO_CAP, EMPTY_FUNCS),
+        gpio_pin!(18, "GPIO18", ESP_GPIO_CAP, EMPTY_FUNCS),
+        gpio_pin!(19, "GPIO19", ESP_GPIO_CAP, GP19_FUNCS),
+        gpio_pin!(20, "GPIO20", ESP_GPIO_CAP, GP20_FUNCS),
+        gpio_pin!(21, "GPIO21", ESP_GPIO_CAP, EMPTY_FUNCS),
+        // GPIO 26-32: Reserved for SPI Flash
+        gpio_pin!(26, "GPIO26", ESP_FLASH_CAP, EMPTY_FUNCS),
+        gpio_pin!(27, "GPIO27", ESP_FLASH_CAP, EMPTY_FUNCS),
+        gpio_pin!(28, "GPIO28", ESP_FLASH_CAP, EMPTY_FUNCS),
+        gpio_pin!(29, "GPIO29", ESP_FLASH_CAP, EMPTY_FUNCS),
+        gpio_pin!(30, "GPIO30", ESP_FLASH_CAP, EMPTY_FUNCS),
+        gpio_pin!(31, "GPIO31", ESP_FLASH_CAP, EMPTY_FUNCS),
+        gpio_pin!(32, "GPIO32", ESP_FLASH_CAP, EMPTY_FUNCS),
+        // GPIO 33-37: Reserved for Octal Flash / PSRAM
+        gpio_pin!(33, "GPIO33", ESP_FLASH_CAP, EMPTY_FUNCS),
+        gpio_pin!(34, "GPIO34", ESP_FLASH_CAP, EMPTY_FUNCS),
+        gpio_pin!(35, "GPIO35", ESP_FLASH_CAP, EMPTY_FUNCS),
+        gpio_pin!(36, "GPIO36", ESP_FLASH_CAP, EMPTY_FUNCS),
+        gpio_pin!(37, "GPIO37", ESP_FLASH_CAP, EMPTY_FUNCS),
+        gpio_pin!(38, "GPIO38", ESP_GPIO_CAP, EMPTY_FUNCS),
+        gpio_pin!(39, "GPIO39", ESP_GPIO_CAP, EMPTY_FUNCS),
+        gpio_pin!(40, "GPIO40", ESP_GPIO_CAP, EMPTY_FUNCS),
+        gpio_pin!(41, "GPIO41", ESP_GPIO_CAP, EMPTY_FUNCS),
+        gpio_pin!(42, "GPIO42", ESP_GPIO_CAP, EMPTY_FUNCS),
+        gpio_pin!(43, "GPIO43", ESP_GPIO_CAP, GP43_FUNCS),
+        gpio_pin!(44, "GPIO44", ESP_GPIO_CAP, GP44_FUNCS),
+        gpio_pin!(
+            45,
+            "GPIO45",
+            ESP_GPIO_CAP,
+            GP45_FUNCS,
+            StrappingRequirement::MustBeLow {
+                purpose: "VDD_SPI Flash voltage selection",
+                violation_consequence:
+                    "holding GPIO45 HIGH selects 1.8V flash and browns out standard 3.3V modules",
+            }
+        ),
+        gpio_pin!(46, "GPIO46", ESP_INPUT_ONLY, GP46_FUNCS, StrappingRequirement::MustBeLow {
             purpose: "ROM boot log output",
             violation_consequence:
                 "holding GPIO46 HIGH suppresses ROM boot messages; pin cannot be used as an output",
         }),
-        functions: GP46_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(47)),
-        name: "GPIO47",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(48)),
-        name: "GPIO48",
-        capabilities: ESP_GPIO_CAP,
-        strapping: None,
-        functions: EMPTY_FUNCS,
-    },
-];
+        gpio_pin!(47, "GPIO47", ESP_GPIO_CAP, EMPTY_FUNCS),
+        gpio_pin!(48, "GPIO48", ESP_GPIO_CAP, EMPTY_FUNCS),
+    ];
 
 pub static ESP32S3: SiliconTarget = SiliconTarget {
     name: "esp32-s3",

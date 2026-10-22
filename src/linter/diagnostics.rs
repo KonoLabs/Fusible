@@ -10,10 +10,6 @@ use std::fmt;
 
 use thiserror::Error;
 
-// ---------------------------------------------------------------------------
-// One violation
-// ---------------------------------------------------------------------------
-
 /// A violation detected by a rule.
 ///
 /// `miette::Diagnostic` is implemented **by hand** instead of derived: the
@@ -48,10 +44,6 @@ impl miette::Diagnostic for Diagnostic {
             .map(|help| Box::new(help) as Box<dyn fmt::Display>)
     }
 }
-
-// ---------------------------------------------------------------------------
-// The fuse blows
-// ---------------------------------------------------------------------------
 
 /// Aggregates every violation into a single error report.
 ///

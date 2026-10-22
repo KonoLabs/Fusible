@@ -1,13 +1,13 @@
 //! AST lowering into the Netlist connectivity graph.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
-use super::endpoint::Endpoint;
-use super::node::NetNode;
+use super::pads::index_pad;
+use super::registry::{attach_port, register_net};
 use super::{DanglingRef, Netlist};
-use crate::parser::{Circuit, Pad, PcbPort, Port, Trace};
+use crate::parser::{Circuit, PcbPort, Port, Trace};
 
-type PortMap<'a> = HashMap<&'a str, &'a Port>;
+pub(super) type PortMap<'a> = HashMap<&'a str, &'a Port>;
 
 /// Lowers the AST in dependency order: declared nets, port nets, traces,
 /// then pads, which resolve their net through the ports traces connected.
@@ -114,142 +114,4 @@ fn port_only_net(
             .unwrap_or_else(|| format!("source_trace#{index}"));
         register_net(netlist, &synthetic_id, trace.name.as_deref(), true)
     }))
-}
-
-/// `source_pad "<id>"`, or the pad's position when it has no id.
-fn pad_label(pad: &Pad, index: usize) -> String {
-    match pad.pad_id.as_deref() {
-        Some(id) => format!("pad \"{id}\""),
-        None => format!("pad #{index}"),
-    }
-}
-
-/// The `source_port_id` a pad stands for, through its direct `port_id` or
-/// the canonical `pcb_port_id` chain. Every broken link is recorded.
-fn linked_port_id<'a>(
-    netlist: &mut Netlist,
-    index: usize,
-    pad: &'a Pad,
-    ports: &PortMap<'_>,
-    pcb_ports: &HashMap<&str, &'a PcbPort>,
-) -> Option<&'a str> {
-    let (port_id, owner) = match (pad.port_id.as_deref(), pad.pcb_port_id.as_deref()) {
-        (Some(port_id), _) => (port_id, pad_label(pad, index)),
-        (None, Some(pcb_port_id)) => {
-            let Some(pcb_port) = pcb_ports.get(pcb_port_id) else {
-                netlist.dangling_refs.push(DanglingRef {
-                    owner: pad_label(pad, index),
-                    target: format!("pcb_port \"{pcb_port_id}\""),
-                });
-                return None;
-            };
-            let owner = format!("pcb_port \"{pcb_port_id}\"");
-            let Some(port_id) = pcb_port.source_port_id.as_deref() else {
-                netlist.dangling_refs.push(DanglingRef {
-                    owner,
-                    target: "a source_port (no source_port_id)".to_string(),
-                });
-                return None;
-            };
-            (port_id, owner)
-        }
-        (None, None) => return None,
-    };
-    if ports.contains_key(port_id) {
-        return Some(port_id);
-    }
-    netlist.dangling_refs.push(DanglingRef {
-        owner,
-        target: format!("source_port \"{port_id}\""),
-    });
-    None
-}
-
-fn index_pad(
-    netlist: &mut Netlist,
-    index: usize,
-    pad: &Pad,
-    ports: &PortMap<'_>,
-    pcb_ports: &HashMap<&str, &PcbPort>,
-) {
-    let port_id = linked_port_id(netlist, index, pad, ports, pcb_ports);
-    let idx = match pad.net_id.as_deref() {
-        Some(net_id) => {
-            let idx = register_net(netlist, net_id, None, false);
-            netlist.nets[idx].reference_count += 1;
-            Some(idx)
-        }
-        None => port_id.and_then(|id| netlist.port_to_net.get(id).copied()),
-    };
-    let Some(idx) = idx else {
-        return;
-    };
-    if let Some(pad_id) = pad.pad_id.as_deref() {
-        netlist.pad_to_net.insert(pad_id.to_string(), idx);
-    }
-    if !port_id.is_some_and(|id| netlist.endpoint_ids_per_net[idx].contains(id)) {
-        attach_endpoint(netlist, idx, Endpoint::pad(pad.pad_id.clone()));
-    }
-}
-
-fn attach_port(netlist: &mut Netlist, idx: usize, port: &Port) {
-    attach_endpoint(netlist, idx, Endpoint::port(port));
-    if let Some(id) = port.port_id.as_deref() {
-        netlist.port_to_net.insert(id.to_string(), idx);
-    }
-}
-
-fn register_net(
-    netlist: &mut Netlist,
-    net_id: &str,
-    name: Option<&str>,
-    is_defined: bool,
-) -> usize {
-    match netlist.by_id.get(net_id).copied() {
-        Some(idx) => {
-            promote_defined_net(netlist, idx, name, is_defined);
-            idx
-        }
-        None => insert_new_net(netlist, net_id, name, is_defined),
-    }
-}
-
-fn promote_defined_net(netlist: &mut Netlist, idx: usize, name: Option<&str>, is_defined: bool) {
-    if !is_defined {
-        return;
-    }
-    let node = &mut netlist.nets[idx];
-    node.is_defined = true;
-    if node.name.is_none() {
-        node.name = name.map(str::to_string);
-    }
-}
-
-fn insert_new_net(
-    netlist: &mut Netlist,
-    net_id: &str,
-    name: Option<&str>,
-    is_defined: bool,
-) -> usize {
-    let idx = netlist.nets.len();
-    netlist.nets.push(NetNode {
-        id: net_id.to_string(),
-        name: name.map(str::to_string),
-        endpoints: Vec::new(),
-        is_defined,
-        reference_count: 0,
-    });
-    netlist.endpoint_ids_per_net.push(HashSet::new());
-    netlist.by_id.insert(net_id.to_string(), idx);
-    idx
-}
-
-fn attach_endpoint(netlist: &mut Netlist, net_idx: usize, endpoint: Endpoint) {
-    let is_new = match endpoint.id.as_deref() {
-        Some(id) => netlist.endpoint_ids_per_net[net_idx].insert(id.to_string()),
-        None => true,
-    };
-    if is_new {
-        netlist.nets[net_idx].endpoints.push(endpoint);
-    }
 }

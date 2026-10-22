@@ -5,6 +5,8 @@ use crate::parser::Pad;
 
 /// Minimum copper clearance in millimeters (standard 6 mil / 0.15mm PCB manufacturing limit).
 const MIN_CLEARANCE_MM: f64 = 0.15;
+const CLEARANCE_HELP: &str = "reroute copper or relocate pads to maintain at least 0.15mm \
+                              clearance to prevent manufacturing defects";
 
 /// Inspects physical PCB copper geometry (pads, traces, vias) and detects
 /// short circuits and clearance violations between distinct electrical nets.
@@ -29,52 +31,45 @@ impl Rule for TraceClearanceRule {
     fn check(&self, ctx: &LintContext<'_>) -> Vec<Diagnostic> {
         let features = extract_copper_features(ctx);
         let mut diagnostics = Vec::new();
-
-        for i in 0..features.len() {
-            for j in (i + 1)..features.len() {
-                let f1 = &features[i];
-                let f2 = &features[j];
-
-                if f1.net_id == f2.net_id || !f1.layer.eq_ignore_ascii_case(&f2.layer) {
-                    continue;
-                }
-
-                let dx = (f1.x - f2.x).abs();
-                let dy = (f1.y - f2.y).abs();
-
-                let clearance_gap = ((dx - (f1.half_w + f2.half_w)).max(0.0))
-                    .hypot((dy - (f1.half_h + f2.half_h)).max(0.0));
-
-                if clearance_gap < MIN_CLEARANCE_MM {
-                    let is_direct_short =
-                        dx < (f1.half_w + f2.half_w) && dy < (f1.half_h + f2.half_h);
-
-                    let msg = if is_direct_short {
-                        format!(
-                            "direct copper short-circuit on {}: net \"{}\" and net \"{}\" overlap at ({:.2}, {:.2})",
-                            f1.layer, f1.net_name, f2.net_name, f1.x, f1.y
-                        )
-                    } else {
-                        format!(
-                            "copper clearance violation on {}: net \"{}\" and net \"{}\" have only {:.3}mm spacing (minimum {MIN_CLEARANCE_MM}mm)",
-                            f1.layer, f1.net_name, f2.net_name, clearance_gap
-                        )
-                    };
-
-                    diagnostics.push(Diagnostic {
-                        rule: self.name().to_string(),
-                        message: msg,
-                        help: Some(
-                            "reroute copper or relocate pads to maintain at least 0.15mm clearance to prevent manufacturing defects"
-                                .to_string(),
-                        ),
-                    });
-                }
+        for (i, f1) in features.iter().enumerate() {
+            for f2 in &features[i + 1..] {
+                diagnostics.extend(clearance_violation(f1, f2).map(|message| Diagnostic {
+                    rule: self.name().to_string(),
+                    message,
+                    help: Some(CLEARANCE_HELP.to_string()),
+                }));
             }
         }
-
         diagnostics
     }
+}
+
+/// The violation message when two copper features of distinct nets on one
+/// layer sit closer than [`MIN_CLEARANCE_MM`].
+fn clearance_violation(f1: &CopperFeature, f2: &CopperFeature) -> Option<String> {
+    if f1.net_id == f2.net_id || !f1.layer.eq_ignore_ascii_case(&f2.layer) {
+        return None;
+    }
+    let dx = (f1.x - f2.x).abs();
+    let dy = (f1.y - f2.y).abs();
+    let reach_x = f1.half_w + f2.half_w;
+    let reach_y = f1.half_h + f2.half_h;
+    let clearance_gap = ((dx - reach_x).max(0.0)).hypot((dy - reach_y).max(0.0));
+    (clearance_gap < MIN_CLEARANCE_MM).then(|| {
+        if dx < reach_x && dy < reach_y {
+            format!(
+                "direct copper short-circuit on {}: net \"{}\" and net \"{}\" overlap at \
+                 ({:.2}, {:.2})",
+                f1.layer, f1.net_name, f2.net_name, f1.x, f1.y
+            )
+        } else {
+            format!(
+                "copper clearance violation on {}: net \"{}\" and net \"{}\" have only \
+                 {:.3}mm spacing (minimum {MIN_CLEARANCE_MM}mm)",
+                f1.layer, f1.net_name, f2.net_name, clearance_gap
+            )
+        }
+    })
 }
 
 /// Half extents of a pad: `width`/`height`, or `radius` for circle pads.

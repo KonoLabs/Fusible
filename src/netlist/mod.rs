@@ -21,6 +21,8 @@ use std::collections::{HashMap, HashSet};
 mod builder;
 mod endpoint;
 mod node;
+mod pads;
+mod registry;
 #[cfg(test)]
 mod tests;
 
