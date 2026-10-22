@@ -5,7 +5,9 @@ use super::sync::apply_kicad_sync;
 fn placed(name: &str, x: f64, y: f64, rotation: f64) -> String {
     format!(
         r#"{{ "type": "source_component", "source_component_id": "sc_{name}", "name": "{name}" }},
-        {{ "type": "pcb_component", "pcb_component_id": "pc_{name}", "source_component_id": "sc_{name}", "center": {{ "x": {x}, "y": {y} }}, "rotation": {rotation}, "layer": "top", "width": 1, "height": 1 }}"#
+        {{ "type": "pcb_component", "pcb_component_id": "pc_{name}", "source_component_id": "sc_{name}",
+          "center": {{ "x": {x}, "y": {y} }}, "rotation": {rotation}, "layer": "top",
+          "width": 1, "height": 1 }}"#
     )
 }
 

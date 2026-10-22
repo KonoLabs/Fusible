@@ -1,4 +1,7 @@
 pub mod diff;
+mod footprint;
+mod placements;
+mod report;
 pub mod sexpr;
 pub mod sync;
 
