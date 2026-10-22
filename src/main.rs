@@ -73,18 +73,17 @@ fn dispatch_mechanical(
     mounting: String,
     skip_lint: bool,
 ) -> ExitCode {
-    match commands::mechanical::run(
-        file,
-        &format,
-        output,
-        outline,
-        wall_thickness,
+    let cfg = MechanicalConfig {
+        format: Some(format),
+        out_dir: output,
+        wall_thickness: Some(wall_thickness),
         height,
-        component_cutouts,
-        ventilation,
-        mounting,
-        skip_lint,
-    ) {
+        component_cutouts: Some(component_cutouts),
+        ventilation: Some(ventilation),
+        mounting: Some(mounting),
+        outline_source: Some(outline),
+    };
+    match commands::mechanical::run(file, cfg, skip_lint) {
         Ok(()) => ExitCode::SUCCESS,
         Err(MechanicalError::Check(CheckError::FuseBlown(blown))) => fail(blown, EXIT_VIOLATIONS),
         Err(err) => fail(err, EXIT_TOOL_ERROR),

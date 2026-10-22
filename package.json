@@ -1,0 +1,9 @@
+{
+  "name": "fusible-mechanical-generator",
+  "private": true,
+  "dependencies": {
+    "@tscircuit/core": "^latest",
+    "occt-wasm": "^5.7.1"
+  },
+  "type": "module"
+}

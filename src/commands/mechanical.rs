@@ -7,6 +7,7 @@ use thiserror::Error;
 
 use crate::commands::check::{self, CheckError};
 use crate::commands::target::resolve_entry;
+use crate::config::MechanicalConfig;
 use crate::tscircuit::{Runner, RunnerError};
 
 /// Unified error enum for the mechanical pipeline.
@@ -43,20 +44,25 @@ pub enum MechanicalError {
 ///
 /// By default, all exports are **fuse-gated**: electrical rules are checked first.
 /// If any violation is found, the process halts and no export occurs.
+#[allow(clippy::too_many_arguments)]
 pub fn run(
     file: Option<PathBuf>,
-    format: &str,
-    output: Option<PathBuf>,
-    outline: String,
-    wall_thickness: f64,
-    height: Option<f64>,
-    component_cutouts: bool,
-    ventilation: String,
-    mounting: String,
+    config: MechanicalConfig,
     skip_lint: bool,
 ) -> Result<(), MechanicalError> {
+    // Extract values from the provided config, using defaults where needed.
+    let format = config.format.as_deref().unwrap_or("step");
+    let output = config.out_dir.clone();
+    let outline = config.outline_source.clone().unwrap_or_else(|| "auto".to_string());
+    let wall_thickness = config.wall_thickness.unwrap_or(2.0);
+    let height = config.height;
+    let component_cutouts = config.component_cutoffs.unwrap_or(false);
+    let ventilation = config.ventilation.clone().unwrap_or_else(|| "none".to_string());
+    let mounting = config.mounting.clone().unwrap_or_else(|| "none".to_string());
+
     validate_format(format)?;
 
+    // Resolve the entry point for the circuit.
     let entry = resolve_entry(file.clone()).unwrap_or_else(|_| PathBuf::from("index.tsx"));
 
     if !skip_lint {
@@ -70,13 +76,10 @@ pub fn run(
     let runner = Runner::detect().ok();
     let outline_path = resolve_outline(&entry, runner.as_ref(), &outline)?;
 
-    let config = MechanicalConfig {
-        wall_thickness,
-        height,
-        component_cutouts,
-        ventilation,
-        mounting,
-    };
+    // Use the provided config for export.
+    // No need to recreate MechanicalConfig here.
+
+
 
     if format == "all" {
         for fmt in ["step", "iges", "stl", "glb", "brep"] {
@@ -112,13 +115,16 @@ fn validate_format(format: &str) -> Result<(), MechanicalError> {
     }
 }
 
-struct MechanicalConfig {
+#[derive(Debug)]
+struct MechanicalExportConfig {
     wall_thickness: f64,
     height: Option<f64>,
     component_cutouts: bool,
     ventilation: String,
     mounting: String,
 }
+
+
 
 /// Derives the board outline from the circuit, KiCad, or SVG source.
 fn resolve_outline(
