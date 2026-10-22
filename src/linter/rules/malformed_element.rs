@@ -3,7 +3,8 @@
 use crate::linter::{Diagnostic, LintContext, Rule};
 use crate::parser::CircuitElement;
 
-/// A recognized element without an identifier.
+/// A recognized element without an identifier, or a trace that connects
+/// nothing.
 ///
 /// `Option` in the model keeps *deserialization* tolerant, but canonical
 /// circuit-json always provides these identifiers: `None` means the input
@@ -26,12 +27,13 @@ fn summarize(element: &CircuitElement) -> Option<ElementSummary<'_>> {
         CircuitElement::Net(n) => ("source_net", n.net_id.as_deref(), "source_net_id"),
         CircuitElement::Port(p) => ("source_port", p.port_id.as_deref(), "source_port_id"),
         CircuitElement::Pad(p) => ("source_pad", p.pad_id.as_deref(), "source_pad_id"),
+        CircuitElement::PcbPort(p) => ("pcb_port", p.pcb_port_id.as_deref(), "pcb_port_id"),
         CircuitElement::Trace(t) => ("source_trace", t.trace_id.as_deref(), "source_trace_id"),
         CircuitElement::Unknown => return None,
     })
 }
 
-fn violation(index: usize, kind: &str, expected: &str) -> Diagnostic {
+fn missing_identifier(index: usize, kind: &str, expected: &str) -> Diagnostic {
     Diagnostic {
         rule: "malformed_element".to_string(),
         message: format!(
@@ -45,6 +47,32 @@ fn violation(index: usize, kind: &str, expected: &str) -> Diagnostic {
     }
 }
 
+fn empty_trace(index: usize) -> Diagnostic {
+    Diagnostic {
+        rule: "malformed_element".to_string(),
+        message: format!("element #{index} (source_trace) connects no port and no net"),
+        help: Some(
+            "fill `connected_source_port_ids` or `connected_source_net_ids`, or delete the trace"
+                .to_string(),
+        ),
+    }
+}
+
+/// Every defect of one element: a missing identifier, and a trace whose
+/// connection lists are both empty.
+fn defects(index: usize, element: &CircuitElement) -> Vec<Diagnostic> {
+    let mut found = Vec::new();
+    if let Some((kind, None, expected)) = summarize(element) {
+        found.push(missing_identifier(index, kind, expected));
+    }
+    if let CircuitElement::Trace(t) = element {
+        if t.connected_source_port_ids.is_empty() && t.connected_source_net_ids.is_empty() {
+            found.push(empty_trace(index));
+        }
+    }
+    found
+}
+
 impl Rule for MalformedElementRule {
     fn name(&self) -> &'static str {
         "malformed_element"
@@ -55,10 +83,7 @@ impl Rule for MalformedElementRule {
             .elements
             .iter()
             .enumerate()
-            .filter_map(|(index, element)| {
-                let (kind, id, expected) = summarize(element)?;
-                (id.is_none()).then(|| violation(index, kind, expected))
-            })
+            .flat_map(|(index, element)| defects(index, element))
             .collect()
     }
 }

@@ -16,6 +16,7 @@
 //! methods, so a hub module keeps every rule comfortably under the limit.
 
 mod bypass_cap;
+mod dangling_reference;
 mod ghost_net;
 mod malformed_element;
 mod pin_mux;
@@ -26,6 +27,7 @@ mod trace_clearance;
 mod unconnected_net;
 
 pub use bypass_cap::BypassCapRule;
+pub use dangling_reference::DanglingReferenceRule;
 pub use ghost_net::GhostNetRule;
 pub use malformed_element::MalformedElementRule;
 pub use pin_mux::PinMuxRule;

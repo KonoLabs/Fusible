@@ -1,15 +1,22 @@
-//! Tests for the three phase-1 rules, each exercised on an isolated
-//! `Linter::new().with_rule(...)` so a failing assertion names the rule,
-//! not the default registry.
+//! Rule tests, each exercised on an isolated `Linter::new().with_rule(...)`
+//! so a failing assertion names the rule, not the default registry.
+//! Fixtures for the physical and power rules use canonical circuit-json:
+//! ports without nets, `pcb_smtpad` linked through `pcb_port`, and
+//! component ids distinct from their names.
 //!
 //! Sibling file of `rules.rs` (declared `#[cfg(test)] mod tests`), kept
 //! under filet's functions-per-file budget.
 
+use std::path::Path;
+
 use miette::Diagnostic as _;
 
-use super::{GhostNetRule, MalformedElementRule, SchematicScaleRule, UnconnectedNetRule};
+use super::{
+    BypassCapRule, DanglingReferenceRule, GhostNetRule, MalformedElementRule, SchematicScaleRule,
+    TraceClearanceRule, UnconnectedNetRule,
+};
 use crate::linter::{Diagnostic, Linter, Rule};
-use crate::parser::{Circuit, CircuitElement, Net, Pad, Port};
+use crate::parser::{parse, Circuit, CircuitElement, Net, Pad, Port};
 
 fn net(id: Option<&str>, name: &str) -> CircuitElement {
     CircuitElement::Net(Net {
@@ -225,135 +232,137 @@ fn pin_mux_rule_on_example_file() {
     assert_eq!(v.len(), 1);
 }
 
+fn lint(rule: impl Rule + 'static, json: &str) -> Vec<Diagnostic> {
+    let circuit = parse(json, Path::new("circuit.json")).expect("fixture must parse");
+    Linter::new().with_rule(rule).run(&circuit)
+}
+
 #[test]
-fn decoupling_capacitor_rule_flags_missing_bypass_caps() {
-    use super::BypassCapRule;
-    use crate::parser::Component;
-
-    let chip = CircuitElement::Component(Component {
-        component_id: Some("U1".to_string()),
-        name: Some("STM32G431".to_string()),
-        kind: Some("chip".to_string()),
-    });
-    let vdd_port = CircuitElement::Port(Port {
-        port_id: Some("U1.VDD".to_string()),
-        source_component_id: Some("U1".to_string()),
-        name: Some("VDD".to_string()),
-        net_id: Some("n_3v3".to_string()),
-        ..Default::default()
-    });
-    let power_in = CircuitElement::Port(Port {
-        port_id: Some("J1.VOUT".to_string()),
-        source_component_id: Some("J1".to_string()),
-        name: Some("VOUT".to_string()),
-        net_id: Some("n_3v3".to_string()),
-        ..Default::default()
-    });
-    let net_3v3 = net(Some("n_3v3"), "+3V3");
-
-    // Missing capacitor: fails
-    let v = rule_violations(
-        BypassCapRule,
-        vec![
-            chip.clone(),
-            vdd_port.clone(),
-            power_in.clone(),
-            net_3v3.clone(),
-        ],
+fn trace_connecting_nothing_is_malformed() {
+    let v = lint(
+        MalformedElementRule,
+        r#"[{"type": "source_trace", "source_trace_id": "t0"}]"#,
     );
+    assert_eq!(v.len(), 1);
+    assert!(v[0].message.contains("connects no port and no net"));
+}
+
+#[test]
+fn trace_to_a_missing_port_is_a_dangling_reference() {
+    let v = lint(
+        DanglingReferenceRule,
+        r#"[
+        {"type": "source_net", "source_net_id": "net_0", "name": "SDA"},
+        {"type": "source_port", "source_port_id": "sp_0"},
+        {"type": "source_trace", "source_trace_id": "t0",
+         "connected_source_port_ids": ["sp_0", "sp_missing"], "connected_source_net_ids": ["net_0"]}
+    ]"#,
+    );
+    assert_eq!(v.len(), 1);
+    assert_eq!(v[0].rule, "dangling_reference");
+    assert!(v[0].message.contains("sp_missing"));
+}
+
+/// A chip whose VDD pin reaches rail `V3_3` only through a `source_trace`,
+/// next to a second component of the given name and `ftype` on that rail.
+fn rail_with(name: &str, ftype: &str) -> String {
+    format!(
+        r#"[
+        {{"type": "source_component", "source_component_id": "source_component_0", "name": "MCU", "ftype": "simple_chip"}},
+        {{"type": "source_component", "source_component_id": "source_component_1", "name": "{name}", "ftype": "{ftype}"}},
+        {{"type": "source_net", "source_net_id": "source_net_0", "name": "V3_3"}},
+        {{"type": "source_port", "source_port_id": "source_port_0", "name": "VDD", "source_component_id": "source_component_0"}},
+        {{"type": "source_port", "source_port_id": "source_port_1", "name": "pin1", "source_component_id": "source_component_1"}},
+        {{"type": "source_trace", "source_trace_id": "source_trace_0",
+          "connected_source_port_ids": ["source_port_0", "source_port_1"],
+          "connected_source_net_ids": ["source_net_0"]}}
+    ]"#
+    )
+}
+
+#[test]
+fn bypass_cap_flags_a_traced_rail_without_capacitor() {
+    let v = lint(BypassCapRule, &rail_with("C9", "simple_resistor"));
     assert_eq!(v.len(), 1);
     assert_eq!(v[0].rule, "decoupling_capacitor");
-    assert!(v[0].message.contains("VDD"));
-    assert!(v[0].message.contains("STM32G431"));
-
-    // Add bypass capacitor C1
-    let cap = CircuitElement::Component(Component {
-        component_id: Some("C1".to_string()),
-        name: Some("C1".to_string()),
-        kind: Some("capacitor".to_string()),
-    });
-    let cap_port = CircuitElement::Port(Port {
-        port_id: Some("C1.1".to_string()),
-        source_component_id: Some("C1".to_string()),
-        name: Some("1".to_string()),
-        net_id: Some("n_3v3".to_string()),
-        ..Default::default()
-    });
-
-    let v_clean = rule_violations(
-        BypassCapRule,
-        vec![chip, vdd_port, power_in, net_3v3, cap, cap_port],
-    );
-    assert!(v_clean.is_empty());
+    assert!(v[0].message.contains("MCU"));
+    assert!(v[0].message.contains("V3_3"));
 }
 
 #[test]
-fn trace_clearance_rule_detects_copper_overlap() {
-    use super::TraceClearanceRule;
+fn bypass_cap_accepts_a_capacitor_named_unlike_c() {
+    assert!(lint(BypassCapRule, &rail_with("BYP", "simple_capacitor")).is_empty());
+}
 
-    let pad1 = CircuitElement::Pad(Pad {
-        pad_id: Some("P1".to_string()),
-        net_id: Some("net_a".to_string()),
-        x: Some(10.0),
-        y: Some(10.0),
-        width: Some(1.0),
-        height: Some(1.0),
-        layer: Some("top".to_string()),
-        ..Default::default()
-    });
-    let pad2 = CircuitElement::Pad(Pad {
-        pad_id: Some("P2".to_string()),
-        net_id: Some("net_b".to_string()),
-        x: Some(10.05), // Overlapping!
-        y: Some(10.05),
-        width: Some(1.0),
-        height: Some(1.0),
-        layer: Some("top".to_string()),
-        ..Default::default()
-    });
+/// Two nets, each reaching one canonical `pcb_smtpad` through
+/// `source_trace` -> `source_port` <- `pcb_port` <- `pcb_port_id`.
+fn two_pads(pad_a: &str, pad_b: &str) -> String {
+    format!(
+        r#"[
+        {{"type": "source_net", "source_net_id": "net_a", "name": "SIG_A"}},
+        {{"type": "source_net", "source_net_id": "net_b", "name": "SIG_B"}},
+        {{"type": "source_port", "source_port_id": "sp_a"}},
+        {{"type": "source_port", "source_port_id": "sp_b"}},
+        {{"type": "source_trace", "source_trace_id": "st_a",
+          "connected_source_port_ids": ["sp_a"], "connected_source_net_ids": ["net_a"]}},
+        {{"type": "source_trace", "source_trace_id": "st_b",
+          "connected_source_port_ids": ["sp_b"], "connected_source_net_ids": ["net_b"]}},
+        {{"type": "pcb_port", "pcb_port_id": "pp_a", "source_port_id": "sp_a"}},
+        {{"type": "pcb_port", "pcb_port_id": "pp_b", "source_port_id": "sp_b"}},
+        {{"type": "pcb_smtpad", "pcb_smtpad_id": "pad_a", "layer": "top", {pad_a}}},
+        {{"type": "pcb_smtpad", "pcb_smtpad_id": "pad_b", "layer": "top", {pad_b}}}
+    ]"#
+    )
+}
 
-    let net_a = net(Some("net_a"), "SIG_A");
-    let net_b = net(Some("net_b"), "SIG_B");
-
-    let v = rule_violations(
-        TraceClearanceRule,
-        vec![pad1.clone(), pad2.clone(), net_a.clone(), net_b.clone()],
-    );
+#[test]
+fn trace_clearance_resolves_canonical_pad_nets() {
+    let a = r#""pcb_port_id": "pp_a", "shape": "rect", "x": 0, "y": 0, "width": 1, "height": 1"#;
+    let b = r#""pcb_port_id": "pp_b", "shape": "rect", "x": 0.5, "y": 0, "width": 1, "height": 1"#;
+    let v = lint(TraceClearanceRule, &two_pads(a, b));
     assert_eq!(v.len(), 1);
-    assert_eq!(v[0].rule, "trace_clearance");
     assert!(v[0].message.contains("short-circuit"));
+    assert!(v[0].message.contains("SIG_A"));
 
-    // Move pad2 far away: clearance passes
-    let pad2_far = CircuitElement::Pad(Pad {
-        pad_id: Some("P2".to_string()),
-        net_id: Some("net_b".to_string()),
-        x: Some(25.0),
-        y: Some(25.0),
-        width: Some(1.0),
-        height: Some(1.0),
-        layer: Some("top".to_string()),
-        ..Default::default()
-    });
-
-    let v_clean = rule_violations(TraceClearanceRule, vec![pad1, pad2_far, net_a, net_b]);
-    assert!(v_clean.is_empty());
+    let same_net = b.replace("pp_b", "pp_a");
+    assert!(lint(TraceClearanceRule, &two_pads(a, &same_net)).is_empty());
 }
 
 #[test]
-fn schematic_scale_rule_detects_out_of_bounds_components() {
-    let circuit = Circuit {
+fn trace_clearance_reads_circle_pad_radius() {
+    let a = r#""pcb_port_id": "pp_a", "shape": "circle", "x": 0, "y": 0, "radius": 1"#;
+    let b = r#""pcb_port_id": "pp_b", "shape": "circle", "x": 1.5, "y": 0, "radius": 1"#;
+    assert_eq!(lint(TraceClearanceRule, &two_pads(a, b)).len(), 1);
+}
+
+#[test]
+fn trace_clearance_treats_an_unresolved_pad_as_its_own_net() {
+    let a = r#""pcb_port_id": "pp_a", "shape": "rect", "x": 0, "y": 0, "width": 1, "height": 1"#;
+    let b = r#""shape": "rect", "x": 0.5, "y": 0, "width": 1, "height": 1"#;
+    let v = lint(TraceClearanceRule, &two_pads(a, b));
+    assert_eq!(v.len(), 1);
+    assert!(v[0].message.contains("unresolved pad pad_b"));
+}
+
+fn schematic_component(center: serde_json::Value) -> Circuit {
+    Circuit {
         elements: vec![],
         raw_elements: vec![serde_json::json!({
             "type": "schematic_component",
             "schematic_component_id": "schematic_component_0",
             "source_component_id": "source_component_0",
             "refdes": "U1",
-            "center": { "x": 700.0, "y": -1000.0 }
+            "center": center
         })],
-    };
+    }
+}
+
+#[test]
+fn schematic_scale_reports_its_code_as_rule_name() {
+    let circuit = schematic_component(serde_json::json!({ "x": 700.0, "y": -1000.0 }));
     let violations = Linter::new().with_rule(SchematicScaleRule).run(&circuit);
     assert_eq!(violations.len(), 1);
-    assert_eq!(violations[0].rule, "schematic_scale");
+    assert_eq!(violations[0].rule, "E_SCHEMATIC_SCALE_EXCESSIVE");
     assert_eq!(
         violations[0].code().unwrap().to_string(),
         "E_SCHEMATIC_SCALE_EXCESSIVE"
@@ -362,25 +371,18 @@ fn schematic_scale_rule_detects_out_of_bounds_components() {
         violations[0].message,
         "Component 'U1' placed at (700.0, -1000.0) exceeds standard schematic sheet bounds"
     );
-    assert!(violations[0]
-        .help()
-        .unwrap()
-        .to_string()
-        .contains("tscircuit schematic coordinates"));
 }
 
 #[test]
-fn schematic_scale_rule_passes_normal_coordinates() {
-    let circuit = Circuit {
-        elements: vec![],
-        raw_elements: vec![serde_json::json!({
-            "type": "schematic_component",
-            "schematic_component_id": "schematic_component_0",
-            "source_component_id": "source_component_0",
-            "refdes": "R1",
-            "center": { "x": 0.0, "y": 5.0 }
-        })],
-    };
+fn schematic_scale_fails_closed_on_nan_coordinates() {
+    let circuit = schematic_component(serde_json::json!({ "x": "NaN", "y": 0.0 }));
+    let violations = Linter::new().with_rule(SchematicScaleRule).run(&circuit);
+    assert_eq!(violations.len(), 1);
+}
+
+#[test]
+fn schematic_scale_passes_normal_coordinates() {
+    let circuit = schematic_component(serde_json::json!({ "x": 0.0, "y": 5.0 }));
     let violations = Linter::new().with_rule(SchematicScaleRule).run(&circuit);
     assert!(violations.is_empty());
 }

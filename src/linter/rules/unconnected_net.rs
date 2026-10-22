@@ -24,7 +24,7 @@ impl Rule for UnconnectedNetRule {
                 message: format!(
                     "net \"{}\" has only {} connection(s) (minimum {MIN_CONNECTIONS}): it is floating",
                     net.display_name(),
-                    net.endpoint_count()
+                    net.endpoints.len()
                 ),
                 help: Some(
                     "every net must connect at least two pads/ports — complete the routing in tscircuit"
