@@ -1,5 +1,53 @@
 //! Central database of microcontroller silicon targets.
 
+/// Builds a `MuxFunction` table entry.
+macro_rules! mux {
+    ($sig:expr, $af:expr, $name:expr) => {
+        $crate::silicon::model::MuxFunction {
+            signal: $sig,
+            af_number: $af,
+            af_name: $name,
+        }
+    };
+}
+
+/// Builds a `PinSpec` for a numbered GPIO, with an
+/// optional strapping requirement.
+macro_rules! gpio_pin {
+    ($n:expr, $name:expr, $caps:expr, $funcs:expr) => {
+        $crate::silicon::model::PinSpec {
+            gpio: Some($crate::silicon::model::GpioNum($n)),
+            name: $name,
+            capabilities: $caps,
+            strapping: None,
+            functions: $funcs,
+        }
+    };
+    ($n:expr, $name:expr, $caps:expr, $funcs:expr, $strap:expr) => {
+        $crate::silicon::model::PinSpec {
+            gpio: Some($crate::silicon::model::GpioNum($n)),
+            name: $name,
+            capabilities: $caps,
+            strapping: Some($strap),
+            functions: $funcs,
+        }
+    };
+}
+
+/// Builds a `PinSpec` for a port/pin designator
+/// without a GPIO number.
+macro_rules! port_pin {
+    ($name:expr, $caps:expr, $funcs:expr) => {
+        $crate::silicon::model::PinSpec {
+            gpio: None,
+            name: $name,
+            capabilities: $caps,
+            strapping: None,
+            functions: $funcs,
+        }
+    };
+}
+
 pub mod esp32s3;
 pub mod rp2040;
 pub mod stm32;

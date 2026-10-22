@@ -52,8 +52,15 @@ pub fn validate_pin_assignments(
     target: &SiliconTarget,
     assignments: &[AssignedPin],
 ) -> Vec<PinConflict> {
-    let mut conflicts = Vec::new();
+    let mut conflicts = pin_collisions(assignments);
+    for a in assignments {
+        check_assignment(target, a, &mut conflicts);
+    }
+    conflicts
+}
 
+/// One [`PinConflict::PinCollision`] per pin carrying distinct signals, in pin order.
+fn pin_collisions(assignments: &[AssignedPin]) -> Vec<PinConflict> {
     let mut pin_to_signals: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
     for a in assignments {
         pin_to_signals
@@ -61,65 +68,61 @@ pub fn validate_pin_assignments(
             .or_default()
             .push(&a.signal_name);
     }
-
-    for (pin_name, signals) in pin_to_signals {
-        let mut unique_signals = signals.clone();
-        unique_signals.sort();
-        unique_signals.dedup();
-        if unique_signals.len() > 1 {
-            conflicts.push(PinConflict::PinCollision {
+    pin_to_signals
+        .into_iter()
+        .filter_map(|(pin_name, mut signals)| {
+            signals.sort();
+            signals.dedup();
+            (signals.len() > 1).then(|| PinConflict::PinCollision {
                 pin_name: pin_name.to_string(),
-                signals: unique_signals.into_iter().map(str::to_string).collect(),
-            });
-        }
+                signals: signals.into_iter().map(str::to_string).collect(),
+            })
+        })
+        .collect()
+}
+
+fn check_assignment(target: &SiliconTarget, a: &AssignedPin, conflicts: &mut Vec<PinConflict>) {
+    let Some(pin_spec) = target.find_pin(&a.pin_name) else {
+        conflicts.push(PinConflict::UnknownPin {
+            pin_name: a.pin_name.clone(),
+            chip_name: target.name,
+        });
+        return;
+    };
+    if pin_spec.capabilities.is_reserved_flash {
+        conflicts.push(PinConflict::ReservedPinUsed {
+            pin_name: a.pin_name.clone(),
+            reason: "pin is permanently allocated to internal high-speed Flash/PSRAM bus",
+        });
+        return;
     }
-
-    for a in assignments {
-        let pin_spec = match target.find_pin(&a.pin_name) {
-            Some(spec) => spec,
-            None => {
-                conflicts.push(PinConflict::UnknownPin {
-                    pin_name: a.pin_name.clone(),
-                    chip_name: target.name,
-                });
-                continue;
-            }
-        };
-
-        if pin_spec.capabilities.is_reserved_flash {
-            conflicts.push(PinConflict::ReservedPinUsed {
-                pin_name: a.pin_name.clone(),
-                reason: "pin is permanently allocated to internal high-speed Flash/PSRAM bus",
-            });
-            continue;
-        }
-
-        if let Some(req) = pin_spec.strapping {
-            if violates_strapping(&req, a) {
-                conflicts.push(PinConflict::StrappingConflict {
-                    pin_name: a.pin_name.clone(),
-                    requirement: req,
-                    net_name: a.net_name.clone(),
-                });
-            }
-        }
-
-        if let Some(sig) =
-            PeripheralSignal::parse(&a.signal_name).or_else(|| PeripheralSignal::parse(&a.net_name))
-        {
-            if !pin_spec.functions.is_empty() && !pin_spec.supports_signal(&sig) {
-                let alternatives = target.find_valid_pins_for_signal(&sig);
-                conflicts.push(PinConflict::UnsupportedFunction {
-                    pin_name: a.pin_name.clone(),
-                    signal: sig,
-                    chip_name: target.name,
-                    valid_alternatives: alternatives,
-                });
-            }
-        }
+    if let Some(req) = pin_spec.strapping.filter(|req| violates_strapping(req, a)) {
+        conflicts.push(PinConflict::StrappingConflict {
+            pin_name: a.pin_name.clone(),
+            requirement: req,
+            net_name: a.net_name.clone(),
+        });
     }
+    conflicts.extend(unsupported_function(target, pin_spec, a));
+}
 
-    conflicts
+/// The AF conflict when the pin has a mux table that lacks the assigned signal.
+fn unsupported_function(
+    target: &SiliconTarget,
+    pin_spec: &PinSpec,
+    a: &AssignedPin,
+) -> Option<PinConflict> {
+    let sig =
+        PeripheralSignal::parse(&a.signal_name).or_else(|| PeripheralSignal::parse(&a.net_name))?;
+    if pin_spec.functions.is_empty() || pin_spec.supports_signal(&sig) {
+        return None;
+    }
+    Some(PinConflict::UnsupportedFunction {
+        pin_name: a.pin_name.clone(),
+        valid_alternatives: target.find_valid_pins_for_signal(&sig),
+        signal: sig,
+        chip_name: target.name,
+    })
 }
 
 /// True when the assigned load contradicts the pin's reset-time strapping level.

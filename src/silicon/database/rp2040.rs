@@ -1,18 +1,8 @@
 //! Raspberry Pi RP2040 Function Select (F1-F9) and ADC silicon tables.
 
 use crate::silicon::model::{
-    GpioNum, MuxFunction, PeripheralSignal, PinCapabilities, PinSpec, SiliconTarget,
+    MuxFunction, PeripheralSignal, PinCapabilities, PinSpec, SiliconTarget,
 };
-
-macro_rules! mux {
-    ($sig:expr, $af:expr, $name:expr) => {
-        MuxFunction {
-            signal: $sig,
-            af_number: $af,
-            af_name: $name,
-        }
-    };
-}
 
 const RP_GPIO_CAP: PinCapabilities = PinCapabilities {
     is_gpio: true,
@@ -207,188 +197,32 @@ static GP29_FUNCS: &[MuxFunction] = &[
 ];
 
 pub static RP2040_PINS: &[PinSpec] = &[
-    PinSpec {
-        gpio: Some(GpioNum(0)),
-        name: "GPIO0",
-        capabilities: RP_GPIO_CAP,
-        strapping: None,
-        functions: GP0_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(1)),
-        name: "GPIO1",
-        capabilities: RP_GPIO_CAP,
-        strapping: None,
-        functions: GP1_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(2)),
-        name: "GPIO2",
-        capabilities: RP_GPIO_CAP,
-        strapping: None,
-        functions: GP2_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(3)),
-        name: "GPIO3",
-        capabilities: RP_GPIO_CAP,
-        strapping: None,
-        functions: GP3_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(4)),
-        name: "GPIO4",
-        capabilities: RP_GPIO_CAP,
-        strapping: None,
-        functions: GP4_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(5)),
-        name: "GPIO5",
-        capabilities: RP_GPIO_CAP,
-        strapping: None,
-        functions: GP5_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(6)),
-        name: "GPIO6",
-        capabilities: RP_GPIO_CAP,
-        strapping: None,
-        functions: GP6_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(7)),
-        name: "GPIO7",
-        capabilities: RP_GPIO_CAP,
-        strapping: None,
-        functions: GP7_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(8)),
-        name: "GPIO8",
-        capabilities: RP_GPIO_CAP,
-        strapping: None,
-        functions: GP8_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(9)),
-        name: "GPIO9",
-        capabilities: RP_GPIO_CAP,
-        strapping: None,
-        functions: GP9_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(10)),
-        name: "GPIO10",
-        capabilities: RP_GPIO_CAP,
-        strapping: None,
-        functions: GP10_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(11)),
-        name: "GPIO11",
-        capabilities: RP_GPIO_CAP,
-        strapping: None,
-        functions: GP11_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(12)),
-        name: "GPIO12",
-        capabilities: RP_GPIO_CAP,
-        strapping: None,
-        functions: GP12_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(13)),
-        name: "GPIO13",
-        capabilities: RP_GPIO_CAP,
-        strapping: None,
-        functions: GP13_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(14)),
-        name: "GPIO14",
-        capabilities: RP_GPIO_CAP,
-        strapping: None,
-        functions: GP14_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(15)),
-        name: "GPIO15",
-        capabilities: RP_GPIO_CAP,
-        strapping: None,
-        functions: GP15_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(16)),
-        name: "GPIO16",
-        capabilities: RP_GPIO_CAP,
-        strapping: None,
-        functions: GP16_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(17)),
-        name: "GPIO17",
-        capabilities: RP_GPIO_CAP,
-        strapping: None,
-        functions: GP17_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(18)),
-        name: "GPIO18",
-        capabilities: RP_GPIO_CAP,
-        strapping: None,
-        functions: GP18_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(19)),
-        name: "GPIO19",
-        capabilities: RP_GPIO_CAP,
-        strapping: None,
-        functions: GP19_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(20)),
-        name: "GPIO20",
-        capabilities: RP_GPIO_CAP,
-        strapping: None,
-        functions: GP20_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(21)),
-        name: "GPIO21",
-        capabilities: RP_GPIO_CAP,
-        strapping: None,
-        functions: GP21_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(26)),
-        name: "GPIO26",
-        capabilities: RP_ADC_CAP,
-        strapping: None,
-        functions: GP26_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(27)),
-        name: "GPIO27",
-        capabilities: RP_ADC_CAP,
-        strapping: None,
-        functions: GP27_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(28)),
-        name: "GPIO28",
-        capabilities: RP_ADC_CAP,
-        strapping: None,
-        functions: GP28_FUNCS,
-    },
-    PinSpec {
-        gpio: Some(GpioNum(29)),
-        name: "GPIO29",
-        capabilities: RP_ADC_CAP,
-        strapping: None,
-        functions: GP29_FUNCS,
-    },
+    gpio_pin!(0, "GPIO0", RP_GPIO_CAP, GP0_FUNCS),
+    gpio_pin!(1, "GPIO1", RP_GPIO_CAP, GP1_FUNCS),
+    gpio_pin!(2, "GPIO2", RP_GPIO_CAP, GP2_FUNCS),
+    gpio_pin!(3, "GPIO3", RP_GPIO_CAP, GP3_FUNCS),
+    gpio_pin!(4, "GPIO4", RP_GPIO_CAP, GP4_FUNCS),
+    gpio_pin!(5, "GPIO5", RP_GPIO_CAP, GP5_FUNCS),
+    gpio_pin!(6, "GPIO6", RP_GPIO_CAP, GP6_FUNCS),
+    gpio_pin!(7, "GPIO7", RP_GPIO_CAP, GP7_FUNCS),
+    gpio_pin!(8, "GPIO8", RP_GPIO_CAP, GP8_FUNCS),
+    gpio_pin!(9, "GPIO9", RP_GPIO_CAP, GP9_FUNCS),
+    gpio_pin!(10, "GPIO10", RP_GPIO_CAP, GP10_FUNCS),
+    gpio_pin!(11, "GPIO11", RP_GPIO_CAP, GP11_FUNCS),
+    gpio_pin!(12, "GPIO12", RP_GPIO_CAP, GP12_FUNCS),
+    gpio_pin!(13, "GPIO13", RP_GPIO_CAP, GP13_FUNCS),
+    gpio_pin!(14, "GPIO14", RP_GPIO_CAP, GP14_FUNCS),
+    gpio_pin!(15, "GPIO15", RP_GPIO_CAP, GP15_FUNCS),
+    gpio_pin!(16, "GPIO16", RP_GPIO_CAP, GP16_FUNCS),
+    gpio_pin!(17, "GPIO17", RP_GPIO_CAP, GP17_FUNCS),
+    gpio_pin!(18, "GPIO18", RP_GPIO_CAP, GP18_FUNCS),
+    gpio_pin!(19, "GPIO19", RP_GPIO_CAP, GP19_FUNCS),
+    gpio_pin!(20, "GPIO20", RP_GPIO_CAP, GP20_FUNCS),
+    gpio_pin!(21, "GPIO21", RP_GPIO_CAP, GP21_FUNCS),
+    gpio_pin!(26, "GPIO26", RP_ADC_CAP, GP26_FUNCS),
+    gpio_pin!(27, "GPIO27", RP_ADC_CAP, GP27_FUNCS),
+    gpio_pin!(28, "GPIO28", RP_ADC_CAP, GP28_FUNCS),
+    gpio_pin!(29, "GPIO29", RP_ADC_CAP, GP29_FUNCS),
 ];
 
 pub static RP2040: SiliconTarget = SiliconTarget {
