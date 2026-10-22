@@ -29,9 +29,9 @@ fn floating_net() -> Circuit {
     }
 }
 
+/// `new()` is the isolation hatch: nothing runs unless it was added.
 #[test]
 fn new_starts_with_no_rules() {
-    // `new()` is the isolation hatch: nothing runs unless it was added.
     let violations = Linter::new().run(&floating_net());
     assert!(
         violations.is_empty(),
@@ -57,11 +57,11 @@ fn with_rule_appends_to_an_empty_linter() {
     assert_eq!(violations[0].rule, "unconnected_net");
 }
 
+/// One violation per rule, in the order `default()` registers them:
+/// unconnected (identified floating net), malformed (net with no id),
+/// ghost (port pointing at an undefined net).
 #[test]
 fn rules_run_in_registration_order() {
-    // One violation per rule, in the order `default()` registers them:
-    // unconnected (identified floating net), malformed (net with no id),
-    // ghost (port pointing at an undefined net).
     let circuit = Circuit {
         elements: vec![
             CircuitElement::Net(Net {
