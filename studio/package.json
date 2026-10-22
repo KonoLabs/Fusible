@@ -18,7 +18,9 @@
     "circuit-to-svg": "^0.0.450",
     "iconify-icon": "^3.0.4",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "three": "^0.165.0",
+    "three-stdlib": "^2.36.1"
   },
   "devDependencies": {
     "@types/bun": "latest",
