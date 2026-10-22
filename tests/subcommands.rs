@@ -223,8 +223,14 @@ fn subcommand_export_rejects_unknown_preset() {
 fn subcommand_route_dry_run_on_routable_circuit() {
     let fixture = TestDir::new("subcmd_route");
     let circuit = r#"[
-        { "type": "pcb_smtpad", "x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0, "layer": "top", "net_id": "GND" },
-        { "type": "pcb_smtpad", "x": 10.0, "y": 0.0, "width": 1.0, "height": 1.0, "layer": "top", "net_id": "GND" }
+        { "type": "pcb_board", "width": 30.0, "height": 10.0, "center": { "x": 5.0, "y": 0.0 } },
+        { "type": "source_port", "source_port_id": "sp1", "name": "1" },
+        { "type": "source_port", "source_port_id": "sp2", "name": "2" },
+        { "type": "source_trace", "source_trace_id": "st1", "connected_source_port_ids": ["sp1", "sp2"], "connected_source_net_ids": [] },
+        { "type": "pcb_port", "pcb_port_id": "pp1", "source_port_id": "sp1", "x": 0.0, "y": 0.0 },
+        { "type": "pcb_port", "pcb_port_id": "pp2", "source_port_id": "sp2", "x": 10.0, "y": 0.0 },
+        { "type": "pcb_smtpad", "pcb_port_id": "pp1", "shape": "rect", "x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0, "layer": "top" },
+        { "type": "pcb_smtpad", "pcb_port_id": "pp2", "shape": "rect", "x": 10.0, "y": 0.0, "width": 1.0, "height": 1.0, "layer": "top" }
     ]"#;
     let json_file = fixture.path.join("circuit.json");
     std::fs::write(&json_file, circuit).unwrap();
