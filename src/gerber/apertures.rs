@@ -3,12 +3,51 @@
 use std::collections::HashMap;
 use std::fmt::Write as FmtWrite;
 
+use crate::gerber::coordinates::Coord;
+
 /// Aperture geometry types supported in RS-274X standard template definitions.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Aperture {
     Circle { diameter_nm: i64 },
     Rectangle { width_nm: i64, height_nm: i64 },
     Obround { width_nm: i64, height_nm: i64 },
+}
+
+impl Aperture {
+    /// Builds a circle aperture, rejecting non-positive or non-finite diameters.
+    pub fn circle(diameter_mm: f64) -> Result<Self, String> {
+        Ok(Self::Circle {
+            diameter_nm: size_nm(diameter_mm)?,
+        })
+    }
+
+    /// Builds a rectangle aperture, rejecting non-positive or non-finite sizes.
+    pub fn rectangle(width_mm: f64, height_mm: f64) -> Result<Self, String> {
+        Ok(Self::Rectangle {
+            width_nm: size_nm(width_mm)?,
+            height_nm: size_nm(height_mm)?,
+        })
+    }
+
+    /// Builds an obround aperture, rejecting non-positive or non-finite sizes.
+    pub fn obround(width_mm: f64, height_mm: f64) -> Result<Self, String> {
+        Ok(Self::Obround {
+            width_nm: size_nm(width_mm)?,
+            height_nm: size_nm(height_mm)?,
+        })
+    }
+}
+
+/// Rounds a millimeter size to whole nanometers and rejects anything that is not strictly positive.
+fn size_nm(mm: f64) -> Result<i64, String> {
+    if !mm.is_finite() {
+        return Err(format!("aperture size {mm} is not a finite number"));
+    }
+    let nm = Coord::from_mm(mm).0;
+    if nm <= 0 {
+        return Err(format!("aperture size {mm} mm must be positive"));
+    }
+    Ok(nm)
 }
 
 /// An aperture dictionary that allocates contiguous D-codes starting at D10.

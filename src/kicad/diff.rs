@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use serde_json::Value;
 
@@ -37,32 +37,7 @@ pub struct DiffReport {
 
 pub fn compare_kicad_with_circuit(kicad_fps: &[KicadFootprint], circuit_json: &str) -> DiffReport {
     let elements: Vec<Value> = serde_json::from_str(circuit_json).unwrap_or_default();
-    let mut current_map: HashMap<String, ([f64; 2], f64, String)> = HashMap::new();
-
-    for el in &elements {
-        let typ = el.get("type").and_then(|t| t.as_str()).unwrap_or("");
-        if typ == "pcb_smtpad" || typ == "source_component" {
-            let name = el
-                .get("name")
-                .or_else(|| el.get("component_id"))
-                .and_then(|v| v.as_str());
-
-            if let Some(des) = name {
-                let x = el.get("x").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                let y = el.get("y").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                let rot = el.get("rotation").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                let layer = el
-                    .get("layer")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("top")
-                    .to_string();
-
-                current_map
-                    .entry(des.to_string())
-                    .or_insert(([x, y], rot, layer));
-            }
-        }
-    }
+    let current_map = current_placements(&elements);
 
     let mut common_count = 0;
     let mut sum_kicad_x = 0.0;
@@ -91,7 +66,7 @@ pub fn compare_kicad_with_circuit(kicad_fps: &[KicadFootprint], circuit_json: &s
     };
 
     let mut diffs = Vec::new();
-    let mut seen_designators = std::collections::HashSet::new();
+    let mut seen_designators = BTreeSet::new();
 
     let mut modified_count = 0;
     let mut unmatched_count = 0;
@@ -105,10 +80,10 @@ pub fn compare_kicad_with_circuit(kicad_fps: &[KicadFootprint], circuit_json: &s
         if let Some(&(cur_p, cur_rot, ref cur_layer)) = current_map.get(&fp.designator) {
             let dx = norm_x - cur_p[0];
             let dy = norm_y - cur_p[1];
-            let d_rot = (fp.rotation - cur_rot).abs();
+            let d_rot = rotation_delta(fp.rotation, cur_rot);
 
             let is_moved = dx.abs() > 0.1 || dy.abs() > 0.1;
-            let is_rotated = d_rot > 0.5 && (d_rot - 360.0).abs() > 0.5;
+            let is_rotated = d_rot.abs() > 0.5;
             let is_flipped = !fp.layer.eq_ignore_ascii_case(cur_layer);
 
             let kind = if is_flipped {
@@ -171,6 +146,7 @@ pub fn compare_kicad_with_circuit(kicad_fps: &[KicadFootprint], circuit_json: &s
         }
     }
 
+    diffs.sort_by(|a, b| a.designator.cmp(&b.designator));
     let has_drift = modified_count > 0 || unmatched_count > 0;
 
     DiffReport {
@@ -179,6 +155,54 @@ pub fn compare_kicad_with_circuit(kicad_fps: &[KicadFootprint], circuit_json: &s
         unmatched_count,
         unchanged_count,
         has_drift,
+    }
+}
+
+/// Collects each placed component's designator, center, rotation and layer by joining `pcb_component` to its `source_component`.
+fn current_placements(elements: &[Value]) -> BTreeMap<String, ([f64; 2], f64, String)> {
+    let str_field = |el: &Value, key: &str| el.get(key).and_then(Value::as_str).map(str::to_owned);
+    let names: BTreeMap<String, String> = elements
+        .iter()
+        .filter(|el| el.get("type").and_then(Value::as_str) == Some("source_component"))
+        .filter_map(|el| {
+            Some((
+                str_field(el, "source_component_id")?,
+                str_field(el, "name")?,
+            ))
+        })
+        .collect();
+
+    let mut placements = BTreeMap::new();
+    for el in elements {
+        if el.get("type").and_then(Value::as_str) != Some("pcb_component") {
+            continue;
+        }
+        let Some(name) = str_field(el, "source_component_id").and_then(|id| names.get(&id)) else {
+            continue;
+        };
+        let center = el.get("center");
+        let coord = |axis: &str| {
+            center
+                .and_then(|c| c.get(axis))
+                .and_then(Value::as_f64)
+                .unwrap_or(0.0)
+        };
+        let rot = el.get("rotation").and_then(Value::as_f64).unwrap_or(0.0);
+        let layer = str_field(el, "layer").unwrap_or_else(|| "top".to_string());
+        placements
+            .entry(name.clone())
+            .or_insert(([coord("x"), coord("y")], rot, layer));
+    }
+    placements
+}
+
+/// Returns the signed rotation difference `to - from` normalized into (-180, 180] degrees.
+fn rotation_delta(to: f64, from: f64) -> f64 {
+    let d = (to - from).rem_euclid(360.0);
+    if d > 180.0 {
+        d - 360.0
+    } else {
+        d
     }
 }
 

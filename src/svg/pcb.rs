@@ -92,17 +92,8 @@ fn calculate_bounds(model: &PcbModel) -> (f64, f64, f64, f64) {
         }
     };
 
-    for b in &model.boards {
-        if let Some(ref outline) = b.outline {
-            for pt in outline {
-                update(pt.x, -pt.y);
-            }
-        } else if let (Some(w), Some(h)) = (b.width, b.height) {
-            let cx = b.center.map(|c| c.x).unwrap_or(0.0);
-            let cy = b.center.map(|c| c.y).unwrap_or(0.0);
-            update(cx - w / 2.0, -(cy + h / 2.0));
-            update(cx + w / 2.0, -(cy - h / 2.0));
-        }
+    for pt in model.boards.iter().flat_map(PcbBoardElm::outline_points) {
+        update(pt.x, -pt.y);
     }
 
     for p in &model.smt_pads {
@@ -144,30 +135,21 @@ fn render_substrate(
     }
 
     for b in boards {
-        if let Some(ref outline) = b.outline {
-            if outline.len() >= 3 {
-                let mut d = String::new();
-                for (i, pt) in outline.iter().enumerate() {
-                    let cmd = if i == 0 { "M" } else { "L" };
-                    d.push_str(&format!("{cmd} {:.3} {:.3} ", pt.x, -pt.y));
-                }
-                d.push('Z');
-                writer.path(
-                    &d,
-                    DEFAULT_PALETTE.substrate,
-                    Some((DEFAULT_PALETTE.board_edge, 0.4)),
-                );
-            }
-        } else if let (Some(w), Some(h)) = (b.width, b.height) {
-            let cx = b.center.map(|c| c.x).unwrap_or(0.0);
-            let cy = b.center.map(|c| c.y).unwrap_or(0.0);
-            writer.rounded_rect(
-                [cx - w / 2.0, -(cy + h / 2.0), w, h],
-                1.5,
-                DEFAULT_PALETTE.substrate,
-                Some((DEFAULT_PALETTE.board_edge, 0.4)),
-            );
+        let outline = b.outline_points();
+        if outline.len() < 3 {
+            continue;
         }
+        let mut d = String::new();
+        for (i, pt) in outline.iter().enumerate() {
+            let cmd = if i == 0 { "M" } else { "L" };
+            d.push_str(&format!("{cmd} {:.3} {:.3} ", pt.x, -pt.y));
+        }
+        d.push('Z');
+        writer.path(
+            &d,
+            DEFAULT_PALETTE.substrate,
+            Some((DEFAULT_PALETTE.board_edge, 0.4)),
+        );
     }
 }
 

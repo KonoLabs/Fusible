@@ -34,9 +34,9 @@ pub fn apply_kicad_sync(
 
             for p in placements.iter_mut() {
                 if p.get("selector").and_then(|s| s.as_str()) == Some(selector) {
-                    if let Some(center) = p.get_mut("center") {
-                        center["x"] = json!(pos[0]);
-                        center["y"] = json!(pos[1]);
+                    if let Some(center) = p.get_mut("center").and_then(Value::as_object_mut) {
+                        center.insert("x".to_string(), json!(pos[0]));
+                        center.insert("y".to_string(), json!(pos[1]));
                     } else {
                         p["center"] = json!({ "x": pos[0], "y": pos[1] });
                     }

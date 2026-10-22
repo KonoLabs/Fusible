@@ -85,7 +85,8 @@ pub fn run(
             "📦 Generating native RS-274X gerbers to {}...",
             dest.display()
         );
-        let files = crate::gerber::generate_gerber_files(&circuit_json, &board_title);
+        let files = crate::gerber::generate_gerber_files(&circuit_json, &board_title)
+            .map_err(std::io::Error::from)?;
         let zip_bytes = crate::gerber::create_gerber_zip(&files)?;
         std::fs::write(&dest, zip_bytes)?;
         println!("✅ Successfully exported gerbers to {}!", dest.display());

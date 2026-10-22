@@ -5,6 +5,22 @@ use std::fmt::Write as FmtWrite;
 use crate::gerber::apertures::ApertureDictionary;
 use crate::gerber::coordinates::Coord;
 
+/// Image polarity declared by the `.FilePolarity` attribute (Gerber spec 5.6.4).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FilePolarity {
+    Positive,
+    Negative,
+}
+
+impl FilePolarity {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Positive => "Positive",
+            Self::Negative => "Negative",
+        }
+    }
+}
+
 /// RS-274X command stream buffer writer.
 pub struct GerberWriter {
     buffer: String,
@@ -12,8 +28,13 @@ pub struct GerberWriter {
 }
 
 impl GerberWriter {
-    /// Initializes a new Gerber writer with standard header comments.
-    pub fn new(title: &str, file_function: &str, polarity_dark: bool) -> Self {
+    /// Writes the file header: format, unit, file attributes, aperture dictionary, dark polarity and linear plot state.
+    pub fn new(
+        title: &str,
+        file_function: &str,
+        polarity: FilePolarity,
+        apertures: &ApertureDictionary,
+    ) -> Self {
         let mut buffer = String::with_capacity(8192);
         let _ = writeln!(buffer, "G04 =========================================*");
         let _ = writeln!(buffer, "G04 Fusible Pure-Rust Gerber Generator       *");
@@ -23,22 +44,19 @@ impl GerberWriter {
         let _ = writeln!(buffer, "%MOMM*%");
         let _ = writeln!(
             buffer,
-            "{}",
-            if polarity_dark { "%LPD*%" } else { "%LPC*%" }
+            "%TF.GenerationSoftware,Fusible,Fusible,{}*%",
+            env!("CARGO_PKG_VERSION")
         );
-        let _ = writeln!(buffer, "%TF.GenerationSoftware,Fusible,0.3.1*%");
         let _ = writeln!(buffer, "%TF.FileFunction,{file_function}*%");
-        let _ = writeln!(buffer, "%TF.FilePolarity,Positive*%");
+        let _ = writeln!(buffer, "%TF.FilePolarity,{}*%", polarity.as_str());
+        apertures.write_definitions(&mut buffer);
+        let _ = writeln!(buffer, "%LPD*%");
+        let _ = writeln!(buffer, "G01*");
 
         Self {
             buffer,
             current_aperture: None,
         }
-    }
-
-    /// Appends the aperture dictionary definitions to the header.
-    pub fn write_apertures(&mut self, apertures: &ApertureDictionary) {
-        apertures.write_definitions(&mut self.buffer);
     }
 
     /// Selects an aperture if not already selected.
@@ -77,6 +95,20 @@ impl GerberWriter {
             x.format_gerber(),
             y.format_gerber()
         );
+    }
+
+    /// Emits a filled region (G36/G37) whose contour is closed back to its first vertex.
+    pub fn region(&mut self, points: &[[Coord; 2]]) {
+        let Some(&[fx, fy]) = points.first() else {
+            return;
+        };
+        let _ = writeln!(self.buffer, "G36*");
+        self.move_to(fx, fy);
+        for &[x, y] in &points[1..] {
+            self.draw_to(x, y);
+        }
+        self.draw_to(fx, fy);
+        let _ = writeln!(self.buffer, "G37*");
     }
 
     /// Terminates the file with M02* and returns the serialized Gerber string.

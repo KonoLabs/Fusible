@@ -32,7 +32,9 @@ pub fn render_schematic(circuit: &Circuit, netlist: &Netlist) -> String {
     let components: Vec<_> = circuit.components().collect();
 
     if components.is_empty() {
-        return String::new();
+        writer.start_svg(1.0, 1.0, 0.0, 0.0, 1.0, 1.0);
+        writer.end_svg();
+        return writer.finish();
     }
 
     let comp_w = 40.0;
