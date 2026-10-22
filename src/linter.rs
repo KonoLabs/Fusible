@@ -21,12 +21,9 @@ mod tests;
 pub use context::LintContext;
 pub use diagnostics::{Diagnostic, FuseBlown};
 pub use rules::{
-    BypassCapRule, GhostNetRule, MalformedElementRule, PinMuxRule, SchematicScaleRule,
-    TraceClearanceRule, UnconnectedNetRule,
+    BypassCapRule, DanglingReferenceRule, GhostNetRule, MalformedElementRule, PinMuxRule,
+    SchematicScaleRule, TraceClearanceRule, UnconnectedNetRule,
 };
-
-use crate::netlist::Netlist;
-use crate::parser::Circuit;
 
 // ---------------------------------------------------------------------------
 // Rule trait + Linter
@@ -61,9 +58,11 @@ impl Linter {
     }
 
     /// Runs every pass in registration order and concatenates their
-    /// diagnostics, automatically constructing the lowered netlist.
-    pub fn run(&self, circuit: &Circuit) -> Vec<Diagnostic> {
-        let netlist = Netlist::from_circuit(circuit);
+    /// diagnostics, automatically constructing the lowered netlist. Test-only:
+    /// commands build their own context with [`Self::run_with_context`].
+    #[cfg(test)]
+    pub fn run(&self, circuit: &crate::parser::Circuit) -> Vec<Diagnostic> {
+        let netlist = crate::netlist::Netlist::from_circuit(circuit);
         let ctx = LintContext::new(circuit, &netlist);
         self.run_with_context(&ctx)
     }
@@ -80,6 +79,7 @@ impl Default for Linter {
             .with_rule(UnconnectedNetRule)
             .with_rule(MalformedElementRule)
             .with_rule(GhostNetRule)
+            .with_rule(DanglingReferenceRule)
             .with_rule(PinMuxRule)
             .with_rule(BypassCapRule)
             .with_rule(TraceClearanceRule)

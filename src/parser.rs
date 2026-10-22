@@ -60,11 +60,6 @@
 //!
 //! The parse diagnostic (rustc-style label on the Serde position) lives in
 //! the `diagnostic` submodule: only the data model stays here.
-//!
-// The model is deliberately *partial*: Pad/Trace fields and a few others are
-// only consumed in phase 2 (pin-muxing, codegen). We neither dead-code them
-// away nor delete them early.
-#![allow(dead_code)]
 
 mod diagnostic;
 #[cfg(test)]
@@ -98,6 +93,9 @@ pub enum CircuitElement {
     /// A mount pad (physical solder surface on the PCB).
     #[serde(rename = "source_pad", alias = "pcb_smtpad")]
     Pad(Pad),
+    /// The PCB side of a port: links a pad to its `source_port`.
+    #[serde(rename = "pcb_port")]
+    PcbPort(PcbPort),
     /// A copper trace joining two ports.
     #[serde(rename = "source_trace")]
     Trace(Trace),
@@ -171,6 +169,9 @@ pub struct Pad {
     pub net_id: Option<String>,
     #[serde(default, alias = "source_port_id", alias = "port_id")]
     pub port_id: Option<String>,
+    /// Canonical `pcb_smtpad` link: `pcb_port_id` -> `pcb_port.source_port_id`.
+    #[serde(default, alias = "pcbPortId")]
+    pub pcb_port_id: Option<String>,
     #[serde(default)]
     pub x: Option<f64>,
     #[serde(default)]
@@ -179,8 +180,21 @@ pub struct Pad {
     pub width: Option<f64>,
     #[serde(default)]
     pub height: Option<f64>,
+    /// Circle pads carry a radius instead of width and height.
+    #[serde(default)]
+    pub radius: Option<f64>,
     #[serde(default)]
     pub layer: Option<String>,
+}
+
+/// The PCB side of a port.
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct PcbPort {
+    #[serde(alias = "pcbPortId")]
+    pub pcb_port_id: Option<String>,
+    /// The `source_port` this PCB port realizes.
+    #[serde(default, alias = "sourcePortId")]
+    pub source_port_id: Option<String>,
 }
 
 /// A copper trace.
@@ -258,6 +272,13 @@ impl Circuit {
         })
     }
 
+    pub fn pcb_ports(&self) -> impl Iterator<Item = &PcbPort> {
+        self.elements.iter().filter_map(|e| match e {
+            CircuitElement::PcbPort(p) => Some(p),
+            _ => None,
+        })
+    }
+
     pub fn traces(&self) -> impl Iterator<Item = &Trace> {
         self.elements.iter().filter_map(|e| match e {
             CircuitElement::Trace(t) => Some(t),
@@ -276,11 +297,14 @@ impl Circuit {
 pub fn parse(source: &str, path: &Path) -> Result<Circuit, JsonDiagnostic> {
     let raw_elements: Vec<serde_json::Value> =
         serde_json::from_str(source).map_err(|err| JsonDiagnostic::new(err, source, path))?;
-    let elements: Vec<CircuitElement> = raw_elements
+    let elements = raw_elements
         .iter()
-        .map(|v| serde_json::from_value(v.clone()))
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|err| JsonDiagnostic::new(err, source, path))?;
+        .enumerate()
+        .map(|(index, value)| {
+            CircuitElement::deserialize(value)
+                .map_err(|err| JsonDiagnostic::element(index, err, source, path))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
     Ok(Circuit {
         elements,
         raw_elements,

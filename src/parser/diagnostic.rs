@@ -31,16 +31,31 @@ pub struct JsonDiagnostic {
 
 impl JsonDiagnostic {
     pub(super) fn new(err: serde_json::Error, source: &str, path: &Path) -> Self {
-        // serde_json reports a (line, column) position; miette wants a byte
-        // offset into the source — `byte_offset_at` does the mapping. The
-        // offset is always clamped inside the file, so a degenerate position
-        // (empty input, `line == 0` never observed in practice but guarded
-        // anyway) renders a zero-length label instead of panicking.
-        let offset = byte_offset_at(source, err.line(), err.column());
+        Self::at(err.to_string(), &err, source, path)
+    }
+
+    /// A failure inside element `index` of an otherwise valid JSON array.
+    ///
+    /// Errors from an in-memory value carry no position, so the source is
+    /// re-read as typed elements on this error path only: serde_json then
+    /// reports where the same element fails in the file.
+    pub(super) fn element(index: usize, err: serde_json::Error, source: &str, path: &Path) -> Self {
+        let message = format!("element #{index}: {err}");
+        match serde_json::from_str::<Vec<super::CircuitElement>>(source) {
+            Err(located) => Self::at(message, &located, source, path),
+            Ok(_) => Self::at(message, &err, source, path),
+        }
+    }
+
+    /// Anchors `message` on the (line, column) serde_json reported, mapped to
+    /// a byte offset clamped inside the file so a degenerate position renders
+    /// a zero-length label instead of panicking.
+    fn at(message: String, located: &serde_json::Error, source: &str, path: &Path) -> Self {
+        let offset = byte_offset_at(source, located.line(), located.column());
         let len = if offset < source.len() { 1 } else { 0 };
 
         Self {
-            message: err.to_string(),
+            message,
             src: NamedSource::new(path.display().to_string(), source.to_string()),
             span: SourceSpan::new(offset.into(), len),
         }

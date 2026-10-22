@@ -17,8 +17,8 @@ impl Rule for GhostNetRule {
                 rule: self.name().to_string(),
                 message: format!(
                     "net \"{}\" is referenced by {} connection(s) but no source_net defines it",
-                    net.id(),
-                    net.reference_count()
+                    net.id,
+                    net.reference_count
                 ),
                 help: Some(
                     "add the missing source_net element, or fix the net_id reference on the port/pad"

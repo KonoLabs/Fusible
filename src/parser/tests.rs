@@ -74,6 +74,25 @@ fn recognized_elements_without_identifiers_parse_to_none() {
 }
 
 #[test]
+fn element_errors_name_the_element_and_point_at_its_line() {
+    let source = "[\n{\"type\": \"source_net\", \"source_net_id\": \"n1\"},\n{\"type\": \"source_port\", \"pin_number\": \"x\"}\n]";
+    let line3 = source.find("{\"type\": \"source_port\"").expect("line 3");
+
+    let err = parse(source, Path::new("circuit.json")).expect_err("bad pin_number");
+
+    assert!(
+        err.message.starts_with("element #1:"),
+        "got: {}",
+        err.message
+    );
+    assert!(
+        err.span.offset() >= line3,
+        "span {} before line 3",
+        err.span.offset()
+    );
+}
+
+#[test]
 fn object_root_and_empty_input_are_rejected() {
     let err = parse("{\"type\": \"source_net\"}", Path::new("circuit.json"))
         .expect_err("an object root must not parse");

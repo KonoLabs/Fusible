@@ -13,7 +13,7 @@ pub struct SchematicScaleRule;
 
 impl Rule for SchematicScaleRule {
     fn name(&self) -> &'static str {
-        "schematic_scale"
+        "E_SCHEMATIC_SCALE_EXCESSIVE"
     }
 
     fn check(&self, ctx: &LintContext<'_>) -> Vec<Diagnostic> {
@@ -59,7 +59,10 @@ impl Rule for SchematicScaleRule {
         let mut reported = HashSet::new();
 
         for (refdes, x, y) in &components {
-            let exceeds_center = x.abs() > MAX_CENTER_COORD_MM || y.abs() > MAX_CENTER_COORD_MM;
+            let exceeds_center = !x.is_finite()
+                || !y.is_finite()
+                || x.abs() > MAX_CENTER_COORD_MM
+                || y.abs() > MAX_CENTER_COORD_MM;
             let exceeds_span = span_exceeded
                 && ((span_x > MAX_SPAN_MM && (*x == min_x || *x == max_x))
                     || (span_y > MAX_SPAN_MM && (*y == min_y || *y == max_y)));

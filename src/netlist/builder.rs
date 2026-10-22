@@ -1,17 +1,34 @@
 //! AST lowering into the Netlist connectivity graph.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use super::endpoint::Endpoint;
 use super::node::NetNode;
-use super::Netlist;
-use crate::parser::Circuit;
+use super::{DanglingRef, Netlist};
+use crate::parser::{Circuit, Pad, PcbPort, Port, Trace};
 
+type PortMap<'a> = HashMap<&'a str, &'a Port>;
+
+/// Lowers the AST in dependency order: declared nets, port nets, traces,
+/// then pads, which resolve their net through the ports traces connected.
 pub fn build_netlist(circuit: &Circuit) -> Netlist {
     let mut netlist = Netlist::default();
+    let ports: PortMap<'_> = circuit
+        .ports()
+        .filter_map(|p| p.port_id.as_deref().map(|id| (id, p)))
+        .collect();
     index_defined_nets(&mut netlist, circuit);
-    index_ports_and_pads(&mut netlist, circuit);
-    index_traces(&mut netlist, circuit);
+    index_ports(&mut netlist, circuit);
+    for (index, trace) in circuit.traces().enumerate() {
+        index_trace(&mut netlist, index, trace, &ports);
+    }
+    let pcb_ports: HashMap<&str, &PcbPort> = circuit
+        .pcb_ports()
+        .filter_map(|p| p.pcb_port_id.as_deref().map(|id| (id, p)))
+        .collect();
+    for (index, pad) in circuit.pads().enumerate() {
+        index_pad(&mut netlist, index, pad, &ports, &pcb_ports);
+    }
     netlist
 }
 
@@ -23,152 +40,166 @@ fn index_defined_nets(netlist: &mut Netlist, circuit: &Circuit) {
     }
 }
 
-fn index_ports_and_pads(netlist: &mut Netlist, circuit: &Circuit) {
-    let comp_map: std::collections::HashMap<_, _> = circuit
-        .components()
-        .filter_map(|c| {
-            c.component_id
-                .as_deref()
-                .map(|id| (id, c.name.as_deref().unwrap_or(id)))
-        })
-        .collect();
-
+fn index_ports(netlist: &mut Netlist, circuit: &Circuit) {
     for port in circuit.ports() {
-        let comp = port
-            .source_component_id
-            .as_deref()
-            .and_then(|cid| comp_map.get(cid).copied())
-            .map(str::to_string)
-            .or_else(|| port.source_component_id.clone());
-
-        if let Some(net_id) = port.net_id.as_deref() {
-            let idx = register_net(netlist, net_id, None, false);
-            netlist.nets[idx].reference_count += 1;
-            attach_endpoint(
-                netlist,
-                idx,
-                Endpoint::with_details(
-                    port.port_id.clone(),
-                    comp,
-                    port.name.clone(),
-                    port.pin_number,
-                    port.port_hints.clone().unwrap_or_default(),
-                ),
-            );
-            if let Some(id) = port.port_id.as_deref() {
-                netlist.port_to_net.insert(id.to_string(), idx);
-            }
-        }
-    }
-    for pad in circuit.pads() {
-        let Some(net_id) = pad.net_id.as_deref() else {
+        let Some(net_id) = port.net_id.as_deref() else {
             continue;
         };
         let idx = register_net(netlist, net_id, None, false);
         netlist.nets[idx].reference_count += 1;
-        attach_endpoint(netlist, idx, Endpoint::pad(pad.pad_id.clone()));
-        if let Some(id) = pad.pad_id.as_deref() {
-            netlist.pad_to_net.insert(id.to_string(), idx);
+        attach_port(netlist, idx, port);
+    }
+}
+
+/// `source_trace "<id>"`, or the trace's position when it has no id.
+fn trace_label(trace: &Trace, index: usize) -> String {
+    match trace.trace_id.as_deref() {
+        Some(id) => format!("source_trace \"{id}\""),
+        None => format!("source_trace #{index}"),
+    }
+}
+
+fn index_trace(netlist: &mut Netlist, index: usize, trace: &Trace, ports: &PortMap<'_>) {
+    let mut resolved = Vec::new();
+    for port_id in &trace.connected_source_port_ids {
+        match ports.get(port_id.as_str()) {
+            Some(port) => resolved.push(*port),
+            None => netlist.dangling_refs.push(DanglingRef {
+                owner: trace_label(trace, index),
+                target: format!("source_port \"{port_id}\""),
+            }),
+        }
+    }
+
+    let net_indices: Vec<usize> = if trace.connected_source_net_ids.is_empty() {
+        port_only_net(netlist, index, trace, &resolved)
+            .into_iter()
+            .collect()
+    } else {
+        trace
+            .connected_source_net_ids
+            .iter()
+            .map(|net_id| register_net(netlist, net_id, None, false))
+            .collect()
+    };
+
+    for idx in net_indices {
+        netlist.nets[idx].reference_count += 1;
+        for port in &resolved {
+            attach_port(netlist, idx, port);
         }
     }
 }
 
-fn index_traces(netlist: &mut Netlist, circuit: &Circuit) {
-    let comp_map: std::collections::HashMap<_, _> = circuit
-        .components()
-        .filter_map(|c| {
-            c.component_id
-                .as_deref()
-                .map(|id| (id, c.name.as_deref().unwrap_or(id)))
-        })
-        .collect();
-
-    let port_map: std::collections::HashMap<_, _> = circuit
-        .ports()
-        .filter_map(|p| p.port_id.as_deref().map(|id| (id, p)))
-        .collect();
-
-    for trace in circuit.traces() {
-        if !trace.connected_source_net_ids.is_empty() {
-            for net_id in &trace.connected_source_net_ids {
-                let idx = register_net(netlist, net_id, None, false);
-                netlist.nets[idx].reference_count += 1;
-
-                if let Some(trace_id) = trace.trace_id.as_deref() {
-                    netlist.nets[idx].trace_ids.push(trace_id.to_string());
-                }
-
-                attach_trace_ports(
-                    netlist,
-                    idx,
-                    &trace.connected_source_port_ids,
-                    &port_map,
-                    &comp_map,
-                );
-            }
-        } else if !trace.connected_source_port_ids.is_empty() {
-            let existing_net_idx = trace
-                .connected_source_port_ids
-                .iter()
-                .find_map(|pid| netlist.port_to_net.get(pid).copied());
-
-            let idx = existing_net_idx.unwrap_or_else(|| {
-                let synthetic_id = trace
-                    .connectivity_key
-                    .as_deref()
-                    .or(trace.trace_id.as_deref())
-                    .unwrap_or("trace_net");
-                register_net(netlist, synthetic_id, trace.name.as_deref(), true)
-            });
-
-            netlist.nets[idx].reference_count += 1;
-            if let Some(trace_id) = trace.trace_id.as_deref() {
-                netlist.nets[idx].trace_ids.push(trace_id.to_string());
-            }
-
-            attach_trace_ports(
-                netlist,
-                idx,
-                &trace.connected_source_port_ids,
-                &port_map,
-                &comp_map,
-            );
-        }
-    }
-}
-
-fn attach_trace_ports(
+/// The net a trace without `connected_source_net_ids` joins: the net one of
+/// its ports already belongs to, or a synthetic net unique to this trace.
+fn port_only_net(
     netlist: &mut Netlist,
-    net_idx: usize,
-    port_ids: &[String],
-    port_map: &std::collections::HashMap<&str, &crate::parser::Port>,
-    comp_map: &std::collections::HashMap<&str, &str>,
-) {
-    for port_id in port_ids {
-        let port_opt = port_map.get(port_id.as_str()).copied();
-        let comp = port_opt
-            .and_then(|p| p.source_component_id.as_deref())
-            .and_then(|cid| comp_map.get(cid).copied())
-            .map(str::to_string)
-            .or_else(|| port_opt.and_then(|p| p.source_component_id.clone()));
+    index: usize,
+    trace: &Trace,
+    resolved: &[&Port],
+) -> Option<usize> {
+    if resolved.is_empty() {
+        return None;
+    }
+    let existing = resolved
+        .iter()
+        .filter_map(|p| p.port_id.as_deref())
+        .find_map(|id| netlist.port_to_net.get(id).copied());
+    Some(existing.unwrap_or_else(|| {
+        let synthetic_id = trace
+            .connectivity_key
+            .clone()
+            .or_else(|| trace.trace_id.clone())
+            .unwrap_or_else(|| format!("source_trace#{index}"));
+        register_net(netlist, &synthetic_id, trace.name.as_deref(), true)
+    }))
+}
 
-        let endpoint = if let Some(p) = port_opt {
-            Endpoint::with_details(
-                Some(port_id.clone()),
-                comp,
-                p.name.clone(),
-                p.pin_number,
-                p.port_hints.clone().unwrap_or_default(),
-            )
-        } else {
-            Endpoint::port(Some(port_id.clone()), None)
-        };
-        attach_endpoint(netlist, net_idx, endpoint);
-        netlist.port_to_net.insert(port_id.clone(), net_idx);
+/// `source_pad "<id>"`, or the pad's position when it has no id.
+fn pad_label(pad: &Pad, index: usize) -> String {
+    match pad.pad_id.as_deref() {
+        Some(id) => format!("pad \"{id}\""),
+        None => format!("pad #{index}"),
     }
 }
 
-pub(crate) fn register_net(
+/// The `source_port_id` a pad stands for, through its direct `port_id` or
+/// the canonical `pcb_port_id` chain. Every broken link is recorded.
+fn linked_port_id<'a>(
+    netlist: &mut Netlist,
+    index: usize,
+    pad: &'a Pad,
+    ports: &PortMap<'_>,
+    pcb_ports: &HashMap<&str, &'a PcbPort>,
+) -> Option<&'a str> {
+    let (port_id, owner) = match (pad.port_id.as_deref(), pad.pcb_port_id.as_deref()) {
+        (Some(port_id), _) => (port_id, pad_label(pad, index)),
+        (None, Some(pcb_port_id)) => {
+            let Some(pcb_port) = pcb_ports.get(pcb_port_id) else {
+                netlist.dangling_refs.push(DanglingRef {
+                    owner: pad_label(pad, index),
+                    target: format!("pcb_port \"{pcb_port_id}\""),
+                });
+                return None;
+            };
+            let owner = format!("pcb_port \"{pcb_port_id}\"");
+            let Some(port_id) = pcb_port.source_port_id.as_deref() else {
+                netlist.dangling_refs.push(DanglingRef {
+                    owner,
+                    target: "a source_port (no source_port_id)".to_string(),
+                });
+                return None;
+            };
+            (port_id, owner)
+        }
+        (None, None) => return None,
+    };
+    if ports.contains_key(port_id) {
+        return Some(port_id);
+    }
+    netlist.dangling_refs.push(DanglingRef {
+        owner,
+        target: format!("source_port \"{port_id}\""),
+    });
+    None
+}
+
+fn index_pad(
+    netlist: &mut Netlist,
+    index: usize,
+    pad: &Pad,
+    ports: &PortMap<'_>,
+    pcb_ports: &HashMap<&str, &PcbPort>,
+) {
+    let port_id = linked_port_id(netlist, index, pad, ports, pcb_ports);
+    let idx = match pad.net_id.as_deref() {
+        Some(net_id) => {
+            let idx = register_net(netlist, net_id, None, false);
+            netlist.nets[idx].reference_count += 1;
+            Some(idx)
+        }
+        None => port_id.and_then(|id| netlist.port_to_net.get(id).copied()),
+    };
+    let Some(idx) = idx else {
+        return;
+    };
+    if let Some(pad_id) = pad.pad_id.as_deref() {
+        netlist.pad_to_net.insert(pad_id.to_string(), idx);
+    }
+    if !port_id.is_some_and(|id| netlist.endpoint_ids_per_net[idx].contains(id)) {
+        attach_endpoint(netlist, idx, Endpoint::pad(pad.pad_id.clone()));
+    }
+}
+
+fn attach_port(netlist: &mut Netlist, idx: usize, port: &Port) {
+    attach_endpoint(netlist, idx, Endpoint::port(port));
+    if let Some(id) = port.port_id.as_deref() {
+        netlist.port_to_net.insert(id.to_string(), idx);
+    }
+}
+
+fn register_net(
     netlist: &mut Netlist,
     net_id: &str,
     name: Option<&str>,
@@ -187,13 +218,10 @@ fn promote_defined_net(netlist: &mut Netlist, idx: usize, name: Option<&str>, is
     if !is_defined {
         return;
     }
-    netlist.nets[idx].is_defined = true;
-    let Some(name) = name else {
-        return;
-    };
-    if netlist.nets[idx].name.is_none() {
-        netlist.nets[idx].name = Some(name.to_string());
-        netlist.by_name.insert(name.to_string(), idx);
+    let node = &mut netlist.nets[idx];
+    node.is_defined = true;
+    if node.name.is_none() {
+        node.name = name.map(str::to_string);
     }
 }
 
@@ -204,29 +232,24 @@ fn insert_new_net(
     is_defined: bool,
 ) -> usize {
     let idx = netlist.nets.len();
-    let node = NetNode {
+    netlist.nets.push(NetNode {
         id: net_id.to_string(),
         name: name.map(str::to_string),
         endpoints: Vec::new(),
-        trace_ids: Vec::new(),
         is_defined,
         reference_count: 0,
-    };
-    netlist.nets.push(node);
+    });
     netlist.endpoint_ids_per_net.push(HashSet::new());
     netlist.by_id.insert(net_id.to_string(), idx);
-    if let Some(n) = name {
-        netlist.by_name.insert(n.to_string(), idx);
-    }
     idx
 }
 
 fn attach_endpoint(netlist: &mut Netlist, net_idx: usize, endpoint: Endpoint) {
-    if let Some(id) = endpoint.id() {
-        if netlist.endpoint_ids_per_net[net_idx].insert(id.to_string()) {
-            netlist.nets[net_idx].endpoints.push(endpoint);
-        }
-    } else {
+    let is_new = match endpoint.id.as_deref() {
+        Some(id) => netlist.endpoint_ids_per_net[net_idx].insert(id.to_string()),
+        None => true,
+    };
+    if is_new {
         netlist.nets[net_idx].endpoints.push(endpoint);
     }
 }
