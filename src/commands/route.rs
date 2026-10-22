@@ -43,7 +43,7 @@ pub fn run(
 ) -> Result<(), RouteCommandError> {
     let entry = resolve_entry(file)?;
     println!(
-        "⚡ Initializing parallel autorouter for \"{}\"...",
+        "⚡ Initializing autorouter for \"{}\"...",
         entry.display()
     );
 

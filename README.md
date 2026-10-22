@@ -23,7 +23,7 @@ wrapping development servers, dark-theme web previewers, artifact exports, and f
 | 2.1 | Pure-Rust RS-274X Extended Gerber & Excellon drill generator | shipped |
 | 2.2 | Pure-Rust vector documentation exporter (PCB & schematic SVGs) | shipped |
 | 2.3 | Native Fusible Studio dev server with dark theme and live SSE reload | shipped |
-| 2.4 | Parallel multi-core autorouter and bidirectional KiCad syncer | shipped |
+| 2.4 | Deterministic autorouter and bidirectional KiCad syncer | shipped |
 | 2.5 | Fuse-gated 3D enclosure generator (`mechanical`) on OpenCascade | shipped |
 
 ## Prerequisites
@@ -121,9 +121,9 @@ Features:
 - Diagnostics inspector showing rule violations, severity, and remediation advice.
 - PCB layer visibility toggles (top copper, bottom copper, ENIG pads, silkscreen).
 
-### 3. Parallel multi-core autorouter (`route`)
+### 3. Autorouter (`route`)
 
-Topological multi-layer autorouter powered by pure Rust spatial R-trees (`rstar`) and parallel path negotiation (`rayon`):
+Multi-layer A* autorouter on pure Rust spatial R-trees (`rstar`). Nets route one at a time in a fixed order, and each finished trace becomes an obstacle for the next, so routed nets cannot short:
 
 ```sh
 fusible route                             # routes entry circuit and writes dist/circuit.routed.json
@@ -239,7 +239,7 @@ src/
 ├── cli.rs                  # Clap command definitions
 ├── assets/                 # Embedded dark-theme web dashboard & Undefined font
 ├── dev/                    # Native Fusible Studio dev server (tiny_http, SSE, notify)
-├── router/                 # Parallel multi-core topological autorouter (rstar, rayon, A*)
+├── router/                 # Deterministic multi-layer autorouter (rstar, A*)
 ├── kicad/                  # S-expression parser & bidirectional layout drift syncer
 ├── commands/               # Subcommand execution pipelines (check, dev, route, diff, sync, export, build)
 ├── config/                 # fusible.yml manifest loader and path resolution

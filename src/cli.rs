@@ -134,7 +134,7 @@ pub enum Commands {
         skip_lint: bool,
     },
 
-    /// Run the parallel autorouter to solve circuit traces
+    /// Run the autorouter to solve circuit traces
     Route {
         /// Path to Circuit JSON or TSX file
         #[arg(value_name = "FILE")]
