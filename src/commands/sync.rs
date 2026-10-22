@@ -5,6 +5,7 @@ use thiserror::Error;
 
 use crate::commands::check::{load_circuit_source, CheckError};
 use crate::commands::target::{resolve_entry, MissingTargetError};
+use crate::kicad::diff::parse_circuit_elements;
 use crate::kicad::{apply_kicad_sync, compare_kicad_with_circuit, extract_footprints, parse_sexpr};
 
 #[derive(Debug, Error, Diagnostic)]
@@ -23,6 +24,14 @@ pub enum SyncCommandError {
         path: String,
         #[source]
         source: std::io::Error,
+    },
+
+    #[error("invalid Circuit JSON in \"{path}\": {source}")]
+    #[diagnostic(code(fusible::sync::invalid_circuit_json))]
+    CircuitJson {
+        path: String,
+        #[source]
+        source: serde_json::Error,
     },
 
     #[error("failed to parse KiCad S-expression: {0}")]
@@ -50,9 +59,14 @@ pub fn run(
     let footprints = extract_footprints(&sexpr);
 
     let entry = resolve_entry(file)?;
-    let (_json_path, source) = load_circuit_source(&entry)?;
+    let (json_path, source) = load_circuit_source(&entry)?;
+    let elements =
+        parse_circuit_elements(&source).map_err(|source| SyncCommandError::CircuitJson {
+            path: json_path.display().to_string(),
+            source,
+        })?;
 
-    let report = compare_kicad_with_circuit(&footprints, &source);
+    let report = compare_kicad_with_circuit(&footprints, &elements);
 
     let manual_edits_path = target.unwrap_or_else(|| default_manual_edits_path(&entry));
 

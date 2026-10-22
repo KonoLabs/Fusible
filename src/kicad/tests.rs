@@ -11,6 +11,10 @@ fn placed(name: &str, x: f64, y: f64, rotation: f64) -> String {
     )
 }
 
+fn elements(json: &str) -> Vec<serde_json::Value> {
+    super::diff::parse_circuit_elements(json).expect("valid circuit json")
+}
+
 fn temp_path(tag: &str) -> std::path::PathBuf {
     std::env::temp_dir().join(format!(
         "fusible_test_{tag}_{}",
@@ -67,7 +71,7 @@ fn compares_and_detects_layout_drift() {
 
     let circuit_json = format!("[{}]", placed("R1", 10.0, -20.0, 0.0));
 
-    let report = compare_kicad_with_circuit(&kicad_fps, &circuit_json);
+    let report = compare_kicad_with_circuit(&kicad_fps, &elements(&circuit_json));
     assert_eq!(report.diffs.len(), 1);
     let diff = &report.diffs[0];
     assert_eq!(diff.designator, "R1");
@@ -94,7 +98,7 @@ fn rotation_compare_is_modulo_360_and_report_is_sorted() {
         placed("R0", 5.0, 5.0, 0.0)
     );
 
-    let report = compare_kicad_with_circuit(&kicad_fps, &circuit_json);
+    let report = compare_kicad_with_circuit(&kicad_fps, &elements(&circuit_json));
     let names: Vec<&str> = report.diffs.iter().map(|d| d.designator.as_str()).collect();
     assert_eq!(names, ["R0", "R1", "R2"]);
     assert_eq!(report.diffs[1].kind, DiffKind::Unchanged);
@@ -115,7 +119,7 @@ fn applies_sync_to_manual_edits() {
     let kicad_fps = extract_footprints(&parse_sexpr(sexpr_str).unwrap());
     let circuit_json = format!("[{}]", placed("R1", 0.0, 0.0, 0.0));
 
-    let report = compare_kicad_with_circuit(&kicad_fps, &circuit_json);
+    let report = compare_kicad_with_circuit(&kicad_fps, &elements(&circuit_json));
     let msg = apply_kicad_sync(&report, &manual_edits_path, false).expect("sync should succeed");
 
     assert!(msg.contains("Synced 1 component placement"));
@@ -139,8 +143,10 @@ fn sync_replaces_a_non_object_center_instead_of_panicking() {
     let sexpr_str =
         r#"(kicad_pcb (footprint "R" (layer "F.Cu") (at 15.0 25.0) (property "Reference" "R1")))"#;
     let kicad_fps = extract_footprints(&parse_sexpr(sexpr_str).unwrap());
-    let report =
-        compare_kicad_with_circuit(&kicad_fps, &format!("[{}]", placed("R1", 0.0, 0.0, 0.0)));
+    let report = compare_kicad_with_circuit(
+        &kicad_fps,
+        &elements(&format!("[{}]", placed("R1", 0.0, 0.0, 0.0))),
+    );
     apply_kicad_sync(&report, &manual_edits_path, false).expect("sync should succeed");
 
     let root: serde_json::Value =

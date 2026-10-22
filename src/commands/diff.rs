@@ -5,6 +5,7 @@ use thiserror::Error;
 
 use crate::commands::check::{load_circuit_source, CheckError};
 use crate::commands::target::{resolve_entry, MissingTargetError};
+use crate::kicad::diff::parse_circuit_elements;
 use crate::kicad::{
     compare_kicad_with_circuit, extract_footprints, format_diff_report, parse_sexpr,
 };
@@ -25,6 +26,14 @@ pub enum DiffCommandError {
         path: String,
         #[source]
         source: std::io::Error,
+    },
+
+    #[error("invalid Circuit JSON in \"{path}\": {source}")]
+    #[diagnostic(code(fusible::diff::invalid_circuit_json))]
+    CircuitJson {
+        path: String,
+        #[source]
+        source: serde_json::Error,
     },
 
     #[error("failed to parse KiCad S-expression: {0}")]
@@ -49,9 +58,14 @@ pub fn run(kicad_pcb: PathBuf, file: Option<PathBuf>) -> Result<(), DiffCommandE
     let footprints = extract_footprints(&sexpr);
 
     let entry = resolve_entry(file)?;
-    let (_json_path, source) = load_circuit_source(&entry)?;
+    let (json_path, source) = load_circuit_source(&entry)?;
+    let elements =
+        parse_circuit_elements(&source).map_err(|source| DiffCommandError::CircuitJson {
+            path: json_path.display().to_string(),
+            source,
+        })?;
 
-    let report = compare_kicad_with_circuit(&footprints, &source);
+    let report = compare_kicad_with_circuit(&footprints, &elements);
     print!("{}", format_diff_report(&report));
 
     if report.has_drift {
