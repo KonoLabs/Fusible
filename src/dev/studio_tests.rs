@@ -41,9 +41,29 @@ fn studio_effects_do_not_call_hooks() {
         "\n    useContextMenuIntercept(circuitJson, cb);\n"
     ));
     assert!(!calls_hook("container.useThing(); const user = 1;"));
-    let bodies = effect_bodies(include_str!("../../studio/src/index.ts"));
+    let sources =
+        studio_sources(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("studio/src"));
+    let bodies: Vec<&str> = sources.iter().flat_map(|s| effect_bodies(s)).collect();
     assert!(bodies.len() >= 3);
     for body in bodies {
         assert!(!calls_hook(body), "hook called inside useEffect:\n{body}");
     }
+}
+
+/// Reads every TypeScript file under `dir`, recursing into subdirectories.
+fn studio_sources(dir: &std::path::Path) -> Vec<String> {
+    std::fs::read_dir(dir)
+        .expect("studio/src is readable")
+        .flatten()
+        .flat_map(|entry| {
+            let path = entry.path();
+            if path.is_dir() {
+                studio_sources(&path)
+            } else if path.extension().is_some_and(|e| e == "ts") {
+                vec![std::fs::read_to_string(&path).expect("studio source is readable")]
+            } else {
+                Vec::new()
+            }
+        })
+        .collect()
 }

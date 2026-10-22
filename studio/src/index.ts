@@ -18,6 +18,8 @@ import { animateCameraPreset } from "./orbit";
 import { animateCadCameraPreset, type CadCameraController } from "./cadCamera";
 import { installRenderCapture, mainCapturedCanvas } from "./capture";
 import { useContextMenuIntercept } from "./contextMenu";
+import { renderPcbViewer } from "./pcbViewer";
+import { renderSchematicViewer } from "./schematicViewer";
 import { determineRefdesFrom3dObject, resolveComponentRefdes } from "./refdes";
 import { FUSIBLE_SCHEMATIC_PALETTE, normalizeCircuitJsonForSchematic, renderFusibleSchematicSvg } from "./schematic";
 
@@ -134,64 +136,7 @@ export function CadViewer({
   );
 }
 
-function ResponsivePcbViewer({
-  circuitJson,
-  onSelectComponent,
-}: {
-  circuitJson: any;
-  onSelectComponent?: (name: string) => void;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [viewerHeight, setViewerHeight] = useState(600);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("pcb-viewer:rendering-engine", "canvas");
-    } catch {}
-    const parent = containerRef.current?.parentElement || containerRef.current;
-    if (!parent) return;
-    const updateSize = () => {
-      const h = parent.clientHeight || window.innerHeight - 52;
-      if (h > 50) {
-        setViewerHeight(h);
-      }
-    };
-    updateSize();
-    const ro = new ResizeObserver(updateSize);
-    ro.observe(parent);
-    window.addEventListener("resize", updateSize);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", updateSize);
-    };
-  }, []);
-
-  useContextMenuIntercept(circuitJson || [], onSelectComponent);
-
-  return React.createElement(
-    "div",
-    {
-      ref: containerRef,
-      style: { width: "100%", height: "100%", position: "relative", overflow: "hidden" },
-    },
-    React.createElement(PCBViewer, {
-      circuitJson: circuitJson || [],
-      height: viewerHeight,
-      renderer: "canvas",
-      allowEditing: false,
-      onViewSchematicComponent: (event: any) => {
-        const refdes = event?.refdes || event?.source_component_id;
-        if (refdes && onSelectComponent) {
-          onSelectComponent(resolveComponentRefdes(circuitJson || [], refdes));
-        }
-      },
-    })
-  );
-}
-
 const cadSlot = rootSlot();
-const pcbSlot = rootSlot();
-const schematicSlot = rootSlot();
 
 export function render3dViewer(
   container: HTMLElement,
@@ -200,87 +145,6 @@ export function render3dViewer(
 ) {
   const props = { circuitJson: circuitJson || [], onSelectComponent };
   renderIntoSlot(cadSlot, container, React.createElement(CadViewer, props));
-}
-
-export function renderPcbViewer(
-  container: HTMLElement,
-  circuitJson: any,
-  onSelectComponent?: (name: string) => void
-) {
-  const props = { circuitJson: circuitJson || [], onSelectComponent };
-  renderIntoSlot(pcbSlot, container, React.createElement(ResponsivePcbViewer, props));
-}
-
-function ResponsiveSchematicViewer({
-  circuitJson,
-  onSelectComponent,
-}: {
-  circuitJson: any;
-  onSelectComponent?: (name: string) => void;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
-  const normalizedCircuit = React.useMemo(
-    () => normalizeCircuitJsonForSchematic(circuitJson),
-    [circuitJson]
-  );
-
-  useEffect(() => {
-    const parent = containerRef.current?.parentElement || containerRef.current;
-    if (!parent) return;
-    const updateSize = () => {
-      const w = parent.clientWidth || window.innerWidth;
-      const h = parent.clientHeight || window.innerHeight - 52;
-      if (w > 50 && h > 50) {
-        setDimensions({ width: w, height: h });
-      }
-    };
-    updateSize();
-    const ro = new ResizeObserver(updateSize);
-    ro.observe(parent);
-    window.addEventListener("resize", updateSize);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", updateSize);
-    };
-  }, []);
-
-  return React.createElement(
-    "div",
-    {
-      ref: containerRef,
-      style: { width: "100%", height: "100%", position: "relative", overflow: "hidden" },
-    },
-    React.createElement(SchematicViewer, {
-      key: `${dimensions.width}x${dimensions.height}`,
-      circuitJson: normalizedCircuit || [],
-      containerStyle: { width: "100%", height: "100%", backgroundColor: "#000000" },
-      colorOverrides: {
-        schematic: FUSIBLE_SCHEMATIC_PALETTE,
-      },
-      onSchematicComponentClicked: (event: any) => {
-        const id = event?.schematicComponentId || event?.refdes;
-        if (id && onSelectComponent) {
-          onSelectComponent(resolveComponentRefdes(normalizedCircuit || [], id));
-        }
-      },
-      onViewPcbComponent: (event: any) => {
-        const refdes = event?.refdes;
-        if (refdes && onSelectComponent) {
-          onSelectComponent(resolveComponentRefdes(normalizedCircuit || [], refdes));
-        }
-      },
-    })
-  );
-}
-
-export function renderSchematicViewer(
-  container: HTMLElement,
-  circuitJson: any,
-  onSelectComponent?: (name: string) => void
-) {
-  const props = { circuitJson: circuitJson || [], onSelectComponent };
-  renderIntoSlot(schematicSlot, container, React.createElement(ResponsiveSchematicViewer, props));
 }
 
 export {
