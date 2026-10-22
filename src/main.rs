@@ -114,10 +114,19 @@ fn dispatch_sync(
 fn main() -> ExitCode {
     let cli = Cli::parse();
 
+    if !matches!(
+        cli.command,
+        Some(Commands::Init { .. } | Commands::Doctor { .. })
+    ) {
+        if let Err(err) = config::FusibleConfig::find_and_load(std::path::Path::new(".")) {
+            return fail(err, EXIT_TOOL_ERROR);
+        }
+    }
+
     match cli.command {
         Some(Commands::Dev { file, port, legacy }) => {
             match commands::dev::run(file, port, legacy) {
-                Ok(code) => ExitCode::from(code as u8),
+                Ok(code) => ExitCode::from(u8::try_from(code).unwrap_or(EXIT_TOOL_ERROR)),
                 Err(err) => fail(err, EXIT_TOOL_ERROR),
             }
         }

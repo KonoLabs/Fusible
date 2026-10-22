@@ -52,10 +52,14 @@ pub fn run(
     });
 
     let mcu_chip = mcu.unwrap_or_else(|| "esp32-s3".to_string());
+    let yaml_name = serde_yaml::to_string(&project_name)
+        .map(|y| y.trim_end().to_string())
+        .unwrap_or_default();
+    let package_name =
+        serde_json::to_string(&format!("{project_name}-hardware")).unwrap_or_default();
 
-    // 1. Write fusible.yml
     let manifest_content = format!(
-        r#"name: {project_name}
+        r#"name: {yaml_name}
 
 hardware:
   entry: hardware/index.tsx
@@ -75,14 +79,13 @@ firmware:
     std::fs::write(&yml_path, manifest_content)
         .map_err(|e| InitError::new(format!("failed to write fusible.yml: {e}")))?;
 
-    // 2. Scaffold hardware/ directory
     let hw_dir = base_dir.join("hardware");
     std::fs::create_dir_all(&hw_dir)
         .map_err(|e| InitError::new(format!("failed to create hardware directory: {e}")))?;
 
     let pkg_json = format!(
         r#"{{
-  "name": "{project_name}-hardware",
+  "name": {package_name},
   "version": "0.1.0",
   "private": true,
   "dependencies": {{
@@ -95,8 +98,7 @@ firmware:
 }}
 "#
     );
-    std::fs::write(hw_dir.join("package.json"), pkg_json)
-        .map_err(|e| InitError::new(format!("failed to write package.json: {e}")))?;
+    write_new(&hw_dir.join("package.json"), &pkg_json)?;
 
     let tsconfig_json = r#"{
   "compilerOptions": {
@@ -111,8 +113,7 @@ firmware:
   "include": ["**/*.ts", "**/*.tsx"]
 }
 "#;
-    std::fs::write(hw_dir.join("tsconfig.json"), tsconfig_json)
-        .map_err(|e| InitError::new(format!("failed to write tsconfig.json: {e}")))?;
+    write_new(&hw_dir.join("tsconfig.json"), tsconfig_json)?;
 
     let index_tsx = r#"export default () => (
   <board width="40mm" height="30mm">
@@ -153,17 +154,14 @@ firmware:
   </board>
 );
 "#;
-    std::fs::write(hw_dir.join("index.tsx"), index_tsx)
-        .map_err(|e| InitError::new(format!("failed to write index.tsx: {e}")))?;
+    write_new(&hw_dir.join("index.tsx"), index_tsx)?;
 
-    // 3. Optional .gitignore
     let gitignore_path = base_dir.join(".gitignore");
     if !gitignore_path.exists() {
         let gitignore_content = "node_modules/\ndist/\n.tscircuit/\ntarget/\n*.kicad_prl\n*.bak\n";
         let _ = std::fs::write(gitignore_path, gitignore_content);
     }
 
-    // 4. Install dependencies if requested
     if !no_install {
         install_hardware_deps(&hw_dir);
     }
@@ -185,6 +183,16 @@ firmware:
     println!("  fusible build             Compile hardware artifacts & build firmware");
 
     Ok(())
+}
+
+/// Writes `content` to `path` unless the file already exists, which it reports and keeps.
+fn write_new(path: &Path, content: &str) -> Result<(), InitError> {
+    if path.exists() {
+        println!("↷ Keeping existing {}", path.display());
+        return Ok(());
+    }
+    std::fs::write(path, content)
+        .map_err(|e| InitError::new(format!("failed to write {}: {e}", path.display())))
 }
 
 fn install_hardware_deps(hw_dir: &Path) {

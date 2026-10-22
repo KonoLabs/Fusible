@@ -61,7 +61,6 @@ pub fn is_kicad_target(path: &Path) -> bool {
             Some("kicad_sch") | Some("kicad_pcb") | Some("kicad_pro")
         )
     } else if path.is_dir() {
-        // Directory containing KiCad files
         std::fs::read_dir(path)
             .ok()
             .map(|entries| {

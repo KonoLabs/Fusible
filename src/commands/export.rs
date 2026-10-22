@@ -7,7 +7,6 @@ use thiserror::Error;
 
 use crate::commands::check::{self, CheckError};
 use crate::commands::target::resolve_entry;
-use crate::config::FusibleConfig;
 use crate::tscircuit::{Runner, RunnerError};
 
 /// Unified error enum for the export pipeline.
@@ -59,12 +58,12 @@ pub fn run(
     }
 
     let runner = Runner::detect().ok();
-    let board_title = resolve_board_title();
+    let board_title = check::resolve_board_name();
 
     if let Some(preset_name) = preset {
         let circuit_json = if preset_name == "fab" || preset_name == "all" || preset_name == "docs"
         {
-            load_or_build_circuit_json(&entry, runner.as_ref())?
+            load_circuit_json(&entry)?
         } else {
             String::new()
         };
@@ -77,7 +76,7 @@ pub fn run(
             output.as_deref(),
         )
     } else if format == "gerbers" || format == "gerber" {
-        let circuit_json = load_or_build_circuit_json(&entry, runner.as_ref())?;
+        let circuit_json = load_circuit_json(&entry)?;
         let dest = output.unwrap_or_else(|| PathBuf::from("dist/gerbers.zip"));
         if let Some(parent) = dest.parent() {
             std::fs::create_dir_all(parent)?;
@@ -92,7 +91,7 @@ pub fn run(
         println!("✅ Successfully exported gerbers to {}!", dest.display());
         Ok(())
     } else if format == "pcb-svg" || format == "pcb_svg" {
-        let circuit_json = load_or_build_circuit_json(&entry, runner.as_ref())?;
+        let circuit_json = load_circuit_json(&entry)?;
         let dest = output.unwrap_or_else(|| PathBuf::from("dist/pcb.svg"));
         if let Some(parent) = dest.parent() {
             std::fs::create_dir_all(parent)?;
@@ -115,8 +114,8 @@ pub fn run(
         let tmp_zip = dest.join(".kicad_export.zip");
         println!("📦 Exporting KiCad project to {}...", dest.display());
         runner.export(&entry, "kicad_zip", Some(&tmp_zip))?;
-        extract_zip_archive(&tmp_zip, &dest);
-        let _ = std::fs::remove_file(&tmp_zip);
+        extract_zip_archive(&tmp_zip, &dest)?;
+        std::fs::remove_file(&tmp_zip)?;
         println!(
             "✅ Successfully exported KiCad project to {}!",
             dest.display()
@@ -135,51 +134,15 @@ pub fn run(
     }
 }
 
-fn resolve_board_title() -> String {
-    FusibleConfig::find_and_load(Path::new("."))
-        .ok()
-        .flatten()
-        .and_then(|(_, cfg)| cfg.name)
-        .unwrap_or_else(|| "Hardware Board".to_string())
+fn load_circuit_json(entry: &Path) -> Result<String, ExportError> {
+    Ok(check::load_circuit_source(entry)?.1)
 }
 
-fn load_or_build_circuit_json(
-    entry: &Path,
-    runner: Option<&Runner>,
-) -> Result<String, ExportError> {
-    if entry.extension().and_then(|e| e.to_str()) == Some("json") {
-        std::fs::read_to_string(entry).map_err(|e| {
-            CheckError::Read(check::ReadError {
-                path: entry.display().to_string(),
-                source: e,
-            })
-            .into()
-        })
-    } else {
-        let runner = runner.ok_or(RunnerError::NotFound)?;
-        println!(
-            "⚙️  Evaluating \"{}\" for native export...",
-            entry.display()
-        );
-        let json_path = runner.build(entry, None)?;
-        std::fs::read_to_string(&json_path).map_err(|e| {
-            CheckError::Read(check::ReadError {
-                path: json_path.display().to_string(),
-                source: e,
-            })
-            .into()
-        })
-    }
-}
-
-fn extract_zip_archive(zip_path: &Path, target_dir: &Path) {
-    let file = match std::fs::File::open(zip_path) {
-        Ok(f) => f,
-        Err(_) => return,
-    };
-    if let Ok(mut archive) = zip::ZipArchive::new(file) {
-        let _ = archive.extract(target_dir);
-    }
+fn extract_zip_archive(zip_path: &Path, target_dir: &Path) -> Result<(), ExportError> {
+    let file = std::fs::File::open(zip_path)?;
+    zip::ZipArchive::new(file)
+        .and_then(|mut archive| archive.extract(target_dir))
+        .map_err(|err| ExportError::Io(std::io::Error::other(err)))
 }
 
 fn export_fab(
@@ -205,15 +168,15 @@ fn export_cad(runner: &Runner, entry: &Path, out: Option<&Path>) -> Result<(), E
     let base = out
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("dist/cad"));
-    std::fs::create_dir_all(&base).ok();
+    std::fs::create_dir_all(&base)?;
     println!("📦 Running CAD export preset (cad)...");
     let kicad = base.join("kicad.zip");
     println!("  • Exporting KiCad project -> {}", kicad.display());
     runner.export(entry, "kicad_zip", Some(&kicad))?;
 
     let kicad_dir = base.join("kicad");
-    std::fs::create_dir_all(&kicad_dir).ok();
-    extract_zip_archive(&kicad, &kicad_dir);
+    std::fs::create_dir_all(&kicad_dir)?;
+    extract_zip_archive(&kicad, &kicad_dir)?;
     println!(
         "  • KiCad project files extracted -> {}",
         kicad_dir.display()
@@ -230,19 +193,15 @@ fn export_docs(circuit_json: &str, out: Option<&Path>) -> Result<(), ExportError
     let base = out
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("dist/docs"));
-    std::fs::create_dir_all(&base).ok();
+    std::fs::create_dir_all(&base)?;
     println!("📦 Running documentation export preset (docs)...");
     println!("  • Exporting schematic SVG & PCB layout SVG via native Rust engine...");
 
-    let circuit = crate::parser::parse(circuit_json, Path::new("circuit.json")).ok();
-    let dummy_circuit = crate::parser::Circuit {
-        elements: Vec::new(),
-        raw_elements: Vec::new(),
-    };
-    let c = circuit.as_ref().unwrap_or(&dummy_circuit);
-    let netlist = crate::netlist::Netlist::from_circuit(c);
+    let circuit =
+        crate::parser::parse(circuit_json, Path::new("circuit.json")).map_err(CheckError::from)?;
+    let netlist = crate::netlist::Netlist::from_circuit(&circuit);
 
-    crate::svg::export_docs_bundle(circuit_json, c, &netlist, &base)?;
+    crate::svg::export_docs_bundle(circuit_json, &circuit, &netlist, &base)?;
     println!(
         "✅ Documentation artifacts generated in \"{}\" (schematic.svg, pcb.svg)",
         base.display()

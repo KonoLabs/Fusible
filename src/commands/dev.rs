@@ -41,7 +41,7 @@ pub fn run(file: Option<PathBuf>, port: Option<u16>, legacy: bool) -> Result<i32
         );
         println!("🌐 Dev server active at http://localhost:{port_num} (press Ctrl+C to quit)");
         let status = runner.dev(&entry, resolved_port)?;
-        return Ok(status.code().unwrap_or(0));
+        return Ok(status.code().unwrap_or(2));
     }
 
     println!(

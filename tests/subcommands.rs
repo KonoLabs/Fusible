@@ -320,3 +320,90 @@ fn subcommand_mechanical_rejects_bad_input_as_tool_error() {
         assert_eq!(out.status.code(), Some(2), "args: {args:?}");
     }
 }
+
+#[test]
+fn malformed_manifest_is_a_tool_error() {
+    let fixture = TestDir::new("bad_manifest");
+    std::fs::write(fixture.path.join("fusible.yml"), "hardware: [unclosed\n").unwrap();
+    let out = fusible()
+        .current_dir(&fixture.path)
+        .args(["check", "board.json"])
+        .output()
+        .expect("binary should run");
+    assert_eq!(out.status.code(), Some(2));
+}
+
+#[test]
+fn manifest_in_a_parent_directory_resolves_its_own_paths() {
+    let fixture = TestDir::new("parent_manifest");
+    std::fs::write(
+        fixture.path.join("board.json"),
+        include_str!("../examples/circuit.json"),
+    )
+    .unwrap();
+    std::fs::write(
+        fixture.path.join("fusible.yml"),
+        "hardware:\n  entry: board.json\n",
+    )
+    .unwrap();
+    let sub = fixture.path.join("firmware");
+    std::fs::create_dir_all(&sub).unwrap();
+    let out = fusible()
+        .current_dir(&sub)
+        .arg("check")
+        .output()
+        .expect("binary should run");
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+}
+
+#[test]
+fn stale_circuit_json_is_refused_without_a_runner() {
+    let fixture = TestDir::new("stale_json");
+    let dist = fixture.path.join("dist");
+    std::fs::create_dir_all(&dist).unwrap();
+    let json = dist.join("circuit.json");
+    let tsx = fixture.path.join("board.tsx");
+    let run = || {
+        fusible()
+            .current_dir(&fixture.path)
+            .env("PATH", "")
+            .args(["check", "board.tsx"])
+            .output()
+            .expect("binary should run")
+            .status
+            .code()
+    };
+
+    std::fs::write(&json, include_str!("../examples/circuit.json")).unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(20));
+    std::fs::write(&tsx, "export default () => <board />\n").unwrap();
+    assert_eq!(run(), Some(2));
+
+    std::thread::sleep(std::time::Duration::from_millis(20));
+    std::fs::write(&json, include_str!("../examples/circuit.json")).unwrap();
+    assert_eq!(run(), Some(0));
+}
+
+#[test]
+fn init_keeps_existing_hardware_files() {
+    let fixture = TestDir::new("init_keep");
+    let hw = fixture.path.join("hardware");
+    std::fs::create_dir_all(&hw).unwrap();
+    std::fs::write(hw.join("index.tsx"), "mine").unwrap();
+    let out = fusible()
+        .args(["init", "--no-install"])
+        .arg(&fixture.path)
+        .output()
+        .expect("binary should run");
+    assert_eq!(out.status.code(), Some(0));
+    assert_eq!(
+        std::fs::read_to_string(hw.join("index.tsx")).unwrap(),
+        "mine"
+    );
+    assert!(hw.join("package.json").exists());
+}

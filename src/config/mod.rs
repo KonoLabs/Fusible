@@ -100,10 +100,12 @@ impl FusibleConfig {
             }
         }
 
+        let start_dir =
+            std::path::absolute(start_dir).map_err(|err| ConfigError::io(start_dir, err))?;
         let dir = if start_dir.is_file() {
-            start_dir.parent().unwrap_or(start_dir)
+            start_dir.parent().unwrap_or(&start_dir)
         } else {
-            start_dir
+            &start_dir
         };
 
         for ancestor in dir.ancestors() {
@@ -115,10 +117,32 @@ impl FusibleConfig {
         Ok(None)
     }
 
-    /// Reads and parses a configuration file from disk.
+    fn rebased(mut self, dir: &Path) -> Self {
+        let rebase = |p: &mut Option<PathBuf>| {
+            if let Some(path) = p.as_mut().filter(|path| path.is_relative()) {
+                *path = dir.join(&*path);
+            }
+        };
+        if let Some(hw) = self.hardware.as_mut() {
+            rebase(&mut hw.entry);
+            rebase(&mut hw.out_dir);
+            rebase(&mut hw.circuit_json);
+        }
+        if let Some(fw) = self.firmware.as_mut() {
+            rebase(&mut fw.path);
+            rebase(&mut fw.pins_rs);
+        }
+        if let Some(mech) = self.mechanical.as_mut() {
+            rebase(&mut mech.out_dir);
+        }
+        self
+    }
+
+    /// Reads and parses a configuration file from disk, resolving relative paths against its directory.
     pub fn from_file(path: &Path) -> Result<Self, ConfigError> {
         let content = std::fs::read_to_string(path).map_err(|err| ConfigError::io(path, err))?;
-        Self::from_str_named(&content, &path.display().to_string())
+        let config = Self::from_str_named(&content, &path.display().to_string())?;
+        Ok(config.rebased(path.parent().unwrap_or(Path::new(""))))
     }
 
     /// Parses a YAML configuration string using the default filename label `fusible.yml`.

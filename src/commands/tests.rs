@@ -46,11 +46,9 @@ fn resolves_explicit_entry_first() {
 #[test]
 fn init_creates_manifest_in_temp_dir() {
     let fixture = TestDir::new("init");
-    let prev = std::env::current_dir().unwrap();
-    std::env::set_current_dir(&fixture.path).unwrap();
 
     let res = init::run(
-        None,
+        Some(fixture.path.clone()),
         Some("custom-device".into()),
         Some("esp32-s3".into()),
         true,
@@ -64,9 +62,6 @@ fn init_creates_manifest_in_temp_dir() {
     assert!(content.contains("name: custom-device"));
     assert!(content.contains("chip: esp32-s3"));
 
-    // Second init should fail because file already exists
-    let res2 = init::run(None, None, None, true);
+    let res2 = init::run(Some(fixture.path.clone()), None, None, true);
     assert!(res2.is_err());
-
-    std::env::set_current_dir(prev).unwrap();
 }

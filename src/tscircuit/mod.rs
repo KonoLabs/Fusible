@@ -20,7 +20,7 @@ pub use command::{
 };
 pub use detect::detect_runner;
 pub use error::RunnerError;
-pub use kicad::{convert_kicad, is_kicad_target};
+pub use kicad::convert_kicad;
 
 /// Represents the detected or configured tscircuit execution backend.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -76,15 +76,6 @@ impl Runner {
         let mut cmd = dev_command(&self.kind, &target_file, port);
         if let Some(ref dir) = working_dir {
             cmd.current_dir(dir);
-            if let RunnerKind::Local(ref p) = self.kind {
-                if p.is_relative() {
-                    let abs = std::env::current_dir()
-                        .unwrap_or_else(|_| PathBuf::from("."))
-                        .join(p);
-                    cmd = dev_command(&RunnerKind::Local(abs), &target_file, port);
-                    cmd.current_dir(dir);
-                }
-            }
         }
         cmd.stdin(Stdio::inherit())
             .stdout(Stdio::inherit())
@@ -142,16 +133,6 @@ impl Runner {
         let mut cmd = build_command(&self.kind, &target_file);
         if let Some(ref dir) = working_dir {
             cmd.current_dir(dir);
-            if let RunnerKind::Local(ref p) = self.kind {
-                if p.is_relative() {
-                    let abs = std::env::current_dir()
-                        .unwrap_or_else(|_| PathBuf::from("."))
-                        .join(p);
-                    cmd = std::process::Command::new(abs);
-                    cmd.arg("build").arg(&target_file).arg("--ignore-errors");
-                    cmd.current_dir(dir);
-                }
-            }
         }
         cmd.stdin(Stdio::null());
         cmd.env("CI", "1");
@@ -159,6 +140,7 @@ impl Runner {
         cmd.stderr(Stdio::piped());
 
         let cmd_str = command::format_command(&cmd);
+        let started = std::time::SystemTime::now() - std::time::Duration::from_secs(2);
         let mut child = cmd.spawn().map_err(|source| RunnerError::Io {
             command: cmd_str.clone(),
             source,
@@ -198,7 +180,7 @@ impl Runner {
                             command: cmd_str,
                             code: None,
                             stderr: "compilation timed out after 30 seconds".to_string(),
-                            help: "compilation took too long; falling back to cached circuit.json if available".to_string(),
+                            help: "the circuit took longer than 30 seconds to compile; try `routingDisabled` on <board>".to_string(),
                         });
                     }
                     std::thread::sleep(std::time::Duration::from_millis(50));
@@ -223,7 +205,16 @@ impl Runner {
         };
 
         let stdout_str = String::from_utf8_lossy(&out.stdout);
-        let produced = output::resolve_circuit_json(file, &stdout_str);
+        let produced = output::resolve_circuit_json(file, &stdout_str).and_then(|path| {
+            let fresh = std::fs::metadata(&path)
+                .and_then(|m| m.modified())
+                .is_ok_and(|modified| modified >= started);
+            if fresh {
+                Ok(path)
+            } else {
+                Err(RunnerError::OutputNotFound { path })
+            }
+        });
 
         if !out.status.success() && produced.is_err() {
             let details = command::extract_output_details(&out);

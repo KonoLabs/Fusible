@@ -46,13 +46,14 @@ pub enum CheckError {
     FuseBlown(#[from] FuseBlown),
 }
 
-/// Probes for existing pre-built Circuit JSON when runner is unavailable.
-fn find_fallback_circuit_json(entry: &Path) -> Option<PathBuf> {
+/// Finds pre-built Circuit JSON for `entry` that is at least as new as the source file.
+pub fn find_fallback_circuit_json(entry: &Path) -> Option<PathBuf> {
     let stem = entry
         .file_stem()
         .map(|s| s.to_string_lossy())
         .unwrap_or_default();
     let parent = entry.parent().unwrap_or_else(|| Path::new(""));
+    let source_time = std::fs::metadata(entry).and_then(|m| m.modified()).ok();
     let candidates = [
         parent.join("dist").join("circuit.json"),
         parent.join("dist").join(stem.as_ref()).join("circuit.json"),
@@ -62,63 +63,41 @@ fn find_fallback_circuit_json(entry: &Path) -> Option<PathBuf> {
             .join("circuit.json"),
         entry.with_extension("circuit.json"),
         entry.with_file_name("circuit.json"),
-        PathBuf::from("circuit.json"),
     ];
-    candidates.into_iter().find(|p| p.is_file())
+    candidates.into_iter().find(|p| {
+        let built = std::fs::metadata(p).and_then(|m| m.modified()).ok();
+        p.is_file() && built >= source_time
+    })
+}
+
+fn read_json(path: PathBuf) -> Result<(PathBuf, String), CheckError> {
+    let content = std::fs::read_to_string(&path).map_err(|source| ReadError {
+        path: path.display().to_string(),
+        source,
+    })?;
+    Ok((path, content))
 }
 
 fn compile_tsx(entry: &Path) -> Result<(PathBuf, String), CheckError> {
-    match Runner::detect() {
-        Ok(runner) => {
-            println!("⚙️  Compiling \"{}\" via tscircuit...", entry.display());
-            let start = std::time::Instant::now();
-            match runner.build(entry, None) {
-                Ok(built_json) => {
-                    println!(
-                        "✓ Circuit compiled in {:.1}s — preview ready",
-                        start.elapsed().as_secs_f32()
-                    );
-                    let content =
-                        std::fs::read_to_string(&built_json).map_err(|source| ReadError {
-                            path: built_json.display().to_string(),
-                            source,
-                        })?;
-                    Ok((built_json, content))
-                }
-                Err(runner_err) => {
-                    if let Some(fallback) = find_fallback_circuit_json(entry) {
-                        println!(
-                            "⚠️  tscircuit compilation failed; falling back to existing \"{}\"...",
-                            fallback.display()
-                        );
-                        let content =
-                            std::fs::read_to_string(&fallback).map_err(|source| ReadError {
-                                path: fallback.display().to_string(),
-                                source,
-                            })?;
-                        Ok((fallback, content))
-                    } else {
-                        Err(CheckError::Runner(runner_err))
-                    }
-                }
-            }
-        }
+    let runner = match Runner::detect() {
+        Ok(runner) => runner,
         Err(runner_err) => {
-            if let Some(fallback) = find_fallback_circuit_json(entry) {
-                println!(
-                    "⚠️  tscircuit runner not found; falling back to existing \"{}\"...",
-                    fallback.display()
-                );
-                let content = std::fs::read_to_string(&fallback).map_err(|source| ReadError {
-                    path: fallback.display().to_string(),
-                    source,
-                })?;
-                Ok((fallback, content))
-            } else {
-                Err(CheckError::Runner(runner_err))
-            }
+            let fallback = find_fallback_circuit_json(entry).ok_or(runner_err)?;
+            println!(
+                "⚠️  tscircuit runner not found; using \"{}\", which is newer than the source.",
+                fallback.display()
+            );
+            return read_json(fallback);
         }
-    }
+    };
+    println!("⚙️  Compiling \"{}\" via tscircuit...", entry.display());
+    let start = std::time::Instant::now();
+    let built_json = runner.build(entry, None)?;
+    println!(
+        "✓ Circuit compiled in {:.1}s — preview ready",
+        start.elapsed().as_secs_f32()
+    );
+    read_json(built_json)
 }
 
 fn convert_kicad(entry: &Path) -> Result<(PathBuf, String), CheckError> {
@@ -209,7 +188,8 @@ fn resolve_pins_rs(explicit: Option<PathBuf>) -> Option<PathBuf> {
     })
 }
 
-fn resolve_board_name() -> String {
+/// Returns the manifest `name`, or a generic board title when there is none.
+pub fn resolve_board_name() -> String {
     FusibleConfig::find_and_load(Path::new("."))
         .ok()
         .flatten()
