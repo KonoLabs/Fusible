@@ -1,5 +1,7 @@
 //! Subcommand: `fusible init` — scaffold a complete Fusible & tscircuit project.
 
+mod templates;
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -30,142 +32,69 @@ pub fn run(
     no_install: bool,
 ) -> Result<(), InitError> {
     let base_dir = path.unwrap_or_else(|| PathBuf::from("."));
-    if !base_dir.exists() {
-        std::fs::create_dir_all(&base_dir)
-            .map_err(|e| InitError::new(format!("failed to create directory: {e}")))?;
-    }
+    prepare_base_dir(&base_dir)?;
 
-    let yml_path = base_dir.join("fusible.yml");
-    let yaml_path = base_dir.join("fusible.yaml");
-    if yml_path.exists() || yaml_path.exists() {
-        return Err(InitError::new(
-            "fusible.yml already exists in target directory",
-        ));
-    }
-
-    let project_name = name.unwrap_or_else(|| {
-        base_dir
-            .canonicalize()
-            .ok()
-            .and_then(|p| p.file_name().map(|n| n.to_string_lossy().to_string()))
-            .unwrap_or_else(|| "sensor-node".to_string())
-    });
-
+    let project_name = name.unwrap_or_else(|| default_project_name(&base_dir));
     let mcu_chip = mcu.unwrap_or_else(|| "esp32-s3".to_string());
-    let yaml_name = serde_yaml::to_string(&project_name)
-        .map(|y| y.trim_end().to_string())
-        .unwrap_or_default();
-    let package_name =
-        serde_json::to_string(&format!("{project_name}-hardware")).unwrap_or_default();
-
-    let manifest_content = format!(
-        r#"name: {yaml_name}
-
-hardware:
-  entry: hardware/index.tsx
-  out_dir: dist
-  port: 3020
-
-mcu:
-  chip: {mcu_chip}
-
-firmware:
-  path: apps/firmware
-  framework: esp-idf
-  pins_rs: apps/firmware/src/pins.rs
-  build_cmd: cargo test
-"#
-    );
-    std::fs::write(&yml_path, manifest_content)
-        .map_err(|e| InitError::new(format!("failed to write fusible.yml: {e}")))?;
+    std::fs::write(
+        base_dir.join("fusible.yml"),
+        templates::manifest(&project_name, &mcu_chip),
+    )
+    .map_err(|e| InitError::new(format!("failed to write fusible.yml: {e}")))?;
 
     let hw_dir = base_dir.join("hardware");
-    std::fs::create_dir_all(&hw_dir)
-        .map_err(|e| InitError::new(format!("failed to create hardware directory: {e}")))?;
-
-    let pkg_json = format!(
-        r#"{{
-  "name": {package_name},
-  "version": "0.1.0",
-  "private": true,
-  "dependencies": {{
-    "@tscircuit/core": "^0.0.229",
-    "tscircuit": "^0.0.229"
-  }},
-  "devDependencies": {{
-    "@types/react": "^18.3.0"
-  }}
-}}
-"#
-    );
-    write_new(&hw_dir.join("package.json"), &pkg_json)?;
-
-    let tsconfig_json = r#"{
-  "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "jsx": "react-jsx",
-    "jsxImportSource": "@tscircuit/core",
-    "strict": true,
-    "skipLibCheck": true
-  },
-  "include": ["**/*.ts", "**/*.tsx"]
-}
-"#;
-    write_new(&hw_dir.join("tsconfig.json"), tsconfig_json)?;
-
-    let index_tsx = r#"export default () => (
-  <board width="40mm" height="30mm">
-    {/* Microcontroller */}
-    <chip
-      name="U1"
-      footprint="qfp32"
-      pinLabels={{
-        pin1: "GND",
-        pin2: "VDD3V3",
-        pin3: "GPIO0",
-        pin4: "GPIO1",
-      }}
-    />
-
-    {/* Power Input Header */}
-    <chip
-      name="J1"
-      footprint="pinrow2"
-      pinLabels={{
-        pin1: "VDD3V3",
-        pin2: "GND",
-      }}
-    />
-
-    {/* Status LED with Current Limiting */}
-    <resistor name="R_LED" resistance="1k" footprint="0603" />
-
-    {/* Power Rails */}
-    <trace from=".J1 > .VDD3V3" to="net.VDD3V3" />
-    <trace from=".J1 > .GND" to="net.GND" />
-    <trace from=".U1 > .VDD3V3" to="net.VDD3V3" />
-    <trace from=".U1 > .GND" to="net.GND" />
-
-    {/* Status LED Circuit */}
-    <trace from=".U1 > .GPIO0" to=".R_LED > .pin1" />
-    <trace from=".R_LED > .pin2" to="net.GND" />
-  </board>
-);
-"#;
-    write_new(&hw_dir.join("index.tsx"), index_tsx)?;
+    scaffold_hardware(&hw_dir, &project_name)?;
 
     let gitignore_path = base_dir.join(".gitignore");
     if !gitignore_path.exists() {
-        let gitignore_content = "node_modules/\ndist/\n.tscircuit/\ntarget/\n*.kicad_prl\n*.bak\n";
-        let _ = std::fs::write(gitignore_path, gitignore_content);
+        let _ = std::fs::write(gitignore_path, templates::GITIGNORE);
     }
 
     if !no_install {
         install_hardware_deps(&hw_dir);
     }
 
+    print_summary(&project_name);
+    Ok(())
+}
+
+/// Creates `base_dir` if needed and refuses to overwrite an existing manifest.
+fn prepare_base_dir(base_dir: &Path) -> Result<(), InitError> {
+    if !base_dir.exists() {
+        std::fs::create_dir_all(base_dir)
+            .map_err(|e| InitError::new(format!("failed to create directory: {e}")))?;
+    }
+    if base_dir.join("fusible.yml").exists() || base_dir.join("fusible.yaml").exists() {
+        return Err(InitError::new(
+            "fusible.yml already exists in target directory",
+        ));
+    }
+    Ok(())
+}
+
+/// Names the project after its directory, or `sensor-node` when that fails.
+fn default_project_name(base_dir: &Path) -> String {
+    base_dir
+        .canonicalize()
+        .ok()
+        .and_then(|p| p.file_name().map(|n| n.to_string_lossy().to_string()))
+        .unwrap_or_else(|| "sensor-node".to_string())
+}
+
+/// Creates the hardware workspace and its starter files.
+fn scaffold_hardware(hw_dir: &Path, project_name: &str) -> Result<(), InitError> {
+    std::fs::create_dir_all(hw_dir)
+        .map_err(|e| InitError::new(format!("failed to create hardware directory: {e}")))?;
+    write_new(
+        &hw_dir.join("package.json"),
+        &templates::package_json(project_name),
+    )?;
+    write_new(&hw_dir.join("tsconfig.json"), templates::TSCONFIG_JSON)?;
+    write_new(&hw_dir.join("index.tsx"), templates::INDEX_TSX)
+}
+
+/// Prints the scaffolded tree and suggested next commands.
+fn print_summary(project_name: &str) {
     println!("✨ Successfully initialized Fusible project \"{project_name}\"");
     println!("  ├── fusible.yml           (Fusible configuration & fuse contract)");
     println!("  └── hardware/");
@@ -181,8 +110,6 @@ firmware:
     println!("  fusible export --preset cad  Export KiCad project for Electrical Engineers");
     println!("  fusible add <pkg>         Install tscircuit packages or footprints");
     println!("  fusible build             Compile hardware artifacts & build firmware");
-
-    Ok(())
 }
 
 /// Writes `content` to `path` unless the file already exists, which it reports and keeps.
@@ -195,6 +122,7 @@ fn write_new(path: &Path, content: &str) -> Result<(), InitError> {
         .map_err(|e| InitError::new(format!("failed to write {}: {e}", path.display())))
 }
 
+/// Runs `install` with the first available package manager in `hw_dir`.
 fn install_hardware_deps(hw_dir: &Path) {
     println!("📦 Installing hardware dependencies...");
     let runners = ["bun", "npm"];

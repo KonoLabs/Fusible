@@ -10,6 +10,7 @@ pub mod codegen;
 pub mod commands;
 pub mod config;
 pub mod dev;
+mod dispatch;
 pub mod gerber;
 pub mod kicad;
 pub mod linter;
@@ -26,97 +27,18 @@ use clap::Parser;
 use miette::Diagnostic;
 
 use crate::cli::{Cli, Commands};
-use crate::commands::check::CheckError;
-use crate::commands::mechanical::MechanicalError;
-use crate::config::MechanicalConfig;
 
 /// Exit code: electrical violations (the fuse blew).
 pub const EXIT_VIOLATIONS: u8 = 1;
 /// Exit code: the tool itself could not do its job (aligns with clap's 2).
 pub const EXIT_TOOL_ERROR: u8 = 2;
 
-fn dispatch_build(file: Option<std::path::PathBuf>) -> ExitCode {
-    match commands::build::run(file) {
-        Ok(()) => ExitCode::SUCCESS,
-        Err(commands::build::BuildError::Check(CheckError::FuseBlown(blown))) => {
-            fail(blown, EXIT_VIOLATIONS)
-        }
-        Err(err) => fail(err, EXIT_TOOL_ERROR),
-    }
-}
-
-fn dispatch_export(
-    file: Option<std::path::PathBuf>,
-    preset: Option<String>,
-    format: String,
-    output: Option<std::path::PathBuf>,
-    skip_lint: bool,
-) -> ExitCode {
-    match commands::export::run(file, preset.as_deref(), &format, output, skip_lint) {
-        Ok(()) => ExitCode::SUCCESS,
-        Err(commands::export::ExportError::Check(CheckError::FuseBlown(blown))) => {
-            fail(blown, EXIT_VIOLATIONS)
-        }
-        Err(err) => fail(err, EXIT_TOOL_ERROR),
-    }
-}
-
-fn dispatch_mechanical(
-    file: Option<std::path::PathBuf>,
-    overrides: MechanicalConfig,
-    skip_lint: bool,
-) -> ExitCode {
-    match commands::mechanical::run(file, overrides, skip_lint) {
-        Ok(()) => ExitCode::SUCCESS,
-        Err(MechanicalError::Check(CheckError::FuseBlown(blown))) => fail(blown, EXIT_VIOLATIONS),
-        Err(err) => fail(err, EXIT_TOOL_ERROR),
-    }
-}
-
-fn dispatch_route(
-    file: Option<std::path::PathBuf>,
-    output: Option<std::path::PathBuf>,
-    clearance: f64,
-    trace_width: f64,
-    layers: u8,
-    dry_run: bool,
-) -> ExitCode {
-    match commands::route::run(file, output, clearance, trace_width, layers, dry_run) {
-        Ok(()) => ExitCode::SUCCESS,
-        Err(err @ commands::route::RouteCommandError::UnroutedNets { .. }) => {
-            fail(err, EXIT_VIOLATIONS)
-        }
-        Err(err) => fail(err, EXIT_TOOL_ERROR),
-    }
-}
-
-fn dispatch_diff(kicad_pcb: std::path::PathBuf, file: Option<std::path::PathBuf>) -> ExitCode {
-    match commands::diff::run(kicad_pcb, file) {
-        Ok(()) => ExitCode::SUCCESS,
-        Err(err @ commands::diff::DiffCommandError::DriftDetected) => fail(err, EXIT_VIOLATIONS),
-        Err(err) => fail(err, EXIT_TOOL_ERROR),
-    }
-}
-
-fn dispatch_sync(
-    kicad_pcb: std::path::PathBuf,
-    file: Option<std::path::PathBuf>,
-    target: Option<std::path::PathBuf>,
-    write: bool,
-    dry_run: bool,
-) -> ExitCode {
-    match commands::sync::run(kicad_pcb, file, target, write, dry_run) {
-        Ok(()) => ExitCode::SUCCESS,
-        Err(err) => fail(err, EXIT_TOOL_ERROR),
-    }
-}
-
 fn main() -> ExitCode {
     let cli = Cli::parse();
 
     if !matches!(
         cli.command,
-        Some(Commands::Init { .. } | Commands::Doctor { .. })
+        Some(Commands::Init(_) | Commands::Doctor { .. })
     ) {
         if let Err(err) = config::FusibleConfig::find_and_load(std::path::Path::new(".")) {
             return fail(err, EXIT_TOOL_ERROR);
@@ -124,101 +46,34 @@ fn main() -> ExitCode {
     }
 
     match cli.command {
-        Some(Commands::Dev { file, port, legacy }) => {
-            match commands::dev::run(file, port, legacy) {
-                Ok(code) => ExitCode::from(u8::try_from(code).unwrap_or(EXIT_TOOL_ERROR)),
-                Err(err) => fail(err, EXIT_TOOL_ERROR),
-            }
-        }
-        Some(Commands::Check { file, mcu, pins_rs }) => dispatch_check(file, mcu, pins_rs),
-        Some(Commands::Build { file }) => dispatch_build(file),
-        Some(Commands::Export {
-            file,
-            preset,
-            format,
-            output,
-            skip_lint,
-        }) => dispatch_export(file, preset, format, output, skip_lint),
-        Some(Commands::Route {
-            file,
-            output,
-            clearance,
-            trace_width,
-            layers,
-            dry_run,
-        }) => dispatch_route(file, output, clearance, trace_width, layers, dry_run),
-        Some(Commands::Diff { kicad_pcb, file }) => dispatch_diff(kicad_pcb, file),
-        Some(Commands::Sync {
-            kicad_pcb,
-            file,
-            target,
-            write,
-            dry_run,
-        }) => dispatch_sync(kicad_pcb, file, target, write, dry_run),
-        Some(Commands::Doctor { install }) => match commands::doctor::run(install) {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(err) => fail(err, EXIT_TOOL_ERROR),
-        },
-        Some(Commands::Init {
-            path,
-            name,
-            mcu,
-            no_install,
-        }) => match commands::init::run(path, name, mcu, no_install) {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(err) => fail(err, EXIT_TOOL_ERROR),
-        },
-        Some(Commands::Add { packages }) => match commands::add::run(&packages) {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(err) => fail(err, EXIT_TOOL_ERROR),
-        },
-        Some(Commands::Install { dir }) => match commands::install::run(dir) {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(err) => fail(err, EXIT_TOOL_ERROR),
-        },
-        Some(Commands::Search { query }) => match commands::search::run(&query) {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(err) => fail(err, EXIT_TOOL_ERROR),
-        },
-        Some(Commands::Mechanical {
-            file,
-            format,
-            output,
-            wall_thickness,
-            height,
-            ventilation,
-            no_cutouts,
-            no_mounting,
-            skip_lint,
-        }) => dispatch_mechanical(
-            file,
-            MechanicalConfig {
-                format,
-                out_dir: output,
-                wall_thickness,
-                height,
-                cutouts: no_cutouts.then_some(false),
-                ventilation,
-                mounting: no_mounting.then_some(false),
-            },
-            skip_lint,
-        ),
-        None => handle_default_invocation(cli),
+        Some(command) => run_command(command),
+        None => dispatch::check(cli.input, cli.mcu, None),
     }
 }
 
-fn handle_default_invocation(cli: Cli) -> ExitCode {
-    dispatch_check(cli.input, cli.mcu, None)
+/// Dispatches one subcommand and returns its exit code.
+fn run_command(command: Commands) -> ExitCode {
+    match command {
+        Commands::Dev { file, port, legacy } => dispatch::dev(file, port, legacy),
+        Commands::Check { file, mcu, pins_rs } => dispatch::check(file, mcu, pins_rs),
+        Commands::Build { file } => dispatch::build(file),
+        Commands::Export(args) => dispatch::export(args),
+        Commands::Mechanical(args) => dispatch::mechanical(args),
+        Commands::Route(args) => dispatch::route(args),
+        Commands::Diff { kicad_pcb, file } => dispatch::diff(kicad_pcb, file),
+        Commands::Sync(args) => dispatch::sync(args),
+        Commands::Doctor { install } => tool_exit(commands::doctor::run(install)),
+        Commands::Init(a) => tool_exit(commands::init::run(a.path, a.name, a.mcu, a.no_install)),
+        Commands::Add { packages } => tool_exit(commands::add::run(&packages)),
+        Commands::Install { dir } => tool_exit(commands::install::run(dir)),
+        Commands::Search { query } => tool_exit(commands::search::run(&query)),
+    }
 }
 
-fn dispatch_check(
-    file: Option<std::path::PathBuf>,
-    mcu: Option<String>,
-    pins_rs: Option<std::path::PathBuf>,
-) -> ExitCode {
-    match commands::check::run(file, mcu, pins_rs) {
+/// Maps a command result where every error is a tool error.
+fn tool_exit<E: Diagnostic + Send + Sync + 'static>(result: Result<(), E>) -> ExitCode {
+    match result {
         Ok(()) => ExitCode::SUCCESS,
-        Err(CheckError::FuseBlown(blown)) => fail(blown, EXIT_VIOLATIONS),
         Err(err) => fail(err, EXIT_TOOL_ERROR),
     }
 }

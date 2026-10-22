@@ -63,7 +63,8 @@ pub fn create_gerber_zip(files: &GerberFiles) -> Result<Vec<u8>, std::io::Error>
     Ok(cursor.into_inner())
 }
 
-/// Exports the complete fabrication bundle (`gerbers.zip` and `circuit.json`) to `output_dir`; nothing is written when generation fails.
+/// Exports the complete fabrication bundle (`gerbers.zip` and `circuit.json`) to `output_dir`;
+/// nothing is written when generation fails.
 pub fn export_fab_bundle(
     circuit_json: &str,
     board_title: &str,

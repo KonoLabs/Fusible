@@ -9,6 +9,7 @@ pub mod doctor;
 pub mod export;
 pub mod init;
 pub mod install;
+pub mod manifest;
 pub mod mechanical;
 pub mod route;
 pub mod search;

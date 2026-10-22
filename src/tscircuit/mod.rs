@@ -4,16 +4,18 @@
 //! circuits via tscircuit. Supports local node_modules installations,
 //! global binaries, and on-demand runners via `bun` and `npx`.
 
+mod build;
 pub mod command;
 pub mod detect;
 pub mod error;
+mod interactive;
 pub mod kicad;
 pub mod output;
+mod process;
 #[cfg(test)]
 mod tests;
 
 use std::path::{Path, PathBuf};
-use std::process::{ExitStatus, Stdio};
 
 pub use command::{
     add_command, build_command, dev_command, export_command, install_command, search_command,
@@ -70,23 +72,6 @@ impl Runner {
         &self.kind
     }
 
-    /// Executes `dev [file] -p [port]`, inheriting standard I/O for interactive hot-reloading.
-    pub fn dev(&self, file: &Path, port: Option<u16>) -> Result<ExitStatus, RunnerError> {
-        let (working_dir, target_file) = resolve_hardware_context(file);
-        let mut cmd = dev_command(&self.kind, &target_file, port);
-        if let Some(ref dir) = working_dir {
-            cmd.current_dir(dir);
-        }
-        cmd.stdin(Stdio::inherit())
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit());
-
-        cmd.status().map_err(|source| RunnerError::Io {
-            command: command::format_command(&cmd),
-            source,
-        })
-    }
-
     /// Runs the tscircuit export command.
     pub fn export(
         &self,
@@ -94,31 +79,21 @@ impl Runner {
         format: &str,
         output: Option<&Path>,
     ) -> Result<(), RunnerError> {
-        let abs_output = output.map(|p| {
-            if p.is_absolute() {
-                p.to_path_buf()
-            } else {
-                std::env::current_dir()
-                    .map(|cd| cd.join(p))
-                    .unwrap_or_else(|_| p.to_path_buf())
-            }
-        });
-        if let Some(ref p) = abs_output {
-            if let Some(parent) = p.parent() {
-                std::fs::create_dir_all(parent).ok();
-            }
+        let abs_output = output.map(absolute_output);
+        if let Some(parent) = abs_output.as_deref().and_then(Path::parent) {
+            std::fs::create_dir_all(parent).ok();
         }
 
         let mut cmd = export_command(&self.kind, file, format, abs_output.as_deref());
         let out = cmd.output().map_err(|source| RunnerError::Io {
-            command: command::format_command(&cmd),
+            command: process::format_command(&cmd),
             source,
         })?;
 
         if !out.status.success() {
-            let details = command::extract_output_details(&out);
+            let details = process::extract_output_details(&out);
             return Err(RunnerError::CommandFailed {
-                command: command::format_command(&cmd),
+                command: process::format_command(&cmd),
                 code: out.status.code(),
                 stderr: details.clone(),
                 help: details,
@@ -126,201 +101,19 @@ impl Runner {
         }
         Ok(())
     }
-
-    /// Runs the tscircuit build command to produce circuit json.
-    pub fn build(&self, file: &Path, out_file: Option<&Path>) -> Result<PathBuf, RunnerError> {
-        let (working_dir, target_file) = resolve_hardware_context(file);
-        let mut cmd = build_command(&self.kind, &target_file);
-        if let Some(ref dir) = working_dir {
-            cmd.current_dir(dir);
-        }
-        cmd.stdin(Stdio::null());
-        cmd.env("CI", "1");
-        cmd.stdout(Stdio::piped());
-        cmd.stderr(Stdio::piped());
-
-        let cmd_str = command::format_command(&cmd);
-        let started = std::time::SystemTime::now() - std::time::Duration::from_secs(2);
-        let mut child = cmd.spawn().map_err(|source| RunnerError::Io {
-            command: cmd_str.clone(),
-            source,
-        })?;
-
-        let mut stdout_pipe = child.stdout.take();
-        let mut stderr_pipe = child.stderr.take();
-
-        let stdout_handle = std::thread::spawn(move || {
-            let mut buf = Vec::new();
-            if let Some(mut pipe) = stdout_pipe.take() {
-                use std::io::Read;
-                let _ = pipe.read_to_end(&mut buf);
-            }
-            buf
-        });
-
-        let stderr_handle = std::thread::spawn(move || {
-            let mut buf = Vec::new();
-            if let Some(mut pipe) = stderr_pipe.take() {
-                use std::io::Read;
-                let _ = pipe.read_to_end(&mut buf);
-            }
-            buf
-        });
-
-        let start = std::time::Instant::now();
-        let timeout = build_timeout();
-        let status = loop {
-            match child.try_wait() {
-                Ok(Some(s)) => break s,
-                Ok(None) => {
-                    if start.elapsed() >= timeout {
-                        let _ = child.kill();
-                        let _ = child.wait();
-                        return Err(RunnerError::CommandFailed {
-                            command: cmd_str,
-                            code: None,
-                            stderr: format!("compilation timed out after {} seconds", timeout.as_secs()),
-                            help: "raise FUSIBLE_BUILD_TIMEOUT_SECS or set `routingDisabled` on <board>".to_string(),
-                        });
-                    }
-                    std::thread::sleep(std::time::Duration::from_millis(50));
-                }
-                Err(source) => {
-                    let _ = child.kill();
-                    let _ = child.wait();
-                    return Err(RunnerError::Io {
-                        command: cmd_str,
-                        source,
-                    });
-                }
-            }
-        };
-
-        let stdout = stdout_handle.join().unwrap_or_default();
-        let stderr = stderr_handle.join().unwrap_or_default();
-        let out = std::process::Output {
-            status,
-            stdout,
-            stderr,
-        };
-
-        let stdout_str = String::from_utf8_lossy(&out.stdout);
-        let produced = output::resolve_circuit_json(file, &stdout_str).and_then(|path| {
-            let fresh = std::fs::metadata(&path)
-                .and_then(|m| m.modified())
-                .is_ok_and(|modified| modified >= started);
-            if fresh {
-                Ok(path)
-            } else {
-                Err(RunnerError::OutputNotFound { path })
-            }
-        });
-
-        if !out.status.success() && produced.is_err() {
-            let details = command::extract_output_details(&out);
-            return Err(RunnerError::CommandFailed {
-                command: command::format_command(&cmd),
-                code: out.status.code(),
-                stderr: details.clone(),
-                help: details,
-            });
-        }
-
-        let produced_path = produced?;
-        if let Some(dest) = out_file {
-            output::copy_output(&produced_path, dest)?;
-            Ok(dest.to_path_buf())
-        } else {
-            Ok(produced_path)
-        }
-    }
-
-    /// Adds packages to the tscircuit project.
-    pub fn add(&self, packages: &[String], cwd: Option<&Path>) -> Result<(), RunnerError> {
-        let mut cmd = command::add_command(&self.kind, packages);
-        if let Some(dir) = cwd {
-            cmd.current_dir(dir);
-        }
-        cmd.stdin(Stdio::inherit())
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit());
-
-        let status = cmd.status().map_err(|source| RunnerError::Io {
-            command: command::format_command(&cmd),
-            source,
-        })?;
-
-        if !status.success() {
-            return Err(RunnerError::CommandFailed {
-                command: command::format_command(&cmd),
-                code: status.code(),
-                stderr: "failed to add package(s)".into(),
-                help: "check package names or registry connectivity".into(),
-            });
-        }
-        Ok(())
-    }
-
-    /// Installs dependencies in the project.
-    pub fn install(&self, cwd: Option<&Path>) -> Result<(), RunnerError> {
-        let mut cmd = command::install_command(&self.kind);
-        if let Some(dir) = cwd {
-            cmd.current_dir(dir);
-        }
-        cmd.stdin(Stdio::inherit())
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit());
-
-        let status = cmd.status().map_err(|source| RunnerError::Io {
-            command: command::format_command(&cmd),
-            source,
-        })?;
-
-        if !status.success() {
-            return Err(RunnerError::CommandFailed {
-                command: command::format_command(&cmd),
-                code: status.code(),
-                stderr: "failed to install dependencies".into(),
-                help: "check network connection or package.json validity".into(),
-            });
-        }
-        Ok(())
-    }
-
-    /// Searches the tscircuit registry for components, footprints, and CAD models.
-    pub fn search(&self, query: &[String]) -> Result<(), RunnerError> {
-        let mut cmd = command::search_command(&self.kind, query);
-        cmd.stdin(Stdio::inherit())
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit());
-
-        let status = cmd.status().map_err(|source| RunnerError::Io {
-            command: command::format_command(&cmd),
-            source,
-        })?;
-
-        if !status.success() {
-            return Err(RunnerError::CommandFailed {
-                command: command::format_command(&cmd),
-                code: status.code(),
-                stderr: "search command failed".into(),
-                help: "check network connection".into(),
-            });
-        }
-        Ok(())
-    }
 }
 
-/// Returns the tscircuit build timeout: `FUSIBLE_BUILD_TIMEOUT_SECS` when set to a positive integer, else 120 seconds.
-fn build_timeout() -> std::time::Duration {
-    let secs = std::env::var("FUSIBLE_BUILD_TIMEOUT_SECS")
-        .ok()
-        .and_then(|v| v.parse::<u64>().ok())
-        .filter(|s| *s > 0)
-        .unwrap_or(120);
-    std::time::Duration::from_secs(secs)
+/// Resolves a relative output path against the current directory.
+fn absolute_output(p: &Path) -> PathBuf {
+    if p.is_absolute() {
+        return p.to_path_buf();
+    }
+    std::env::current_dir()
+        .map(|cd| cd.join(p))
+        .unwrap_or_else(|_| p.to_path_buf())
 }
 
+/// Splits `file` into the hardware workspace to run in and the path relative to it.
 fn resolve_hardware_context(file: &Path) -> (Option<PathBuf>, PathBuf) {
     if let Some(parent) = file.parent() {
         if !parent.as_os_str().is_empty() && parent.join("package.json").is_file() {

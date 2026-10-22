@@ -75,7 +75,10 @@ fn recognized_elements_without_identifiers_parse_to_none() {
 
 #[test]
 fn element_errors_name_the_element_and_point_at_its_line() {
-    let source = "[\n{\"type\": \"source_net\", \"source_net_id\": \"n1\"},\n{\"type\": \"source_port\", \"pin_number\": \"x\"}\n]";
+    let source = concat!(
+        "[\n{\"type\": \"source_net\", \"source_net_id\": \"n1\"},\n",
+        "{\"type\": \"source_port\", \"pin_number\": \"x\"}\n]"
+    );
     let line3 = source.find("{\"type\": \"source_port\"").expect("line 3");
 
     let err = parse(source, Path::new("circuit.json")).expect_err("bad pin_number");

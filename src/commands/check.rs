@@ -5,9 +5,10 @@ use std::path::{Path, PathBuf};
 use miette::Diagnostic;
 use thiserror::Error;
 
+use crate::commands::manifest::resolve_pins_rs;
+pub use crate::commands::manifest::{resolve_board_name, resolve_mcu};
 use crate::commands::target::{is_kicad_target, is_tsx_target, resolve_entry, MissingTargetError};
-use crate::config::FusibleConfig;
-use crate::linter::{FuseBlown, Linter};
+use crate::linter::{FuseBlown, LintContext, Linter};
 use crate::netlist::Netlist;
 use crate::parser;
 use crate::tscircuit::{Runner, RunnerError};
@@ -135,64 +136,40 @@ pub fn run(
 
     let circuit = parser::parse(&source, &json_path)?;
     let netlist = Netlist::from_circuit(&circuit);
-    let ctx = crate::linter::LintContext::new(&circuit, &netlist).with_mcu(target_mcu.as_deref());
+    let ctx = LintContext::new(&circuit, &netlist).with_mcu(target_mcu.as_deref());
     let violations = Linter::default().run_with_context(&ctx);
 
-    if violations.is_empty() {
-        println!("✅ Circuit validated (fuse intact)");
-        if let Some(ref mcu) = target_mcu {
-            println!("   silicon target: {mcu}");
-        }
-
-        let target_pins_rs = resolve_pins_rs(pins_rs);
-        if let Some(pins_path) = target_pins_rs {
-            let board_name = resolve_board_name();
-            if let Some(mcu_info) =
-                crate::codegen::extract_mcu_pins(&circuit, &netlist, target_mcu.as_deref())
-            {
-                let code = crate::codegen::generate_pins_rs(&mcu_info, &board_name);
-                if let Some(parent) = pins_path.parent() {
-                    std::fs::create_dir_all(parent).ok();
-                }
-                std::fs::write(&pins_path, code).map_err(|source| ReadError {
-                    path: pins_path.display().to_string(),
-                    source,
-                })?;
-                println!(
-                    "🦀 Generated firmware pin bindings -> {}",
-                    pins_path.display()
-                );
-            }
-        }
-        return Ok(());
+    if !violations.is_empty() {
+        return Err(CheckError::FuseBlown(FuseBlown::new(violations)));
     }
 
-    Err(CheckError::FuseBlown(FuseBlown::new(violations)))
+    println!("✅ Circuit validated (fuse intact)");
+    if let Some(ref mcu) = target_mcu {
+        println!("   silicon target: {mcu}");
+    }
+
+    match resolve_pins_rs(pins_rs) {
+        Some(pins_path) => write_pins_rs(&ctx, &pins_path),
+        None => Ok(()),
+    }
 }
 
-pub fn resolve_mcu(explicit: Option<String>) -> Option<String> {
-    explicit.or_else(|| {
-        FusibleConfig::find_and_load(Path::new("."))
-            .ok()
-            .flatten()
-            .and_then(|(_, cfg)| cfg.mcu.and_then(|m| m.chip))
-    })
-}
-
-fn resolve_pins_rs(explicit: Option<PathBuf>) -> Option<PathBuf> {
-    explicit.or_else(|| {
-        FusibleConfig::find_and_load(Path::new("."))
-            .ok()
-            .flatten()
-            .and_then(|(_, cfg)| cfg.firmware.and_then(|f| f.pins_rs))
-    })
-}
-
-/// Returns the manifest `name`, or a generic board title when there is none.
-pub fn resolve_board_name() -> String {
-    FusibleConfig::find_and_load(Path::new("."))
-        .ok()
-        .flatten()
-        .and_then(|(_, cfg)| cfg.name)
-        .unwrap_or_else(|| "Hardware Board".to_string())
+/// Generates firmware pin bindings for the circuit's MCU into `pins_path`.
+fn write_pins_rs(ctx: &LintContext, pins_path: &Path) -> Result<(), CheckError> {
+    let Some(mcu_info) = crate::codegen::extract_mcu_pins(ctx.circuit, ctx.netlist, ctx.mcu) else {
+        return Ok(());
+    };
+    let code = crate::codegen::generate_pins_rs(&mcu_info, &resolve_board_name());
+    if let Some(parent) = pins_path.parent() {
+        std::fs::create_dir_all(parent).ok();
+    }
+    std::fs::write(pins_path, code).map_err(|source| ReadError {
+        path: pins_path.display().to_string(),
+        source,
+    })?;
+    println!(
+        "🦀 Generated firmware pin bindings -> {}",
+        pins_path.display()
+    );
+    Ok(())
 }

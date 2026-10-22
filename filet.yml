@@ -1,0 +1,21 @@
+ignore:
+  - .git
+  - target
+  - node_modules
+  - dist
+  - src/assets/studio.bundle.js
+  - studio/bun.lock
+
+extensions: [.rs, .ts]
+
+limits:
+  fileLines: 250
+  funcsPerFile: 8
+  funcLines: 30
+  lineLength: 120
+  params: 5
+  returns: 3
+  nesting: 4
+  complexity: 10
+
+disabled: [lsp.unavailable]

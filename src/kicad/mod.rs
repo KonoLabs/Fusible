@@ -1,7 +1,12 @@
 pub mod diff;
+mod footprint;
+mod placements;
+mod report;
 pub mod sexpr;
 pub mod sync;
 
+#[cfg(test)]
+mod sexpr_tests;
 #[cfg(test)]
 mod tests;
 
