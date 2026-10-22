@@ -29,6 +29,7 @@ use miette::Diagnostic;
 use crate::cli::{Cli, Commands};
 use crate::commands::check::CheckError;
 use crate::commands::mechanical::MechanicalError;
+use crate::config::MechanicalConfig;
 
 /// Exit code: electrical violations (the fuse blew).
 pub const EXIT_VIOLATIONS: u8 = 1;
@@ -61,6 +62,7 @@ fn dispatch_export(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn dispatch_mechanical(
     file: Option<std::path::PathBuf>,
     format: String,
@@ -226,7 +228,7 @@ fn handle_default_invocation(cli: Cli) -> ExitCode {
     } else {
         let _ = Cli::command().print_help();
         println!();
-        ExitCode::from(EXIT_TOOL_ERROR)
+        ExitCode::SUCCESS
     }
 }
 

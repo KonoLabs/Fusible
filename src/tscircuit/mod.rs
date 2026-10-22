@@ -324,11 +324,7 @@ impl Runner {
     ///
     /// Uses `detect_ts_runner()` to find a suitable TS executor (bun > npx > node).
     /// The script at `script_path` is executed with `args`.
-    pub fn mechanical(
-        &self,
-        script_path: &Path,
-        args: &[String],
-    ) -> Result<(), RunnerError> {
+    pub fn mechanical(&self, script_path: &Path, args: &[String]) -> Result<(), RunnerError> {
         let path_var = std::env::var_os("PATH");
         let ts_runner = detect_ts_runner(path_var.as_deref()).ok_or(RunnerError::NotFound)?;
 

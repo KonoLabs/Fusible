@@ -50,15 +50,9 @@ pub fn run(
     config: MechanicalConfig,
     skip_lint: bool,
 ) -> Result<(), MechanicalError> {
-    // Extract values from the provided config, using defaults where needed.
     let format = config.format.as_deref().unwrap_or("step");
     let output = config.out_dir.clone();
     let outline = config.outline_source.clone().unwrap_or_else(|| "auto".to_string());
-    let wall_thickness = config.wall_thickness.unwrap_or(2.0);
-    let height = config.height;
-    let component_cutouts = config.component_cutoffs.unwrap_or(false);
-    let ventilation = config.ventilation.clone().unwrap_or_else(|| "none".to_string());
-    let mounting = config.mounting.clone().unwrap_or_else(|| "none".to_string());
 
     validate_format(format)?;
 
@@ -78,8 +72,6 @@ pub fn run(
 
     // Use the provided config for export.
     // No need to recreate MechanicalConfig here.
-
-
 
     if format == "all" {
         for fmt in ["step", "iges", "stl", "glb", "brep"] {
@@ -114,17 +106,6 @@ fn validate_format(format: &str) -> Result<(), MechanicalError> {
         }),
     }
 }
-
-#[derive(Debug)]
-struct MechanicalExportConfig {
-    wall_thickness: f64,
-    height: Option<f64>,
-    component_cutouts: bool,
-    ventilation: String,
-    mounting: String,
-}
-
-
 
 /// Derives the board outline from the circuit, KiCad, or SVG source.
 fn resolve_outline(
@@ -186,16 +167,26 @@ fn spawn_mechanical_script(
         .arg("--outline")
         .arg(outline)
         .arg("--wall-thickness")
-        .arg(config.wall_thickness.to_string())
+        .arg(config.wall_thickness.unwrap_or(2.0).to_string())
         .arg("--ventilation")
-        .arg(&config.ventilation)
+        .arg(
+            config
+                .ventilation
+                .clone()
+                .unwrap_or_else(|| "none".to_string()),
+        )
         .arg("--mounting")
-        .arg(&config.mounting);
+        .arg(
+            config
+                .mounting
+                .clone()
+                .unwrap_or_else(|| "none".to_string()),
+        );
 
     if let Some(h) = config.height {
         cmd.arg("--height").arg(h.to_string());
     }
-    if config.component_cutouts {
+    if config.component_cutouts.unwrap_or(false) {
         cmd.arg("--component-cutouts");
     }
 
@@ -253,4 +244,3 @@ fn export_mechanical(
 
     Ok(())
 }
-
