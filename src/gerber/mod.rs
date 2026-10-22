@@ -13,5 +13,5 @@ pub use apertures::{Aperture, ApertureDictionary};
 pub use bundle::{create_gerber_zip, export_fab_bundle, generate_gerber_files, GerberFiles};
 pub use coordinates::Coord;
 pub use excellon::ExcellonWriter;
-pub use layers::PcbModel;
-pub use writer::GerberWriter;
+pub use layers::{GerberError, PcbModel};
+pub use writer::{FilePolarity, GerberWriter};
