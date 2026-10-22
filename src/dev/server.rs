@@ -19,6 +19,11 @@ fn load_studio_bundle() -> Option<String> {
     std::fs::read_to_string(&bundle_path).ok()
 }
 
+fn load_studio_bundle() -> Option<String> {
+    let bundle_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/assets/studio.bundle.js");
+    std::fs::read_to_string(&bundle_path).ok()
+}
+
 pub fn run_dev_server(entry: PathBuf, port: u16) -> Result<(), Box<dyn std::error::Error>> {
     let addr = format!("127.0.0.1:{port}");
     let server =

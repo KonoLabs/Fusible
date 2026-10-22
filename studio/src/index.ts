@@ -410,53 +410,7 @@ function ResponsivePcbViewer({
   useEffect(() => {
     if (!onSelectComponent) return;
 
-    const handleDocumentClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement | null;
-      const btn = target?.closest('button, [role="menuitem"]');
-      if (btn) {
-        const text = btn.textContent || "";
-        if (text.includes("on Schematic")) {
-          const refdes = text.replace("on Schematic", "").replace(/[↗︎\s]/g, "").trim();
-          if (refdes) {
-            const resolved = resolveComponentRefdes(circuitJson || [], refdes);
-            if (resolved) onSelectComponent(resolved);
-          }
-        }
-      }
-    };
-    document.addEventListener("click", handleDocumentClick, true);
-
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        for (const node of Array.from(mutation.addedNodes)) {
-          if (node instanceof HTMLElement) {
-            const menu = node.getAttribute("role") === "menu" ? node : node.querySelector('[role="menu"]');
-            if (menu) {
-              const buttons = menu.querySelectorAll("button, [role=\"menuitem\"]");
-              for (const btn of Array.from(buttons)) {
-                const text = btn.textContent || "";
-                if (text.includes("on Schematic")) {
-                  const refdes = text.replace("on Schematic", "").replace(/[↗︎\s]/g, "").trim();
-                  if (refdes) {
-                    const resolved = resolveComponentRefdes(circuitJson || [], refdes);
-                    if (resolved) {
-                      onSelectComponent(resolved);
-                      return;
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    return () => {
-      document.removeEventListener("click", handleDocumentClick, true);
-      observer.disconnect();
-    };
+    useContextMenuIntercept(circuitJson || [], onSelectComponent);
   }, [circuitJson, onSelectComponent]);
 
   return React.createElement(
