@@ -119,6 +119,7 @@ Features:
 - Vitrine brutalist dark UI palette (`#000000`, `#131313`, `#353535`, `#86A881`, `#A8B365`) and embedded `Undefined` monospace typography.
 - Interactive pan and zoom vector canvas for multi-layer PCB layout (`01 // PCB LAYOUT`) and schematic diagrams (`02 // SCHEMATIC`).
 - Interactive Three.js 3D board viewer (`03 // 3D VIEW`) rendering substrate, ENIG gold pads, copper vias, traces, and components with OrbitControls and view presets.
+- `MECHANICAL` tab showing the generated base and lid, with lid and explode toggles. The 3D view has a `MECHANICAL` toggle that draws the shell translucent around the board. The studio builds the model on demand from the `mechanical:` section of `fusible.yml` and rebuilds it when the circuit changes. Needs `bun`.
 - Real-time fuse status badge (glowing green when intact, pulsing red on blown fuse).
 - Diagnostics inspector showing rule violations, severity, and remediation advice.
 - PCB layer visibility toggles (top copper, bottom copper, ENIG pads, silkscreen).
@@ -198,6 +199,7 @@ fusible mechanical --no-cutouts --no-mounting
 - Components that reach the board edge get a wall notch from the board surface up.
 - CLI flags override the `mechanical:` section of `fusible.yml`, which overrides defaults.
 - Requires `bun`. The first run installs `occt-wasm` into `~/.cache/fusible/`. IGES is not supported.
+- `fusible dev` previews the same model in its `MECHANICAL` tab and as a 3D overlay, without the fuse gate.
 
 ### 8. Hardware package management (`add`, `install`, `search`)
 

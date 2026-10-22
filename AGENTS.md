@@ -69,7 +69,7 @@ cargo clippy --all-targets -- -D warnings
 # 3. Test suite
 cargo test --locked
 
-# 4. Suite quality check (if filet is installed)
+# 4. Suite quality check (filet.yml at the root; must report nothing)
 filet check .
 ```
 
