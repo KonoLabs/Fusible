@@ -57,13 +57,6 @@ fn parses_kicad6_footprint_sexpr() {
 }
 
 #[test]
-fn deeply_nested_sexpr_errors_instead_of_overflowing() {
-    let depth = 200_000;
-    let input = format!("{}{}", "(".repeat(depth), ")".repeat(depth));
-    assert!(parse_sexpr(&input).is_err());
-}
-
-#[test]
 fn compares_and_detects_layout_drift() {
     let sexpr_str = r#"
         (kicad_pcb

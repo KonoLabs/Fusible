@@ -43,7 +43,7 @@ fn tokenize(input: &str) -> Result<Vec<String>, String> {
 
     while i < chars.len() {
         match chars[i] {
-            ' ' | '\t' | '\r' | '\n' => i += 1,
+            c if c.is_whitespace() => i += 1,
             '(' | ')' => {
                 tokens.push(chars[i].to_string());
                 i += 1;
