@@ -21,6 +21,7 @@ mod ghost_net;
 mod malformed_element;
 mod pin_mux;
 mod schematic_scale;
+mod shorted_nets;
 #[cfg(test)]
 mod tests;
 mod trace_clearance;
@@ -32,5 +33,6 @@ pub use ghost_net::GhostNetRule;
 pub use malformed_element::MalformedElementRule;
 pub use pin_mux::PinMuxRule;
 pub use schematic_scale::SchematicScaleRule;
+pub use shorted_nets::ShortedNetsRule;
 pub use trace_clearance::TraceClearanceRule;
 pub use unconnected_net::UnconnectedNetRule;

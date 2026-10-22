@@ -22,7 +22,7 @@ pub use context::LintContext;
 pub use diagnostics::{Diagnostic, FuseBlown};
 pub use rules::{
     BypassCapRule, DanglingReferenceRule, GhostNetRule, MalformedElementRule, PinMuxRule,
-    SchematicScaleRule, TraceClearanceRule, UnconnectedNetRule,
+    SchematicScaleRule, ShortedNetsRule, TraceClearanceRule, UnconnectedNetRule,
 };
 
 // ---------------------------------------------------------------------------
@@ -80,6 +80,7 @@ impl Default for Linter {
             .with_rule(MalformedElementRule)
             .with_rule(GhostNetRule)
             .with_rule(DanglingReferenceRule)
+            .with_rule(ShortedNetsRule)
             .with_rule(PinMuxRule)
             .with_rule(BypassCapRule)
             .with_rule(TraceClearanceRule)

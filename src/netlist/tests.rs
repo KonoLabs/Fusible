@@ -7,12 +7,12 @@ use std::path::Path;
 use super::*;
 use crate::parser::parse;
 
-fn netlist(json: &str) -> Netlist {
+pub(super) fn netlist(json: &str) -> Netlist {
     let circuit = parse(json, Path::new("circuit.json")).expect("fixture must parse");
     Netlist::from_circuit(&circuit)
 }
 
-fn net<'a>(netlist: &'a Netlist, id: &str) -> &'a NetNode {
+pub(super) fn net<'a>(netlist: &'a Netlist, id: &str) -> &'a NetNode {
     &netlist.nets[netlist.by_id[id]]
 }
 
