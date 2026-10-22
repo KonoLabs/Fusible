@@ -52,9 +52,13 @@ impl DiffReport {
     }
 }
 
-pub fn compare_kicad_with_circuit(kicad_fps: &[KicadFootprint], circuit_json: &str) -> DiffReport {
-    let elements: Vec<Value> = serde_json::from_str(circuit_json).unwrap_or_default();
-    let current_map = current_placements(&elements);
+/// Parses Circuit JSON text into its element list.
+pub fn parse_circuit_elements(circuit_json: &str) -> Result<Vec<Value>, serde_json::Error> {
+    serde_json::from_str(circuit_json)
+}
+
+pub fn compare_kicad_with_circuit(kicad_fps: &[KicadFootprint], elements: &[Value]) -> DiffReport {
+    let current_map = current_placements(elements);
     let offset = centroid_offset(kicad_fps, &current_map);
 
     let mut report = DiffReport::default();

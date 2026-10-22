@@ -145,3 +145,28 @@ fn stale_circuit_json_is_refused_without_a_runner() {
     std::fs::write(&json, include_str!("../examples/circuit.json")).unwrap();
     assert_eq!(run(), Some(0));
 }
+
+const MINIMAL_KICAD_PCB: &str =
+    r#"(kicad_pcb (footprint "R" (layer "F.Cu") (at 1 2) (property "Reference" "R1")))"#;
+
+#[test]
+fn subcommands_diff_and_sync_exit_2_on_truncated_circuit_json() {
+    let dir = TestDir::new("kicad_invalid_json");
+    let pcb = dir.path.join("board.kicad_pcb");
+    let json = dir.path.join("circuit.json");
+    std::fs::write(&pcb, MINIMAL_KICAD_PCB).unwrap();
+    std::fs::write(&json, r#"[{"type": "source_component", "name": "R1""#).unwrap();
+
+    for subcommand in ["diff", "sync"] {
+        let out = fusible()
+            .arg(subcommand)
+            .arg(&pcb)
+            .arg(&json)
+            .output()
+            .expect("binary should run");
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        assert_eq!(out.status.code(), Some(2), "{subcommand}: {stderr}");
+        assert!(stderr.contains("invalid_circuit_json"), "{subcommand}");
+        assert!(stderr.contains("circuit.json"), "{subcommand}");
+    }
+}
