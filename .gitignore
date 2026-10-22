@@ -2,3 +2,4 @@
 .tscircuit/
 dist/
 node_modules/
+src/assets/studio.bundle.js

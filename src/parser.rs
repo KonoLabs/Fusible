@@ -276,8 +276,11 @@ impl Circuit {
 pub fn parse(source: &str, path: &Path) -> Result<Circuit, JsonDiagnostic> {
     let raw_elements: Vec<serde_json::Value> =
         serde_json::from_str(source).map_err(|err| JsonDiagnostic::new(err, source, path))?;
-    let elements: Vec<CircuitElement> =
-        serde_json::from_str(source).map_err(|err| JsonDiagnostic::new(err, source, path))?;
+    let elements: Vec<CircuitElement> = raw_elements
+        .iter()
+        .map(|v| serde_json::from_value(v.clone()))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|err| JsonDiagnostic::new(err, source, path))?;
     Ok(Circuit {
         elements,
         raw_elements,
