@@ -492,6 +492,19 @@ impl PcbModel {
 
         writer.finish()
     }
+
+    /// Builds the non-plated drill file for `pcb_hole` mounting holes, or `None` when the board has none.
+    pub fn build_npth_drill_file(&self, title: &str) -> Option<String> {
+        let mut writer = ExcellonWriter::new(title, "NonPlated,1,2,NPTH");
+        for hole in &self.holes {
+            let Some(d) = hole.hole_diameter.filter(|d| *d > 0.0) else {
+                continue;
+            };
+            let tool = writer.register_tool(d);
+            writer.add_hole(tool, Coord::from_mm(hole.x), Coord::from_mm(hole.y));
+        }
+        (!writer.is_empty()).then(|| writer.finish())
+    }
 }
 
 fn make_pad_aperture(pad: &PcbSmtPadElm) -> Aperture {

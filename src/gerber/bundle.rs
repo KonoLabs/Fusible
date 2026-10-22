@@ -35,6 +35,9 @@ pub fn generate_gerber_files(circuit_json: &str, board_title: &str) -> GerberFil
         "drill_pth.drl".to_string(),
         model.build_drill_file(board_title),
     );
+    if let Some(npth) = model.build_npth_drill_file(board_title) {
+        files.insert("drill_npth.drl".to_string(), npth);
+    }
 
     files
 }

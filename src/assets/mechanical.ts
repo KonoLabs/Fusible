@@ -9,7 +9,7 @@ type Spec = {
   board_z: number;
   board_thickness: number;
   bosses: { x: number; y: number; outer: number; pilot: number }[];
-  notches: { x0: number; y0: number; x1: number; y1: number }[];
+  notches: { points: [number, number][] }[];
   vents: { x: number; y: number; w: number; h: number; round: boolean }[];
   outputs: { format: "step" | "stl" | "glb" | "brep"; path: string }[];
 };
@@ -17,8 +17,11 @@ type Spec = {
 const spec: Spec = JSON.parse(await Bun.stdin.text());
 const k = await OcctKernel.init();
 
-const ring = spec.outline.map(([x, y]) => ({ x, y, z: 0 }));
-const board = k.makeWire(ring.map((p, i) => k.makeLineEdge(p, ring[(i + 1) % ring.length])));
+const wire = (points: [number, number][]) => {
+  const ring = points.map(([x, y]) => ({ x, y, z: 0 }));
+  return k.makeWire(ring.map((p, i) => k.makeLineEdge(p, ring[(i + 1) % ring.length])));
+};
+const board = wire(spec.outline);
 const inner = k.offsetWire2D(board, spec.clearance);
 const outer = k.offsetWire2D(board, spec.clearance + spec.wall);
 
@@ -35,7 +38,7 @@ const boardTop = spec.board_z + spec.board_thickness;
 let base = k.cut(prism(outer, 0, spec.height), prism(inner, spec.wall, spec.height));
 for (const b of spec.bosses) base = k.fuse(base, post(b.x, b.y, bossFloor, b.outer, spec.board_z - bossFloor));
 for (const b of spec.bosses) base = k.cut(base, post(b.x, b.y, spec.wall, b.pilot, spec.board_z));
-for (const n of spec.notches) base = k.cut(base, block(n.x0, n.y0, boardTop, n.x1, n.y1, spec.height + 1));
+for (const n of spec.notches) base = k.cut(base, prism(wire(n.points), boardTop, spec.height + 1 - boardTop));
 
 let lid = prism(outer, spec.height, spec.wall);
 for (const v of spec.vents) {

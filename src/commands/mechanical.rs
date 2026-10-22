@@ -125,10 +125,7 @@ struct Boss {
 
 #[derive(Debug, Serialize, PartialEq)]
 struct Notch {
-    x0: f64,
-    y0: f64,
-    x1: f64,
-    y1: f64,
+    points: [[f64; 2]; 4],
 }
 
 #[derive(Debug, Serialize, PartialEq)]
@@ -305,7 +302,7 @@ fn build_spec(
     }
 
     let notches = if settings.cutouts {
-        notches(&model.components, bounds, settings.wall)
+        notches(&model.components, &outline, settings.wall)
     } else {
         Vec::new()
     };
@@ -365,55 +362,50 @@ fn bosses(holes: &[PcbHoleElm]) -> Vec<Boss> {
         .collect()
 }
 
-/// Notches the wall in front of every component whose footprint reaches an edge of the board's bounding box.
-fn notches(components: &[PcbComponentElm], board: Bounds, wall: f64) -> Vec<Notch> {
+/// Notches the wall wherever a component footprint reaches an outline edge, aligned to that edge.
+fn notches(components: &[PcbComponentElm], outline: &[PcbPoint], wall: f64) -> Vec<Notch> {
     let reach = CLEARANCE + wall + 1.0;
+    let winding = signed_area(outline).signum();
     let mut out = Vec::new();
     for c in components {
         let (Some(center), Some(w), Some(h)) = (c.center, c.width, c.height) else {
             continue;
         };
-        let part = Bounds {
-            min_x: center.x - w / 2.0 - NOTCH_MARGIN,
-            min_y: center.y - h / 2.0 - NOTCH_MARGIN,
-            max_x: center.x + w / 2.0 + NOTCH_MARGIN,
-            max_y: center.y + h / 2.0 + NOTCH_MARGIN,
-        };
-        let touches = |edge: f64, side: f64| (side - edge).abs() <= EDGE_TOLERANCE + NOTCH_MARGIN;
-        if touches(board.max_x, part.max_x) || part.max_x > board.max_x {
-            out.push(Notch {
-                x0: board.max_x,
-                y0: part.min_y,
-                x1: board.max_x + reach,
-                y1: part.max_y,
-            });
-        }
-        if touches(board.min_x, part.min_x) || part.min_x < board.min_x {
-            out.push(Notch {
-                x0: board.min_x - reach,
-                y0: part.min_y,
-                x1: board.min_x,
-                y1: part.max_y,
-            });
-        }
-        if touches(board.max_y, part.max_y) || part.max_y > board.max_y {
-            out.push(Notch {
-                x0: part.min_x,
-                y0: board.max_y,
-                x1: part.max_x,
-                y1: board.max_y + reach,
-            });
-        }
-        if touches(board.min_y, part.min_y) || part.min_y < board.min_y {
-            out.push(Notch {
-                x0: part.min_x,
-                y0: board.min_y - reach,
-                x1: part.max_x,
-                y1: board.min_y,
-            });
+        let (hw, hh) = (w / 2.0 + NOTCH_MARGIN, h / 2.0 + NOTCH_MARGIN);
+        let corners = [(-hw, -hh), (hw, -hh), (hw, hh), (-hw, hh)]
+            .map(|(dx, dy)| (center.x + dx, center.y + dy));
+        for (i, a) in outline.iter().enumerate() {
+            let b = outline[(i + 1) % outline.len()];
+            let len = (b.x - a.x).hypot(b.y - a.y);
+            if len == 0.0 {
+                continue;
+            }
+            let (ux, uy) = ((b.x - a.x) / len, (b.y - a.y) / len);
+            let (nx, ny) = (uy * winding, -ux * winding);
+            let along = corners.map(|(x, y)| (x - a.x) * ux + (y - a.y) * uy);
+            let outward = corners.map(|(x, y)| (x - a.x) * nx + (y - a.y) * ny);
+            let t0 = along.into_iter().fold(f64::INFINITY, f64::min).max(0.0);
+            let t1 = along.into_iter().fold(f64::NEG_INFINITY, f64::max).min(len);
+            let reaches = outward.into_iter().fold(f64::NEG_INFINITY, f64::max) >= -EDGE_TOLERANCE;
+            let on_board = outward.into_iter().fold(f64::INFINITY, f64::min) < 0.0;
+            if t1 > t0 && reaches && on_board {
+                let at = |t: f64, s: f64| [a.x + ux * t + nx * s, a.y + uy * t + ny * s];
+                out.push(Notch {
+                    points: [at(t0, 0.0), at(t1, 0.0), at(t1, reach), at(t0, reach)],
+                });
+            }
         }
     }
     out
+}
+
+fn signed_area(polygon: &[PcbPoint]) -> f64 {
+    polygon
+        .iter()
+        .zip(polygon.iter().cycle().skip(1))
+        .map(|(a, b)| a.x * b.y - b.x * a.y)
+        .sum::<f64>()
+        / 2.0
 }
 
 fn vents(pattern: Ventilation, outline: &[PcbPoint], board: Bounds) -> Vec<Vent> {
@@ -638,23 +630,36 @@ mod tests {
 
     #[test]
     fn notches_only_edge_components() {
-        let board = bounds_of(&rect(80.0, 60.0));
-        let part = |x: f64, y: f64| PcbComponentElm {
+        let part = |x: f64, y: f64, w: f64, h: f64| PcbComponentElm {
             center: Some(PcbPoint { x, y }),
-            width: Some(9.0),
-            height: Some(7.0),
+            width: Some(w),
+            height: Some(h),
             ..Default::default()
         };
-        let out = notches(&[part(36.0, 0.0), part(0.0, 0.0)], board, 2.0);
+        let out = notches(
+            &[part(36.0, 0.0, 9.0, 7.0), part(0.0, 0.0, 9.0, 7.0)],
+            &rect(80.0, 60.0),
+            2.0,
+        );
         assert_eq!(
             out,
             vec![Notch {
-                x0: 40.0,
-                y0: -4.0,
-                x1: 43.5,
-                y1: 4.0
+                points: [[40.0, -4.0], [40.0, 4.0], [43.5, 4.0], [43.5, -4.0]]
             }]
         );
+
+        let tri = [
+            PcbPoint { x: 0.0, y: 0.0 },
+            PcbPoint { x: 60.0, y: 0.0 },
+            PcbPoint { x: 0.0, y: 60.0 },
+        ];
+        let slanted = notches(&[part(28.0, 28.0, 4.0, 4.0)], &tri, 2.0);
+        assert_eq!(slanted.len(), 1);
+        let reach = (CLEARANCE + 2.0 + 1.0) * std::f64::consts::SQRT_2;
+        let sums = slanted[0].points.map(|[x, y]| x + y);
+        for (sum, expected) in sums.iter().zip([60.0, 60.0, 60.0 + reach, 60.0 + reach]) {
+            assert!((sum - expected).abs() < 1e-9, "{sums:?}");
+        }
     }
 
     #[test]

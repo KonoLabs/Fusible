@@ -12,6 +12,7 @@ use clap::{Parser, Subcommand};
 #[command(
     name = "fusible",
     version,
+    arg_required_else_help = true,
     about = "Electronic linter: the fuse blows to block firmware code generation",
     after_help = "Examples:\n  fusible --input circuit.json\n  fusible check\n  fusible dev"
 )]

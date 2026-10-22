@@ -122,31 +122,33 @@ fn subcommand_init_with_path_and_mcu() {
 }
 
 #[test]
-fn runs_check_from_manifest_with_no_arguments() {
+fn bare_invocation_prints_help_even_with_a_manifest() {
     let fixture = TestDir::new("manifest_check");
-    let circuit_json = include_str!("../examples/circuit.json");
-    std::fs::write(fixture.path.join("board.json"), circuit_json).unwrap();
+    std::fs::write(
+        fixture.path.join("board.json"),
+        include_str!("../examples/circuit.json"),
+    )
+    .unwrap();
+    std::fs::write(
+        fixture.path.join("fusible.yml"),
+        "name: auto-check\nhardware:\n  entry: board.json\n",
+    )
+    .unwrap();
 
-    let manifest = r#"
-name: auto-check
-hardware:
-  entry: board.json
-"#;
-    std::fs::write(fixture.path.join("fusible.yml"), manifest).unwrap();
-
-    let out = fusible()
+    let bare = fusible()
         .current_dir(&fixture.path)
         .output()
         .expect("binary should run");
+    assert_eq!(bare.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&bare.stderr).contains("Usage: fusible"));
 
-    let stderr = String::from_utf8_lossy(&out.stderr);
-    let stdout = String::from_utf8_lossy(&out.stdout);
-    assert_eq!(
-        out.status.code(),
-        Some(0),
-        "stdout: {stdout}, stderr: {stderr}"
-    );
-    assert!(stdout.contains("fuse intact"));
+    let check = fusible()
+        .current_dir(&fixture.path)
+        .arg("check")
+        .output()
+        .expect("binary should run");
+    assert_eq!(check.status.code(), Some(0));
+    assert!(String::from_utf8_lossy(&check.stdout).contains("fuse intact"));
 }
 
 #[test]
@@ -317,15 +319,4 @@ fn subcommand_mechanical_rejects_bad_input_as_tool_error() {
 
         assert_eq!(out.status.code(), Some(2), "args: {args:?}");
     }
-}
-
-#[test]
-fn bare_invocation_without_manifest_is_a_tool_error() {
-    let dir = TestDir::new("bare");
-    let out = fusible()
-        .current_dir(&dir.path)
-        .output()
-        .expect("binary should run");
-
-    assert_eq!(out.status.code(), Some(2));
 }

@@ -20,10 +20,9 @@ pub mod silicon;
 pub mod svg;
 pub mod tscircuit;
 
-use std::path::Path;
 use std::process::ExitCode;
 
-use clap::{CommandFactory, Parser};
+use clap::Parser;
 use miette::Diagnostic;
 
 use crate::cli::{Cli, Commands};
@@ -200,18 +199,7 @@ fn main() -> ExitCode {
 }
 
 fn handle_default_invocation(cli: Cli) -> ExitCode {
-    let has_manifest = config::FusibleConfig::find_and_load(Path::new("."))
-        .ok()
-        .flatten()
-        .is_some();
-
-    if cli.input.is_some() || has_manifest {
-        dispatch_check(cli.input, cli.mcu, None)
-    } else {
-        let _ = Cli::command().print_help();
-        println!();
-        ExitCode::from(EXIT_TOOL_ERROR)
-    }
+    dispatch_check(cli.input, cli.mcu, None)
 }
 
 fn dispatch_check(

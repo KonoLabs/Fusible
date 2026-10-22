@@ -158,3 +158,20 @@ fn generates_complete_gerber_bundle_from_circuit_json() {
     edge_entry.read_to_string(&mut decompressed).unwrap();
     assert_eq!(decompressed, *edge_cuts);
 }
+
+#[test]
+fn test_mounting_holes_get_their_own_npth_drill_file() {
+    let with_hole = r#"[
+        { "type": "pcb_board", "width": 20.0, "height": 20.0 },
+        { "type": "pcb_hole", "x": 5.0, "y": -5.0, "hole_diameter": 3.2 }
+    ]"#;
+    let files = generate_gerber_files(with_hole, "TestBoard");
+    let npth = &files["drill_npth.drl"];
+    assert!(npth.contains("NonPlated,1,2,NPTH"));
+    assert!(npth.contains("C3.2000"));
+    assert!(npth.contains("X5.0000Y-5.0000"));
+    assert!(!files["drill_pth.drl"].contains("C3.2000"));
+
+    let without = generate_gerber_files(r#"[{ "type": "pcb_board" }]"#, "TestBoard");
+    assert!(!without.contains_key("drill_npth.drl"));
+}
