@@ -4,13 +4,27 @@ use std::collections::HashMap;
 use std::fmt::Write as FmtWrite;
 
 use crate::gerber::coordinates::Coord;
+use crate::gerber::round_rect::write_round_rect;
 
 /// Aperture geometry types supported in RS-274X standard template definitions.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Aperture {
-    Circle { diameter_nm: i64 },
-    Rectangle { width_nm: i64, height_nm: i64 },
-    Obround { width_nm: i64, height_nm: i64 },
+    Circle {
+        diameter_nm: i64,
+    },
+    Rectangle {
+        width_nm: i64,
+        height_nm: i64,
+    },
+    Obround {
+        width_nm: i64,
+        height_nm: i64,
+    },
+    RoundRect {
+        width_nm: i64,
+        height_nm: i64,
+        radius_nm: i64,
+    },
 }
 
 impl Aperture {
@@ -35,6 +49,25 @@ impl Aperture {
             width_nm: size_nm(width_mm)?,
             height_nm: size_nm(height_mm)?,
         })
+    }
+
+    /// Builds a rounded rectangle aperture drawn with a standard macro; the radius must leave a flat body.
+    pub fn round_rect(width_mm: f64, height_mm: f64, radius_mm: f64) -> Result<Self, String> {
+        let aperture = Self::RoundRect {
+            width_nm: size_nm(width_mm)?,
+            height_nm: size_nm(height_mm)?,
+            radius_nm: size_nm(radius_mm)?,
+        };
+        match aperture {
+            Self::RoundRect {
+                width_nm,
+                height_nm,
+                radius_nm,
+            } if 2 * radius_nm < width_nm.min(height_nm) => Ok(aperture),
+            _ => Err(format!(
+                "corner radius {radius_mm} mm must be smaller than half of the pad"
+            )),
+        }
     }
 }
 
@@ -104,6 +137,11 @@ impl ApertureDictionary {
                     let h = *height_nm as f64 / 1_000_000.0;
                     let _ = writeln!(out, "%ADD{id}O,{:.6}X{:.6}*%", w, h);
                 }
+                Aperture::RoundRect {
+                    width_nm,
+                    height_nm,
+                    radius_nm,
+                } => write_round_rect(out, *id, [*width_nm, *height_nm, *radius_nm]),
             }
         }
     }

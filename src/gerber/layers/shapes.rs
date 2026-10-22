@@ -11,17 +11,15 @@ pub(super) fn smtpad_shape(pad: &PcbSmtPadElm) -> Result<PadShape, String> {
     let rot = finite_or(pad.ccw_rotation, 0.0, "ccw_rotation")?;
     let w = || required(pad.width, "width");
     let h = || required(pad.height, "height");
-    match pad.shape.as_deref() {
-        Some("rect") => Ok(PadShape::Rect {
-            w: w()?,
-            h: h()?,
-            rot,
-        }),
-        Some("rotated_rect") => Ok(PadShape::Rect {
-            w: w()?,
-            h: h()?,
-            rot: required(pad.ccw_rotation, "ccw_rotation")?,
-        }),
+    let shape = pad.shape.as_deref();
+    if shape != Some("polygon") {
+        required(Some(pad.x), "x")?;
+        required(Some(pad.y), "y")?;
+    }
+    match shape {
+        Some("rect") => rect_shape(pad, rot),
+        Some("rotated_rect") => rect_shape(pad, required(pad.ccw_rotation, "ccw_rotation")?),
+        Some("polygon") => polygon_shape(pad),
         Some("circle") => Ok(PadShape::Circle {
             d: required(pad.radius, "radius")? * 2.0,
         }),
@@ -38,6 +36,42 @@ pub(super) fn smtpad_shape(pad: &PcbSmtPadElm) -> Result<PadShape, String> {
         Some(other) => Err(format!("unsupported pad shape '{other}'")),
         None => Err("missing shape".to_string()),
     }
+}
+
+/// Returns a rectangle pad, rounded when `rect_border_radius` or `corner_radius` is positive.
+fn rect_shape(pad: &PcbSmtPadElm, rot: f64) -> Result<PadShape, String> {
+    let (w, h) = (
+        required(pad.width, "width")?,
+        required(pad.height, "height")?,
+    );
+    let radius = pad.rect_border_radius.or(pad.corner_radius);
+    let r = finite_or(radius, 0.0, "rect_border_radius")?;
+    if r < 0.0 {
+        return Err(format!("rect_border_radius {r} must not be negative"));
+    }
+    Ok(if r > 0.0 {
+        PadShape::RoundRect { w, h, r, rot }
+    } else {
+        PadShape::Rect { w, h, rot }
+    })
+}
+
+/// Returns a polygon pad from its absolute `points`, requiring at least three finite vertices.
+fn polygon_shape(pad: &PcbSmtPadElm) -> Result<PadShape, String> {
+    let points = pad.points.as_deref().unwrap_or_default();
+    if points.len() < 3 {
+        return Err(format!(
+            "polygon needs at least 3 points, got {}",
+            points.len()
+        ));
+    }
+    for p in points {
+        required(Some(p.x), "polygon point x")?;
+        required(Some(p.y), "polygon point y")?;
+    }
+    Ok(PadShape::Polygon {
+        points: points.iter().map(|p| [p.x, p.y]).collect(),
+    })
 }
 
 /// Returns the layer and width of a wire route point, or `None` for a via.

@@ -1,14 +1,17 @@
 //! Pad and drill primitives and their rendering into Gerber features.
 
 use super::math::{add, coord, long_axis, quarter_turns, rotate};
+use super::rounded::{offset_polygon, round_rect_feature};
 use crate::gerber::apertures::{Aperture, ApertureDictionary};
 use crate::gerber::coordinates::Coord;
 use crate::gerber::writer::{FilePolarity, GerberWriter};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub(super) enum PadShape {
     Circle { d: f64 },
     Rect { w: f64, h: f64, rot: f64 },
+    RoundRect { w: f64, h: f64, r: f64, rot: f64 },
+    Polygon { points: Vec<[f64; 2]> },
     Pill { w: f64, h: f64, rot: f64 },
 }
 
@@ -41,17 +44,21 @@ impl PadShape {
             Self::Circle { d } => Ok(Feature::Flash(Aperture::circle(d + grow)?, at)),
             Self::Rect { w, h, rot } => rect_feature(w + grow, h + grow, rot, at),
             Self::Pill { w, h, rot } => pill_feature(w + grow, h + grow, rot, at),
+            Self::RoundRect { w, h, r, rot } => {
+                round_rect_feature(w + grow, h + grow, r + margin, rot, at)
+            }
+            Self::Polygon { points } => Ok(Feature::Region(offset_polygon(&points, margin)?)),
         }
     }
 }
 
 /// Returns the axis-aligned width and height after `rot`, or `None` for an arbitrary angle.
-fn axis_aligned(w: f64, h: f64, rot: f64) -> Option<(f64, f64)> {
+pub(super) fn axis_aligned(w: f64, h: f64, rot: f64) -> Option<(f64, f64)> {
     quarter_turns(rot).map(|q| if q % 2 == 1 { (h, w) } else { (w, h) })
 }
 
 /// Flashes an axis-aligned rectangle, or fills a rotated one as a region.
-fn rect_feature(w: f64, h: f64, rot: f64, at: [f64; 2]) -> Result<Feature, String> {
+pub(super) fn rect_feature(w: f64, h: f64, rot: f64, at: [f64; 2]) -> Result<Feature, String> {
     if let Some((w, h)) = axis_aligned(w, h, rot) {
         return Ok(Feature::Flash(Aperture::rectangle(w, h)?, at));
     }
@@ -62,7 +69,7 @@ fn rect_feature(w: f64, h: f64, rot: f64, at: [f64; 2]) -> Result<Feature, Strin
 }
 
 /// Flashes an axis-aligned obround, or strokes a rotated one along its long axis.
-fn pill_feature(w: f64, h: f64, rot: f64, at: [f64; 2]) -> Result<Feature, String> {
+pub(super) fn pill_feature(w: f64, h: f64, rot: f64, at: [f64; 2]) -> Result<Feature, String> {
     if let Some((w, h)) = axis_aligned(w, h, rot) {
         return Ok(Feature::Flash(Aperture::obround(w, h)?, at));
     }

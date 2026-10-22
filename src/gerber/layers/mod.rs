@@ -6,12 +6,15 @@ mod copper;
 mod drill;
 mod elements;
 mod features;
+mod font;
 mod geometry;
 mod holes;
 mod math;
 mod parse;
+mod rounded;
 mod shapes;
 mod sites;
+mod text;
 
 use thiserror::Error;
 

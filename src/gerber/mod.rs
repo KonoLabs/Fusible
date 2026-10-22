@@ -5,6 +5,7 @@ pub mod bundle;
 pub mod coordinates;
 pub mod excellon;
 pub mod layers;
+mod round_rect;
 #[cfg(test)]
 mod tests;
 pub mod writer;

@@ -97,6 +97,7 @@ impl PcbModel {
                 Feature::Stroke(ap.clone(), [win[0].x, win[0].y], [win[1].x, win[1].y])
             }));
         }
+        features.extend(self.silkscreen_text_features(is_top)?);
         Ok(features)
     }
 }

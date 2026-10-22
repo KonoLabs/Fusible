@@ -1,0 +1,9 @@
+[
+  { "type": "pcb_board", "pcb_board_id": "pcb_board_0", "width": 20, "height": 12, "center": { "x": 0, "y": 0 } },
+  { "type": "pcb_smtpad", "pcb_smtpad_id": "p0", "shape": "rect", "layer": "top", "x": -6, "y": 0, "width": 3, "height": 2 },
+  { "type": "pcb_smtpad", "pcb_smtpad_id": "p1", "shape": "rect", "layer": "top", "x": -1.5, "y": 0, "width": 3, "height": 2, "rect_border_radius": 0.5 },
+  { "type": "pcb_smtpad", "pcb_smtpad_id": "p2", "shape": "rotated_rect", "layer": "top", "x": 3, "y": 0, "width": 3, "height": 2, "rect_border_radius": 0.5, "ccw_rotation": 30 },
+  { "type": "pcb_smtpad", "pcb_smtpad_id": "p3", "shape": "polygon", "layer": "top", "points": [{ "x": 6, "y": -1 }, { "x": 8, "y": -1 }, { "x": 8.5, "y": 1 }, { "x": 6.5, "y": 1.5 }] },
+  { "type": "pcb_silkscreen_text", "pcb_silkscreen_text_id": "t0", "text": "SHAPES 1.0-A/B+", "font_size": 1, "layer": "top", "anchor_position": { "x": 0, "y": -4 }, "anchor_alignment": "center", "ccw_rotation": 0 },
+  { "type": "pcb_silkscreen_text", "pcb_silkscreen_text_id": "t1", "text": "ROT_90", "font_size": 1, "layer": "top", "anchor_position": { "x": -8, "y": 3 }, "anchor_alignment": "bottom_left", "ccw_rotation": 90 }
+]
