@@ -1404,7 +1404,7 @@
       container.innerHTML = names.map(name => {
         const c = componentsMap[name];
         return `
-          <div class="comp-item ${selectedComponent === name ? 'selected' : ''}" onclick="selectComponent('${escapeHtml(name)}')">
+          <div class="comp-item ${selectedComponent === name ? 'selected' : ''}" data-name="${escapeHtml(name)}">
             <div>
               <div style="font-weight:bold">${escapeHtml(name)}</div>
               <div class="comp-sub">${escapeHtml(c.mpn || c.ftype || '')}</div>
@@ -1423,7 +1423,7 @@
         return;
       }
       container.innerHTML = names.map(name => `
-        <div class="net-item" onclick="selectNet('${escapeHtml(name)}')">
+        <div class="net-item" data-name="${escapeHtml(name)}">
           <span style="font-weight:bold">${escapeHtml(name)}</span>
           <span style="color:var(--text-subtle);font-size:10px">${netsMap[name].count} segments</span>
         </div>
@@ -1480,7 +1480,7 @@
           <div class="pins-list">
             <div class="pins-title">CONNECTED PINS & SIGNALS</div>
             ${comp.pins.map(p => `
-              <div class="pin-item" onclick="selectNet('${escapeHtml(p.net)}')">
+              <div class="pin-item" data-net="${escapeHtml(p.net)}">
                 <span>${escapeHtml(p.pin)}</span>
                 <span class="pin-net">${escapeHtml(p.net)}</span>
               </div>
@@ -1573,7 +1573,30 @@
     }
 
     function escapeHtml(str) {
-      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function delegateClick(containerId, selector, handler) {
+      document.getElementById(containerId).addEventListener('click', (event) => {
+        const item = event.target.closest(selector);
+        if (item) handler(item);
+      });
+    }
+
+    function disposeObject3D(root) {
+      root.traverse((node) => {
+        if (node.geometry) node.geometry.dispose();
+        const materials = Array.isArray(node.material) ? node.material : node.material ? [node.material] : [];
+        for (const material of materials) {
+          if (material.map) material.map.dispose();
+          material.dispose();
+        }
+      });
     }
 
     function onThreeResize() {
@@ -1879,7 +1902,7 @@
       while (boardGroup.children.length > 0) {
         const obj = boardGroup.children[0];
         boardGroup.remove(obj);
-        if (obj.geometry) obj.geometry.dispose();
+        disposeObject3D(obj);
       }
 
       const elements = getElementsArray();
@@ -2395,16 +2418,6 @@
       }
     }, 2000);
 
-    function fetchInitialData() {
-      fetch('/api/circuit')
-        .then(res => {
-          if (!res.ok) throw new Error('Network error');
-          return res.json();
-        })
-        .then(data => updateStudio(data))
-        .catch(() => {});
-    }
-
     function connectSSE() {
       const eventSource = new EventSource('/events');
       const liveDot = document.getElementById('live-dot');
@@ -2503,7 +2516,9 @@
       });
     }
 
-    fetchInitialData();
+    delegateClick('components-list', '.comp-item', (item) => selectComponent(item.dataset.name));
+    delegateClick('nets-list', '.net-item', (item) => selectNet(item.dataset.name));
+    delegateClick('inspector-content', '.pin-item', (item) => selectNet(item.dataset.net));
     connectSSE();
   </script>
 </body>
