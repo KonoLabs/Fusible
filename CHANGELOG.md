@@ -5,6 +5,33 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.9.0] - 2026-10-22
+
+### Changed
+
+- **Breaking:** bare `fusible` prints the help and exits 2 instead of running `check` from `fusible.yml`. Use `fusible check` in scripts and CI.
+- **Breaking:** an `mcu.chip` the silicon database does not know blows the fuse (`unknown_mcu`) instead of passing. Chip ids match exactly: `stm32f4` no longer maps to the G431 tables.
+- **Breaking:** `pins.rs` drops the board-specific `LED_STATUS`, `BATT_SENSE`, `GPIO8`, and `GPIO48` renames. Names come from the net, are unique, and never start with a digit or collide with a Rust keyword. Name nets explicitly to keep a stable constant.
+- **Breaking:** native Gerber export fails on input it cannot draw faithfully (no board, unknown pad shape, trace without layer or width) instead of guessing.
+- The autorouter routes nets one at a time in a fixed order and treats finished traces, holes, and the board outline as obstacles. Output is deterministic.
+- Manifest paths resolve against the folder holding `fusible.yml`, which is now found in parent folders too.
+
+### Fixed
+
+- Gerber: the board outline closes, `G01*` precedes the first draw, solder mask layers are negative, vias inside traces get copper pads, rotated and pill pads keep their shape, and mounting holes go to `drill_npth.drl`.
+- Linter: `trace_clearance` and `decoupling_capacitor` now run on canonical tscircuit output, clearance is measured on the true pad gap, dangling port references blow the fuse, and a port plus its own pad no longer counts as two connections.
+- A failed or timed-out `tsci build` is a tool error instead of a lint of stale `circuit.json`. Without a runner, cached JSON is used only when newer than the source.
+- A malformed `fusible.yml` exits 2 before any command runs.
+- `fusible dev` rejects foreign `Host` headers, drops the wildcard CORS header, escapes SVG text, replaces inline click handlers, keeps changes made during a rebuild, and frees 3D resources between reloads. Release binaries embed the studio bundle.
+- `pins.rs` escapes names in doc comments, so a crafted net name cannot inject code.
+- KiCad: converter paths are JSON-encoded, diff reads positions from `pcb_component`, deep S-expressions are rejected instead of overflowing the stack, and sync no longer panics on a malformed `center`.
+- `init` keeps existing hardware files; KiCad zip extraction and docs parse failures are reported.
+- `fusible mechanical` notches walls along the real outline edge, not its bounding box.
+
+### Removed
+
+- The `rayon` dependency and dead netlist query, S-expression, and router code.
+
 ## [0.8.20] - 2026-10-22
 
 ### Added

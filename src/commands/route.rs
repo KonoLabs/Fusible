@@ -42,10 +42,7 @@ pub fn run(
     dry_run: bool,
 ) -> Result<(), RouteCommandError> {
     let entry = resolve_entry(file)?;
-    println!(
-        "⚡ Initializing autorouter for \"{}\"...",
-        entry.display()
-    );
+    println!("⚡ Initializing autorouter for \"{}\"...", entry.display());
 
     let (_json_path, source) = load_circuit_source(&entry)?;
 
