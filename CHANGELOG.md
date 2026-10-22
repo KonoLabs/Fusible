@@ -11,6 +11,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 - Dev Studio no longer embeds the minified viewer bundle at compile time; it now serves `src/assets/studio.bundle.js` from disk, so rebuilding `studio/src/index.ts` is picked up without a Rust recompile.
 - Consolidated three duplicated context-menu intercept hooks in the Studio viewers into a single shared `useContextMenuIntercept` hook.
+- Circuit JSON parser now deserializes the source once instead of twice, cutting parse time for large boards.
+- Removed the generated `studio.bundle.js` from version control; it is now a build artifact ignored by `.gitignore`.
 
 ## [0.8.16] - 2026-10-21
 
