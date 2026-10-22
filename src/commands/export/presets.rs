@@ -90,8 +90,15 @@ fn export_docs(job: &ExportJob, circuit_json: &str) -> Result<(), ExportError> {
     let netlist = crate::netlist::Netlist::from_circuit(&circuit);
 
     crate::svg::export_docs_bundle(circuit_json, &circuit, &netlist, &base)?;
+    let pdf =
+        super::pdf::print_svg_to_pdf(&base.join("schematic.svg"), &base.join("schematic.pdf"));
+    let files = if pdf {
+        "schematic.svg, pcb.svg, schematic.pdf"
+    } else {
+        "schematic.svg, pcb.svg"
+    };
     println!(
-        "✅ Documentation artifacts generated in \"{}\" (schematic.svg, pcb.svg)",
+        "✅ Documentation artifacts generated in \"{}\" ({files})",
         base.display()
     );
     Ok(())
