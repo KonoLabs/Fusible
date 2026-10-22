@@ -66,6 +66,23 @@ mod tests {
     }
 
     #[test]
+    fn pcb_svg_draws_board_from_outline_points() {
+        let svg = render_pcb_svg(
+            r#"[{ "type": "pcb_board", "width": 50.0, "height": 30.0, "center": { "x": 0.0, "y": 0.0 } }]"#,
+        );
+        assert!(svg.contains("M -25.000 15.000 L 25.000 15.000 L 25.000 -15.000"));
+    }
+
+    #[test]
+    fn empty_schematic_is_still_a_valid_svg() {
+        let circuit = crate::parser::parse("[]", Path::new("empty.json")).unwrap();
+        let netlist = Netlist::from_circuit(&circuit);
+        let svg = render_schematic_svg(&circuit, &netlist);
+        assert!(svg.starts_with("<svg"));
+        assert!(svg.ends_with("</svg>\n"));
+    }
+
+    #[test]
     fn renders_valid_schematic_svg() {
         let json = r#"[
             { "type": "source_component", "component_id": "U1", "name": "MCU", "kind": "chip" },
