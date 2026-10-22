@@ -2,6 +2,8 @@ use std::path::Path;
 
 use super::hub::ClientHub;
 use super::pipeline::execute_pipeline;
+use super::server::is_allowed_host;
+use super::watcher::is_relevant_change;
 
 #[test]
 fn pipeline_runs_on_valid_circuit_json() {
@@ -35,7 +37,7 @@ fn pipeline_handles_missing_file_gracefully() {
 
 #[test]
 fn client_hub_broadcast_and_pruning() {
-    let hub = ClientHub::new();
+    let hub = ClientHub::default();
     let (tx1, rx1) = std::sync::mpsc::channel();
     let (tx2, rx2) = std::sync::mpsc::channel();
 
@@ -55,4 +57,33 @@ fn client_hub_broadcast_and_pruning() {
 
     let msg3 = String::from_utf8(rx1.recv().unwrap()).unwrap();
     assert!(msg3.starts_with("data: {\"test\": 2}\n\n"));
+}
+
+#[test]
+fn host_check_allows_only_loopback_on_port() {
+    assert!(is_allowed_host(Some("localhost:3020"), 3020));
+    assert!(is_allowed_host(Some("127.0.0.1:3020"), 3020));
+    assert!(is_allowed_host(Some("[::1]:3020"), 3020));
+    assert!(is_allowed_host(Some("LocalHost:3020"), 3020));
+    assert!(!is_allowed_host(Some("localhost:3021"), 3020));
+    assert!(!is_allowed_host(Some("localhost"), 3020));
+    assert!(!is_allowed_host(Some("evil.example:3020"), 3020));
+    assert!(!is_allowed_host(Some("localhost.evil.example:3020"), 3020));
+    assert!(!is_allowed_host(None, 3020));
+}
+
+#[test]
+fn watcher_filter_ignores_only_paths_inside_watch_dir() {
+    let root = Path::new("/home/me/.config/target/dist/board");
+    assert!(is_relevant_change(root, &root.join("index.tsx")));
+    assert!(is_relevant_change(root, &root.join("lib/part.ts")));
+    assert!(!is_relevant_change(
+        root,
+        &root.join("node_modules/x/index.ts")
+    ));
+    assert!(!is_relevant_change(root, &root.join("dist/index.js")));
+    assert!(!is_relevant_change(root, &root.join("target/x.ts")));
+    assert!(!is_relevant_change(root, &root.join(".hidden/a.tsx")));
+    assert!(!is_relevant_change(root, &root.join("circuit.json")));
+    assert!(!is_relevant_change(root, &root.join("notes.md")));
 }

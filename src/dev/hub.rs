@@ -7,12 +7,6 @@ pub struct ClientHub {
 }
 
 impl ClientHub {
-    pub fn new() -> Self {
-        Self {
-            clients: Arc::new(Mutex::new(Vec::new())),
-        }
-    }
-
     pub fn add_client(&self, tx: Sender<Vec<u8>>) {
         if let Ok(mut lock) = self.clients.lock() {
             lock.push(tx);

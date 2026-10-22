@@ -1,9 +1,10 @@
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc;
+use std::sync::mpsc::{self, RecvTimeoutError};
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::time::Duration;
 
 use tiny_http::{Header, Response, Server};
 
@@ -14,9 +15,76 @@ use super::watcher::start_file_watcher;
 const VIEWER_HTML: &str = include_str!("../assets/viewer.html");
 const FONT_DATA: &[u8] = include_bytes!("../assets/undefined-medium.otf");
 
+const SSE_HEARTBEAT: Duration = Duration::from_secs(15);
+
+/// Returns the studio bundle embedded at compile time in release builds.
+#[cfg(all(studio_bundle, not(debug_assertions)))]
+fn load_studio_bundle() -> Option<String> {
+    Some(
+        include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/assets/studio.bundle.js"
+        ))
+        .to_string(),
+    )
+}
+
+/// Reads the studio bundle from the source tree so a `bun run build` is picked up without recompiling.
+#[cfg(not(all(studio_bundle, not(debug_assertions))))]
 fn load_studio_bundle() -> Option<String> {
     let bundle_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/assets/studio.bundle.js");
     std::fs::read_to_string(&bundle_path).ok()
+}
+
+/// Accepts only loopback Host headers bound to the dev server port, blocking DNS rebinding.
+pub(super) fn is_allowed_host(host: Option<&str>, port: u16) -> bool {
+    host.is_some_and(|h| {
+        ["localhost", "127.0.0.1", "[::1]"]
+            .iter()
+            .any(|name| h.eq_ignore_ascii_case(&format!("{name}:{port}")))
+    })
+}
+
+/// Rebuilds the payload, broadcasts it and refreshes the cached studio bundle.
+fn rebuild(entry: &Path, hub: &ClientHub, cache: &Mutex<String>, bundle: &Mutex<Option<String>>) {
+    println!("🔄 File change detected — rebuilding circuit preview...");
+    let start = std::time::Instant::now();
+    let payload = execute_pipeline(entry);
+    if let Ok(json_str) = serde_json::to_string(&payload) {
+        if let Ok(mut lock) = cache.lock() {
+            *lock = json_str.clone();
+        }
+        hub.broadcast(&json_str);
+        println!("✓ Circuit updated in {:.1}s", start.elapsed().as_secs_f32());
+    }
+    if let Some(bundle_content) = load_studio_bundle() {
+        if let Ok(mut lock) = bundle.lock() {
+            *lock = Some(bundle_content);
+        }
+    }
+}
+
+/// Streams SSE messages to one client, sending a heartbeat so dead sockets are detected.
+fn stream_events(request: tiny_http::Request, rx: mpsc::Receiver<Vec<u8>>) {
+    let mut writer = request.into_writer();
+    let headers = "HTTP/1.1 200 OK\r\n\
+Content-Type: text/event-stream\r\n\
+Cache-Control: no-cache\r\n\
+Connection: keep-alive\r\n\
+\r\n";
+    if writer.write_all(headers.as_bytes()).is_err() || writer.flush().is_err() {
+        return;
+    }
+    loop {
+        let msg = match rx.recv_timeout(SSE_HEARTBEAT) {
+            Ok(msg) => msg,
+            Err(RecvTimeoutError::Timeout) => b": ping\n\n".to_vec(),
+            Err(RecvTimeoutError::Disconnected) => break,
+        };
+        if writer.write_all(&msg).is_err() || writer.flush().is_err() {
+            break;
+        }
+    }
 }
 
 pub fn run_dev_server(entry: PathBuf, port: u16) -> Result<(), Box<dyn std::error::Error>> {
@@ -24,7 +92,7 @@ pub fn run_dev_server(entry: PathBuf, port: u16) -> Result<(), Box<dyn std::erro
     let server =
         Server::http(&addr).map_err(|e| format!("cannot bind dev server to {addr}: {e}"))?;
 
-    let hub = ClientHub::new();
+    let hub = ClientHub::default();
     let initial_payload = execute_pipeline(&entry);
     let cached_payload = Arc::new(Mutex::new(serde_json::to_string(&initial_payload)?));
     let cached_bundle = Arc::new(Mutex::new(load_studio_bundle()));
@@ -45,38 +113,40 @@ pub fn run_dev_server(entry: PathBuf, port: u16) -> Result<(), Box<dyn std::erro
     let cache_clone = cached_payload.clone();
     let bundle_clone = cached_bundle.clone();
     let is_rebuilding = Arc::new(AtomicBool::new(false));
+    let is_pending = Arc::new(AtomicBool::new(false));
 
-    let is_rebuilding_clone = is_rebuilding.clone();
     let _watcher = start_file_watcher(&watch_dir, move || {
-        if is_rebuilding_clone.swap(true, Ordering::SeqCst) {
+        is_pending.store(true, Ordering::SeqCst);
+        if is_rebuilding.swap(true, Ordering::SeqCst) {
             return;
         }
         let hub = hub_clone.clone();
         let entry = entry_clone.clone();
         let cache = cache_clone.clone();
         let bundle = bundle_clone.clone();
-        let flag = is_rebuilding_clone.clone();
-        thread::spawn(move || {
-            println!("🔄 File change detected — rebuilding circuit preview...");
-            let start = std::time::Instant::now();
-            let payload = execute_pipeline(&entry);
-            if let Ok(json_str) = serde_json::to_string(&payload) {
-                if let Ok(mut lock) = cache.lock() {
-                    *lock = json_str.clone();
-                }
-                hub.broadcast(&json_str);
-                println!("✓ Circuit updated in {:.1}s", start.elapsed().as_secs_f32());
+        let rebuilding = is_rebuilding.clone();
+        let pending = is_pending.clone();
+        thread::spawn(move || loop {
+            while pending.swap(false, Ordering::SeqCst) {
+                rebuild(&entry, &hub, &cache, &bundle);
             }
-            if let Some(bundle_content) = load_studio_bundle() {
-                if let Ok(mut lock) = bundle.lock() {
-                    *lock = Some(bundle_content);
-                }
+            rebuilding.store(false, Ordering::SeqCst);
+            if !pending.load(Ordering::SeqCst) || rebuilding.swap(true, Ordering::SeqCst) {
+                break;
             }
-            flag.store(false, Ordering::SeqCst);
         });
     })?;
 
     for request in server.incoming_requests() {
+        let host = request
+            .headers()
+            .iter()
+            .find(|h| h.field.equiv("Host"))
+            .map(|h| h.value.as_str());
+        if !is_allowed_host(host, port) {
+            let _ = request.respond(Response::from_string("Forbidden").with_status_code(403));
+            continue;
+        }
         match request.url() {
             "/" | "/index.html" => {
                 let header =
@@ -91,26 +161,16 @@ pub fn run_dev_server(entry: PathBuf, port: u16) -> Result<(), Box<dyn std::erro
                     &b"application/javascript; charset=utf-8"[..],
                 )
                 .unwrap();
-                if let Ok(lock) = cached_bundle.lock() {
-                    if let Some(ref content) = *lock {
-                        let response = Response::from_string(content.as_str()).with_header(header);
-                        let _ = request.respond(response);
-                    } else {
-                        let response = Response::from_string(
-                            "// studio.bundle.js not found — run `bun run build` in studio/",
-                        )
-                        .with_header(header)
-                        .with_status_code(404);
-                        let _ = request.respond(response);
-                    }
-                } else {
-                    let response = Response::from_string(
+                let bundle = cached_bundle.lock().ok().and_then(|lock| lock.clone());
+                let response = match bundle {
+                    Some(content) => Response::from_string(content).with_header(header),
+                    None => Response::from_string(
                         "// studio.bundle.js not found — run `bun run build` in studio/",
                     )
                     .with_header(header)
-                    .with_status_code(404);
-                    let _ = request.respond(response);
-                }
+                    .with_status_code(404),
+                };
+                let _ = request.respond(response);
             }
             "/undefined-medium.otf" => {
                 let header = Header::from_bytes(&b"Content-Type"[..], &b"font/otf"[..]).unwrap();
@@ -142,24 +202,7 @@ pub fn run_dev_server(entry: PathBuf, port: u16) -> Result<(), Box<dyn std::erro
                 }
                 hub.add_client(tx);
 
-                thread::spawn(move || {
-                    let mut writer = request.into_writer();
-                    let headers = "HTTP/1.1 200 OK\r\n\
-Content-Type: text/event-stream\r\n\
-Cache-Control: no-cache\r\n\
-Connection: keep-alive\r\n\
-Access-Control-Allow-Origin: *\r\n\
-\r\n";
-                    if writer.write_all(headers.as_bytes()).is_err() || writer.flush().is_err() {
-                        return;
-                    }
-
-                    while let Ok(msg) = rx.recv() {
-                        if writer.write_all(&msg).is_err() || writer.flush().is_err() {
-                            break;
-                        }
-                    }
-                });
+                thread::spawn(move || stream_events(request, rx));
             }
             _ => {
                 let response = Response::from_string("Not Found").with_status_code(404);
