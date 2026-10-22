@@ -1,0 +1,9 @@
+exclude:
+  - "src/assets/studio.bundle.js"
+  - "studio/node_modules/"
+  - "studio/bun.lock"
+  - "target/"
+
+rules:
+  gen.file.long:
+    limit: 120

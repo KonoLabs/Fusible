@@ -5,6 +5,13 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.8.17] - 2026-10-22
+
+### Fixed
+
+- Dev Studio no longer embeds the minified viewer bundle at compile time; it now serves `src/assets/studio.bundle.js` from disk, so rebuilding `studio/src/index.ts` is picked up without a Rust recompile.
+- Consolidated three duplicated context-menu intercept hooks in the Studio viewers into a single shared `useContextMenuIntercept` hook.
+
 ## [0.8.16] - 2026-10-21
 
 ### Added
