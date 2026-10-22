@@ -38,6 +38,14 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Build studio bundle
+        working-directory: studio
+        run: |
+          bun install --frozen-lockfile
+          bun run build
+
       - name: Build
         run: cargo build --release --locked --target ${{ matrix.target }}
 
