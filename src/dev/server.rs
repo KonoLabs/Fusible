@@ -14,6 +14,11 @@ use super::watcher::start_file_watcher;
 const VIEWER_HTML: &str = include_str!("../assets/viewer.html");
 const FONT_DATA: &[u8] = include_bytes!("../assets/undefined-medium.otf");
 
+fn load_studio_bundle() -> Option<String> {
+    let bundle_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/assets/studio.bundle.js");
+    std::fs::read_to_string(&bundle_path).ok()
+}
+
 pub fn run_dev_server(entry: PathBuf, port: u16) -> Result<(), Box<dyn std::error::Error>> {
     let addr = format!("127.0.0.1:{port}");
     let server =
@@ -22,6 +27,7 @@ pub fn run_dev_server(entry: PathBuf, port: u16) -> Result<(), Box<dyn std::erro
     let hub = ClientHub::new();
     let initial_payload = execute_pipeline(&entry);
     let cached_payload = Arc::new(Mutex::new(serde_json::to_string(&initial_payload)?));
+    let cached_bundle = Arc::new(Mutex::new(load_studio_bundle()));
 
     println!("⚡ Fusible Dev Server running at http://localhost:{port} (press Ctrl+C to quit)");
 
@@ -37,6 +43,7 @@ pub fn run_dev_server(entry: PathBuf, port: u16) -> Result<(), Box<dyn std::erro
     let hub_clone = hub.clone();
     let entry_clone = entry.clone();
     let cache_clone = cached_payload.clone();
+    let bundle_clone = cached_bundle.clone();
     let is_rebuilding = Arc::new(AtomicBool::new(false));
 
     let is_rebuilding_clone = is_rebuilding.clone();
@@ -47,6 +54,7 @@ pub fn run_dev_server(entry: PathBuf, port: u16) -> Result<(), Box<dyn std::erro
         let hub = hub_clone.clone();
         let entry = entry_clone.clone();
         let cache = cache_clone.clone();
+        let bundle = bundle_clone.clone();
         let flag = is_rebuilding_clone.clone();
         thread::spawn(move || {
             println!("🔄 File change detected — rebuilding circuit preview...");
@@ -58,6 +66,11 @@ pub fn run_dev_server(entry: PathBuf, port: u16) -> Result<(), Box<dyn std::erro
                 }
                 hub.broadcast(&json_str);
                 println!("✓ Circuit updated in {:.1}s", start.elapsed().as_secs_f32());
+            }
+            if let Some(bundle_content) = load_studio_bundle() {
+                if let Ok(mut lock) = bundle.lock() {
+                    *lock = Some(bundle_content);
+                }
             }
             flag.store(false, Ordering::SeqCst);
         });
@@ -78,18 +91,25 @@ pub fn run_dev_server(entry: PathBuf, port: u16) -> Result<(), Box<dyn std::erro
                     &b"application/javascript; charset=utf-8"[..],
                 )
                 .unwrap();
-                let bundle_path = PathBuf::from("src/assets/studio.bundle.js");
-                match std::fs::read_to_string(&bundle_path) {
-                    Ok(content) => {
-                        let response = Response::from_string(content).with_header(header);
+                if let Ok(lock) = cached_bundle.lock() {
+                    if let Some(ref content) = *lock {
+                        let response = Response::from_string(content.as_str()).with_header(header);
+                        let _ = request.respond(response);
+                    } else {
+                        let response = Response::from_string(
+                            "// studio.bundle.js not found — run `bun run build` in studio/",
+                        )
+                        .with_header(header)
+                        .with_status_code(404);
                         let _ = request.respond(response);
                     }
-                    Err(_) => {
-                        let response = Response::from_string("// studio.bundle.js not found — run `bun run build` in studio/")
-                            .with_header(header)
-                            .with_status_code(404);
-                        let _ = request.respond(response);
-                    }
+                } else {
+                    let response = Response::from_string(
+                        "// studio.bundle.js not found — run `bun run build` in studio/",
+                    )
+                    .with_header(header)
+                    .with_status_code(404);
+                    let _ = request.respond(response);
                 }
             }
             "/undefined-medium.otf" => {

@@ -2,7 +2,7 @@
   "lastQuery": "run parallel agents on this task please then /ship th new version please i trust you",
   "perAgentQuery": {},
   "graftReads": 0,
-  "sourceReads": 23,
+  "sourceReads": 30,
   "savedTokens": 0,
   "injectedPointers": [],
   "nudges": 0,
