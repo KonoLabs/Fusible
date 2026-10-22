@@ -190,6 +190,29 @@
       background: var(--surface-hover);
       color: var(--text);
     }
+    .btn.is-on {
+      color: var(--green);
+    }
+    #mechanical-container {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      display: none;
+      background: var(--bg);
+      cursor: default;
+    }
+    #mechanical-container .mechanical-status {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      max-width: min(560px, calc(100% - 32px));
+      background: var(--surface);
+      padding: 24px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      pointer-events: none;
+    }
     main {
       flex: 1;
       display: flex;
@@ -764,6 +787,7 @@
       <button class="tab-btn active" data-view="schematic" onclick="switchView('schematic')"><iconify-icon icon="pixelarticons:git-commit"></iconify-icon><span>SCHEMATIC</span></button>
       <button class="tab-btn" data-view="pcb" onclick="switchView('pcb')"><iconify-icon icon="pixelarticons:grid"></iconify-icon><span>PCB LAYOUT</span></button>
       <button class="tab-btn" data-view="3d" onclick="switchView('3d')"><iconify-icon icon="pixelarticons:cube"></iconify-icon><span>3D VIEW</span></button>
+      <button class="tab-btn" data-view="mechanical" onclick="switchView('mechanical')"><iconify-icon icon="pixelarticons:box"></iconify-icon><span>MECHANICAL</span></button>
     </div>
 
     <div class="controls" id="controls-2d">
@@ -779,6 +803,16 @@
       <button class="btn" onclick="setCameraPreset('FRONT')"><iconify-icon icon="pixelarticons:arrow-down"></iconify-icon> FRONT</button>
       <button class="btn" onclick="setCameraPreset('RESET')"><iconify-icon icon="pixelarticons:reload"></iconify-icon> RESET</button>
       <button class="btn" id="btn-engine-toggle" onclick="toggle3dEngine()"><iconify-icon icon="pixelarticons:switch"></iconify-icon> <span id="engine-label">ENGINE: CAD</span></button>
+      <button class="btn" id="btn-mechanical-overlay" onclick="toggleMechanical('overlay')"><iconify-icon icon="pixelarticons:box"></iconify-icon> <span id="mechanical-overlay-label">MECHANICAL: OFF</span></button>
+    </div>
+
+    <div class="controls" id="controls-mechanical" style="display: none;">
+      <button class="btn" onclick="setCameraPreset('TOP')"><iconify-icon icon="pixelarticons:arrow-up"></iconify-icon> TOP</button>
+      <button class="btn" onclick="setCameraPreset('ISO')"><iconify-icon icon="pixelarticons:corner-up-right"></iconify-icon> ISO</button>
+      <button class="btn" onclick="setCameraPreset('FRONT')"><iconify-icon icon="pixelarticons:arrow-down"></iconify-icon> FRONT</button>
+      <button class="btn" onclick="setCameraPreset('RESET')"><iconify-icon icon="pixelarticons:reload"></iconify-icon> RESET</button>
+      <button class="btn" id="btn-mechanical-lid" onclick="toggleMechanical('lid')"><iconify-icon icon="pixelarticons:eye"></iconify-icon> <span id="mechanical-lid-label">LID: ON</span></button>
+      <button class="btn" id="btn-mechanical-explode" onclick="toggleMechanical('explode')"><iconify-icon icon="pixelarticons:expand"></iconify-icon> <span id="mechanical-explode-label">EXPLODE: OFF</span></button>
     </div>
   </header>
 
@@ -792,6 +826,7 @@
         <div id="three-native" style="width:100%;height:100%;position:absolute;inset:0;"></div>
         <div id="three-cad" style="width:100%;height:100%;position:absolute;inset:0;display:none;"></div>
       </div>
+      <div id="mechanical-container"></div>
       <div class="hud-toast">
         <div class="status-dot" id="live-dot"></div>
         <span id="live-status">SSE CONNECTED</span>
@@ -885,6 +920,7 @@
     let pcbSvg = '';
     let schematicSvg = '';
     let lastCircuitJson = null;
+    let lastRevision = null;
     let tscircuitFallback = false;
 
     let zoomLevel = 1.0;
@@ -974,7 +1010,7 @@
     }
 
     viewport.addEventListener('wheel', (e) => {
-      if (currentView === '3d' || isInteractive2dActive()) return;
+      if (currentView === '3d' || currentView === 'mechanical' || isInteractive2dActive()) return;
       e.preventDefault();
       const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
       zoomLevel *= zoomFactor;
@@ -982,7 +1018,7 @@
     }, { passive: false });
 
     viewport.addEventListener('mousedown', (e) => {
-      if (currentView === '3d' || isInteractive2dActive()) return;
+      if (currentView === '3d' || currentView === 'mechanical' || isInteractive2dActive()) return;
       if (e.button === 0) {
         isDragging = true;
         startX = e.clientX - panX;
@@ -991,7 +1027,7 @@
     });
 
     window.addEventListener('mousemove', (e) => {
-      if (currentView === '3d' || isInteractive2dActive()) return;
+      if (currentView === '3d' || currentView === 'mechanical' || isInteractive2dActive()) return;
       if (isDragging) {
         panX = e.clientX - startX;
         panY = e.clientY - startY;
@@ -1008,6 +1044,44 @@
     function toggle3dEngine() {
       engine3d = engine3d === 'cad' ? 'native' : 'cad';
       updateEngineUI();
+    }
+
+    let mechanicalOptions = { lid: true, explode: false, overlay: false };
+
+    function syncMechanicalButtons() {
+      const labels = { lid: 'LID', explode: 'EXPLODE', overlay: 'MECHANICAL' };
+      Object.keys(labels).forEach((option) => {
+        const on = !!mechanicalOptions[option];
+        const label = document.getElementById(`mechanical-${option}-label`);
+        if (label) label.textContent = `${labels[option]}: ${on ? 'ON' : 'OFF'}`;
+        const btn = document.getElementById(`btn-mechanical-${option}`);
+        if (btn) btn.classList.toggle('is-on', on);
+      });
+    }
+
+    function syncMechanicalOverlay() {
+      if (!window.Tscircuit || !window.Tscircuit.setMechanicalOverlay) return;
+      const visible = currentView === '3d';
+      window.Tscircuit.setMechanicalOverlay(mechanicalOptions.overlay, visible, document.getElementById('three-cad'));
+    }
+
+    function toggleMechanical(option) {
+      if (!window.Tscircuit || !window.Tscircuit.toggleMechanicalOption) return;
+      if (option === 'overlay') {
+        mechanicalOptions.overlay = !mechanicalOptions.overlay;
+        syncMechanicalOverlay();
+      } else {
+        mechanicalOptions[option] = window.Tscircuit.toggleMechanicalOption(option);
+      }
+      syncMechanicalButtons();
+    }
+
+    function initMechanical() {
+      if (!window.Tscircuit || !window.Tscircuit.getMechanicalOptions) return;
+      mechanicalOptions = window.Tscircuit.getMechanicalOptions();
+      if (scene) window.Tscircuit.setMechanicalNativeScene(scene);
+      syncMechanicalButtons();
+      syncMechanicalOverlay();
     }
 
     function updateEngineUI() {
@@ -1043,17 +1117,36 @@
       });
 
       const is3d = view === '3d';
+      const isMechanical = view === 'mechanical';
       const pcbEl = document.getElementById('pcb-container');
       const schEl = document.getElementById('schematic-container');
       const threeEl = document.getElementById('three-container');
       const canvasEl = document.getElementById('canvas-content');
+      const mechEl = document.getElementById('mechanical-container');
 
-      document.getElementById('controls-2d').style.display = is3d ? 'none' : 'flex';
+      document.getElementById('controls-2d').style.display = is3d || isMechanical ? 'none' : 'flex';
       document.getElementById('controls-3d').style.display = is3d ? 'flex' : 'none';
+      document.getElementById('controls-mechanical').style.display = isMechanical ? 'flex' : 'none';
       const btnPcbMode = document.getElementById('btn-pcb-mode');
       if (btnPcbMode) btnPcbMode.style.display = view === 'pcb' ? 'inline-flex' : 'none';
 
       hideTooltip();
+      if (mechEl) mechEl.style.display = isMechanical ? 'block' : 'none';
+      syncMechanicalOverlay();
+
+      if (isMechanical) {
+        if (pcbEl) pcbEl.style.display = 'none';
+        if (schEl) schEl.style.display = 'none';
+        if (canvasEl) canvasEl.style.display = 'none';
+        if (threeEl) threeEl.style.display = 'none';
+        if (window.Tscircuit && window.Tscircuit.renderMechanicalViewer) {
+          window.Tscircuit.renderMechanicalViewer(mechEl);
+        } else if (mechEl) {
+          mechEl.innerHTML = '<div class="empty-state mechanical-status">STUDIO BUNDLE NOT LOADED</div>';
+        }
+        return;
+      }
+      if (window.Tscircuit && window.Tscircuit.hideMechanicalViewer) window.Tscircuit.hideMechanicalViewer();
 
       if (is3d) {
         if (pcbEl) pcbEl.style.display = 'none';
@@ -1666,6 +1759,7 @@
 
       boardGroup = new THREE.Group();
       scene.add(boardGroup);
+      if (window.Tscircuit && window.Tscircuit.setMechanicalNativeScene) window.Tscircuit.setMechanicalNativeScene(scene);
 
       raycaster = new THREE.Raycaster();
       mouseVector = new THREE.Vector2();
@@ -1851,6 +1945,10 @@
     }
 
     function setCameraPreset(preset) {
+      if (currentView === 'mechanical') {
+        if (window.Tscircuit && window.Tscircuit.mechanicalCameraPreset) window.Tscircuit.mechanicalCameraPreset(preset);
+        return;
+      }
       if (engine3d === 'cad' && window.cadCameraController) {
         if (preset === 'TOP') {
           window.cadCameraController.animateToPreset('Top Down');
@@ -2387,6 +2485,10 @@
         if (data.schematic_svg) schematicSvg = data.schematic_svg;
         if (data.pcb_svg) pcbSvg = data.pcb_svg;
       }
+      if (typeof data.revision === 'string') {
+        lastRevision = data.revision;
+        if (window.Tscircuit && window.Tscircuit.setMechanicalRevision) window.Tscircuit.setMechanicalRevision(lastRevision);
+      }
       if (data.circuit_json) {
         lastCircuitJson = data.circuit_json;
         parseCircuitGraph();
@@ -2402,6 +2504,12 @@
     }
 
     window.addEventListener('tscircuit-ready', () => {
+      if (lastRevision !== null) window.Tscircuit.setMechanicalRevision(lastRevision);
+      initMechanical();
+      if (currentView === 'mechanical') {
+        switchView('mechanical');
+        return;
+      }
       if (lastCircuitJson) {
         if (currentView === '3d') {
           updateEngineUI();

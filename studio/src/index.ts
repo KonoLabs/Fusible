@@ -13,6 +13,10 @@ import { SchematicViewer } from "@tscircuit/schematic-viewer";
 import "iconify-icon";
 import { addCollection } from "iconify-icon";
 import pixelarticons from "@iconify-json/pixelarticons/icons.json";
+import { Mechanical } from "./mechanical";
+import { animateCameraPreset } from "./orbit";
+import { animateCadCameraPreset } from "./cadCamera";
+import { installRenderCapture } from "./capture";
 
 addCollection(pixelarticons as any);
 
@@ -20,20 +24,7 @@ if (typeof window !== "undefined") {
   (window as any).THREE = Object.assign({}, THREE, { OrbitControls });
 }
 
-if (typeof window !== "undefined" && (THREE as any)?.WebGLRenderer && !(THREE.WebGLRenderer.prototype as any).__fusiblePatched) {
-  const origRender = THREE.WebGLRenderer.prototype.render;
-  THREE.WebGLRenderer.prototype.render = function (scene: any, camera: any) {
-    if (this.domElement) {
-      (this.domElement as any).__threeScene = scene;
-      (this.domElement as any).__threeCamera = camera;
-      (this.domElement as any).__threeRenderer = this;
-    }
-    (window as any).__lastThreeScene = scene;
-    (window as any).__lastThreeCamera = camera;
-    return origRender.apply(this, arguments as any);
-  };
-  (THREE.WebGLRenderer.prototype as any).__fusiblePatched = true;
-}
+if (typeof window !== "undefined") installRenderCapture();
 
 export const FUSIBLE_SCHEMATIC_PALETTE = {
   background: "#000000",
@@ -600,6 +591,9 @@ export const Tscircuit = {
   render3dViewer,
   renderPcbViewer,
   renderSchematicViewer,
+  animateCameraPreset,
+  animateCadCameraPreset,
+  ...Mechanical,
 };
 
 declare global {
