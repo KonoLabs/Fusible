@@ -33,8 +33,27 @@ export const FUSIBLE_SCHEMATIC_PALETTE = {
   erc_warning: "#A8B365",
 };
 
-export function normalizeCircuitJsonForSchematic(circuitJson: any) {
-  if (!Array.isArray(circuitJson)) return circuitJson || [];
+const DRAWABLE_SCHEMATIC_WARNINGS = new Set([
+  "schematic_component_overlap_warning",
+  "schematic_component_styling_warning",
+  "schematic_element_outside_sheet_warning",
+  "schematic_manual_edit_conflict_warning",
+]);
+
+function isUndrawableSchematicWarning(element: any) {
+  const type = element?.type;
+  return (
+    typeof type === "string" &&
+    type.startsWith("schematic_") &&
+    type.endsWith("_warning") &&
+    !DRAWABLE_SCHEMATIC_WARNINGS.has(type)
+  );
+}
+
+/** Prepares Circuit JSON for the schematic viewer: drops warnings circuit-to-svg cannot draw and orphaned sheets. */
+export function normalizeCircuitJsonForSchematic(input: any) {
+  if (!Array.isArray(input)) return input || [];
+  const circuitJson = input.filter((e: any) => !isUndrawableSchematicWarning(e));
   const sheets = circuitJson.filter((e: any) => e?.type === "schematic_sheet");
   if (!sheets.length) return circuitJson;
 
