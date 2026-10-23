@@ -1,7 +1,7 @@
 //! Copper traces, SMT pads, plated holes and vias.
 
 use super::DEFAULT_PALETTE;
-use crate::gerber::layers::{PcbModel, PcbTracePoint};
+use crate::gerber::layers::{PcbModel, PcbSmtPadElm, PcbTracePoint};
 use crate::svg::writer::SvgWriter;
 
 /// Draws every trace's route points on `target_layer` as one stroked path per trace.
@@ -37,9 +37,34 @@ fn layer_path(route: &[PcbTracePoint], target_layer: &str) -> Option<(String, f6
     (!d.is_empty()).then_some((d, stroke_w))
 }
 
-/// Draws SMT pads as gold circles or rounded rectangles.
+/// Returns the SVG path of a polygon pad, or `None` for any other pad.
+fn polygon_path(pad: &PcbSmtPadElm) -> Option<String> {
+    let points = pad.points.as_deref()?;
+    if pad.shape.as_deref() != Some("polygon") || points.is_empty() {
+        return None;
+    }
+    let d: Vec<String> = points
+        .iter()
+        .enumerate()
+        .map(|(i, pt)| {
+            format!(
+                "{} {:.3} {:.3}",
+                if i == 0 { "M" } else { "L" },
+                pt.x,
+                -pt.y
+            )
+        })
+        .collect();
+    Some(format!("{} Z", d.join(" ")))
+}
+
+/// Draws SMT pads as gold polygons, circles or rounded rectangles.
 pub(super) fn render_pads(writer: &mut SvgWriter, model: &PcbModel) {
     for pad in &model.smt_pads {
+        if let Some(d) = polygon_path(pad) {
+            writer.path(&d, DEFAULT_PALETTE.pad_gold, None);
+            continue;
+        }
         let y = -pad.y;
         let is_circle =
             pad.shape.as_deref() == Some("circle") || (pad.radius.is_some() && pad.width.is_none());

@@ -67,7 +67,7 @@ mod elements;
 mod tests;
 
 pub use diagnostic::JsonDiagnostic;
-pub use elements::{Component, Net, Pad, PcbPort, Port, Trace};
+pub use elements::{Component, Net, Pad, PadPoint, PcbPort, Port, Trace};
 
 use std::path::Path;
 

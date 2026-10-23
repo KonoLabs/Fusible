@@ -87,3 +87,16 @@ fn text_and_attributes_are_escaped() {
 fn plain_strings_are_borrowed() {
     assert!(matches!(escape_xml("R1"), Cow::Borrowed("R1")));
 }
+
+#[test]
+fn pcb_svg_draws_polygon_pads_from_their_points() {
+    let svg = render_pcb_svg(
+        r#"[
+        { "type": "pcb_board", "width": 10.0, "height": 10.0, "center": { "x": 0.0, "y": 0.0 } },
+        { "type": "pcb_smtpad", "shape": "polygon", "layer": "top",
+          "points": [{ "x": 0, "y": 0 }, { "x": 1, "y": 0 }, { "x": 0, "y": 1 }] }
+    ]"#,
+    );
+    assert!(!svg.contains("NaN"));
+    assert!(svg.contains("M 0.000 -0.000 L 1.000 -0.000 L 0.000 -1.000 Z"));
+}

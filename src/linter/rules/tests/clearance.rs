@@ -64,3 +64,12 @@ fn trace_clearance_measures_diagonal_gaps_corner_to_corner() {
         r#""pcb_port_id": "pp_b", "shape": "rect", "x": 1.1, "y": 0, "width": 1, "height": 1"#;
     assert_eq!(lint(TraceClearanceRule, &two_pads(a, close)).len(), 1);
 }
+
+#[test]
+fn trace_clearance_checks_polygon_pads() {
+    let a = r#""pcb_port_id": "pp_a", "shape": "polygon",
+        "points": [{"x": -1, "y": -1}, {"x": 1, "y": -1}, {"x": 1, "y": 1}, {"x": -1, "y": 1}]"#;
+    let b = r#""pcb_port_id": "pp_b", "shape": "polygon",
+        "points": [{"x": 0.5, "y": -1}, {"x": 2.5, "y": -1}, {"x": 2.5, "y": 1}, {"x": 0.5, "y": 1}]"#;
+    assert_eq!(lint(TraceClearanceRule, &two_pads(a, b)).len(), 1);
+}

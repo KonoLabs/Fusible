@@ -3,7 +3,7 @@
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
-use super::elements::PcbModel;
+use super::elements::{PcbModel, PcbSmtPadElm};
 use super::GerberError;
 
 impl PcbModel {
@@ -39,7 +39,9 @@ impl PcbModel {
         };
         match typ.as_str() {
             "pcb_board" => self.boards.push(decode(&typ, index, val)?),
-            "pcb_smtpad" => self.smt_pads.push(decode(&typ, index, val)?),
+            "pcb_smtpad" => self
+                .smt_pads
+                .push(positioned_pad(index, decode(&typ, index, val)?)?),
             "pcb_trace" => self.traces.push(decode(&typ, index, val)?),
             "pcb_plated_hole" => self.plated_holes.push(decode(&typ, index, val)?),
             "pcb_via" => self.vias.push(decode(&typ, index, val)?),
@@ -58,5 +60,18 @@ fn decode<T: DeserializeOwned>(kind: &str, index: usize, val: Value) -> Result<T
         kind: kind.to_string(),
         index,
         reason: e.to_string(),
+    })
+}
+
+/// Rejects a non-polygon pad without a finite `x` and `y`: only polygon pads
+/// may omit their center, since their `points` carry the position.
+fn positioned_pad(index: usize, pad: PcbSmtPadElm) -> Result<PcbSmtPadElm, GerberError> {
+    if pad.shape.as_deref() == Some("polygon") || (pad.x.is_finite() && pad.y.is_finite()) {
+        return Ok(pad);
+    }
+    Err(GerberError::Malformed {
+        kind: "pcb_smtpad".to_string(),
+        index,
+        reason: "missing or non-finite x/y".to_string(),
     })
 }

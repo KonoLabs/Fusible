@@ -1,7 +1,7 @@
 //! `trace_clearance`: physical copper clearance design rule check (DRC).
 
 use crate::linter::{Diagnostic, LintContext, Rule};
-use crate::parser::Pad;
+use crate::parser::{Pad, PadPoint};
 
 /// Minimum copper clearance in millimeters (standard 6 mil / 0.15mm PCB manufacturing limit).
 const MIN_CLEARANCE_MM: f64 = 0.15;
@@ -80,6 +80,33 @@ fn half_extents(pad: &Pad) -> (f64, f64) {
     }
 }
 
+/// Center and half extents of a pad: from `x`/`y` and its size, or from the
+/// bounding box of its polygon outline, which covers all of its copper.
+fn pad_box(pad: &Pad) -> Option<(f64, f64, f64, f64)> {
+    if let (Some(x), Some(y)) = (pad.x, pad.y) {
+        let (half_w, half_h) = half_extents(pad);
+        return Some((x, y, half_w, half_h));
+    }
+    let points = pad.points.as_deref().filter(|p| !p.is_empty())?;
+    let fold = |f: fn(f64, f64) -> f64, init: f64, axis: fn(&PadPoint) -> f64| {
+        points.iter().map(axis).fold(init, f)
+    };
+    let (min_x, max_x) = (
+        fold(f64::min, f64::MAX, |p| p.x),
+        fold(f64::max, f64::MIN, |p| p.x),
+    );
+    let (min_y, max_y) = (
+        fold(f64::min, f64::MAX, |p| p.y),
+        fold(f64::max, f64::MIN, |p| p.y),
+    );
+    Some((
+        (min_x + max_x) / 2.0,
+        (min_y + max_y) / 2.0,
+        (max_x - min_x) / 2.0,
+        (max_y - min_y) / 2.0,
+    ))
+}
+
 /// Every positioned pad as copper. A pad whose net the netlist cannot
 /// resolve is isolated copper: it gets a net of its own, so any overlap with
 /// another pad is still a violation.
@@ -88,8 +115,7 @@ fn extract_copper_features(ctx: &LintContext<'_>) -> Vec<CopperFeature> {
         .pads()
         .enumerate()
         .filter_map(|(index, pad)| {
-            let (x, y) = (pad.x?, pad.y?);
-            let (half_w, half_h) = half_extents(pad);
+            let (x, y, half_w, half_h) = pad_box(pad)?;
             let label = pad.pad_id.clone().unwrap_or_else(|| format!("#{index}"));
             let (net_id, net_name) = match pad
                 .pad_id

@@ -50,6 +50,13 @@ pub struct Port {
     pub port_hints: Option<Vec<String>>,
 }
 
+/// One vertex of a polygon pad outline.
+#[derive(Debug, Clone, Copy, Deserialize, Default)]
+pub struct PadPoint {
+    pub x: f64,
+    pub y: f64,
+}
+
 /// A mount pad (the physical analogue of a port).
 #[derive(Debug, Clone, Deserialize, Default)]
 pub struct Pad {
@@ -77,6 +84,9 @@ pub struct Pad {
     /// Circle pads carry a radius instead of width and height.
     #[serde(default)]
     pub radius: Option<f64>,
+    /// Polygon pads carry their outline instead of a center and size.
+    #[serde(default)]
+    pub points: Option<Vec<PadPoint>>,
     #[serde(default)]
     pub layer: Option<String>,
 }

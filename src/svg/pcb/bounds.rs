@@ -1,6 +1,6 @@
 //! Screen-space bounding box of everything drawn on the PCB.
 
-use crate::gerber::layers::{PcbBoardElm, PcbModel};
+use crate::gerber::layers::{PcbBoardElm, PcbModel, PcbSmtPadElm};
 
 /// Axis-aligned bounds in screen space (Y flipped).
 #[derive(Debug, Clone, Copy)]
@@ -41,7 +41,7 @@ pub(super) fn calculate_bounds(model: &PcbModel) -> Bounds {
     let outline = model.boards.iter().flat_map(PcbBoardElm::outline_points);
     let points = outline
         .map(|pt| (pt.x, pt.y))
-        .chain(model.smt_pads.iter().map(|p| (p.x, p.y)))
+        .chain(model.smt_pads.iter().flat_map(pad_points))
         .chain(model.plated_holes.iter().map(|h| (h.x, h.y)))
         .chain(model.vias.iter().map(|v| (v.x, v.y)));
     for (x, y) in points {
@@ -56,4 +56,14 @@ pub(super) fn calculate_bounds(model: &PcbModel) -> Bounds {
         };
     }
     bounds
+}
+
+/// The points a pad occupies: its polygon vertices, or its center.
+fn pad_points(pad: &PcbSmtPadElm) -> Vec<(f64, f64)> {
+    match pad.points.as_deref() {
+        Some(points) if pad.shape.as_deref() == Some("polygon") => {
+            points.iter().map(|pt| (pt.x, pt.y)).collect()
+        }
+        _ => vec![(pad.x, pad.y)],
+    }
 }
