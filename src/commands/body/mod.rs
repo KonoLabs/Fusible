@@ -31,6 +31,7 @@ mod eject_files_tests;
 mod eject_tests;
 #[cfg(test)]
 mod generator_tests;
+#[cfg(test)]
 mod jobs_tests;
 #[cfg(test)]
 mod kit_tests;
