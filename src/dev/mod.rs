@@ -20,6 +20,8 @@ mod body_tests;
 #[cfg(test)]
 mod firmware_tests;
 #[cfg(test)]
+mod panel_scripts_tests;
+#[cfg(test)]
 mod runs_tests;
 #[cfg(test)]
 mod studio_tests;

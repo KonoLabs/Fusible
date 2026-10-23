@@ -343,10 +343,135 @@
     .tree-item.selected .tree-run {
       color: #000000;
     }
+    .project-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 8px 0 0;
+    }
+    .project-head .project-title {
+      padding: 6px 16px;
+    }
+    .tree-open {
+      display: none !important;
+    }
+    body.has-project.tree-collapsed .tree-open {
+      display: inline-flex !important;
+    }
+    body.tree-collapsed #project {
+      display: none;
+    }
+    #tree-scrim {
+      display: none;
+    }
     @media (max-width: 900px) {
       #project {
         display: none;
       }
+      body.has-project .tree-open {
+        display: inline-flex !important;
+      }
+      body.tree-drawer-open #project:not([hidden]) {
+        display: block;
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 40;
+      }
+      body.tree-drawer-open #tree-scrim {
+        display: block;
+        position: absolute;
+        inset: 0;
+        z-index: 35;
+        background: rgba(0, 0, 0, 0.55);
+      }
+    }
+    .fw-head {
+      padding: 14px 16px 10px;
+    }
+    .fw-title {
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      color: var(--green);
+    }
+    .fw-meta,
+    .fw-file {
+      margin-top: 4px;
+      font-size: 10px;
+      letter-spacing: 0.05em;
+      color: var(--text-subtle);
+      overflow-wrap: anywhere;
+    }
+    .fw-file {
+      padding: 0 16px;
+    }
+    .fw-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .fw-actions .btn:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+    .fw-summary {
+      margin: 8px 16px 0;
+      font-size: 10px;
+      letter-spacing: 0.05em;
+    }
+    .fw-summary.blown,
+    .fw-error {
+      color: var(--alert);
+    }
+    .fw-error {
+      padding: 0 16px;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+    .fw-pin {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 2px 8px;
+      padding: 6px 16px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .fw-pin:hover {
+      background: var(--surface-hover);
+    }
+    .fw-pin.selected {
+      background: rgba(134, 168, 129, 0.14);
+    }
+    .fw-pin.blown {
+      background: rgba(197, 84, 84, 0.12);
+    }
+    .fw-pin-name {
+      min-width: 56px;
+      color: var(--olive);
+    }
+    .fw-net {
+      flex: 1;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .fw-remote,
+    .fw-rust {
+      font-size: 9px;
+      letter-spacing: 0.05em;
+      color: var(--text-subtle);
+    }
+    .fw-rust {
+      flex-basis: 100%;
+      padding-left: 64px;
+    }
+    .fw-violation {
+      flex-basis: 100%;
+      padding-left: 64px;
+      color: var(--alert);
+      line-height: 1.4;
     }
     #runs-toolbar {
       display: flex;
@@ -891,9 +1016,13 @@
 </head>
 <body>
   <main>
+    <div id="tree-scrim"></div>
     <nav id="project" hidden aria-label="Project">
       <div class="project-card">
-        <div class="project-title" id="project-title"></div>
+        <div class="project-head">
+          <div class="project-title" id="project-title"></div>
+          <button class="btn icon-only" id="tree-close" title="Hide project ([)" aria-label="Hide project"><iconify-icon icon="pixelarticons:chevron-left"></iconify-icon></button>
+        </div>
         <div id="project-tree"></div>
       </div>
     </nav>
@@ -942,6 +1071,7 @@
       </div>
 
       <div class="floating floating-status">
+        <button class="btn icon-only tree-open" id="tree-open" title="Show project ([)" aria-label="Show project" aria-expanded="false"><iconify-icon icon="pixelarticons:layout-sidebar-left"></iconify-icon></button>
         <iconify-icon icon="pixelarticons:cpu-sharp" class="brand-logo"></iconify-icon>
         <span class="board-name" id="board-name">BOARD PREVIEW</span>
         <span class="live" title="Live reload connected" id="live-indicator"><span class="status-dot" id="live-dot"></span></span>
@@ -962,6 +1092,7 @@
           <button class="sidebar-tab-btn" onclick="switchSidebarTab('nets')">NETS</button>
           <button class="sidebar-tab-btn" onclick="switchSidebarTab('checks')">CHECKS</button>
           <button class="sidebar-tab-btn" onclick="switchSidebarTab('runs')">RUNS</button>
+          <button class="sidebar-tab-btn" onclick="switchSidebarTab('pins')">PINS</button>
           <button class="btn icon-only" onclick="toggleSidebar(false)" title="Hide panel (\)" aria-label="Hide panel"><iconify-icon icon="pixelarticons:chevron-right"></iconify-icon></button>
         </div>
 
@@ -982,6 +1113,12 @@
         <div class="sidebar-pane" id="pane-nets">
           <div id="nets-list">
             <div class="empty-state"><span>NO NETS DETECTED</span></div>
+          </div>
+        </div>
+
+        <div class="sidebar-pane" id="pane-pins">
+          <div id="firmware-view">
+            <div class="empty-state"><span>SELECT A FIRMWARE IN THE PROJECT TREE.</span></div>
           </div>
         </div>
 
@@ -1007,6 +1144,8 @@
   </main>
 
   <script src="/project.js"></script>
+  <script src="/firmware.js"></script>
+  <script src="/drawer.js"></script>
   <script>
     let currentView = 'schematic';
     let lastCircuitJson = null;

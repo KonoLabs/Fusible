@@ -12,6 +12,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 - `fusible dev` serves every board of the project in one Studio. A project tree on the left lists boards, firmware, and bodies, shows each board's fuse state, and switches the schematic, PCB, 3D, parts, nets, checks, and bodies views to the selected board. The URL keeps the selection.
 - A `RUNS` tab in Studio starts `check`, `build`, and `body` for one item or the whole project and streams the log live. The runs re-run the same `fusible` binary, so results match the terminal.
 - Dev server endpoints: `GET /api/project`, `GET /api/runs`, `POST /api/run`, and a `board` query on `/api/circuit` and `/api/mechanical`. Event stream messages for a board carry a `board` field, and run output arrives as `log` and `run` events.
+- Studio firmware view. Selecting a firmware in the project tree opens a `PINS` tab with its pin map: the board, MCU, and framework, every mapped pin grouped by peripheral with its signal, net, connected part, and generated Rust name, and `pin_mux` conflicts marked on their pins. Clicking a pin inspects the net or the connected part. A `BUILD` button runs the firmware build and shows its last result. The data comes from the same code that writes `pins.rs`, through the new `GET /api/firmware?name=<firmware>`, which only accepts names from `fusible.yml`.
+- On windows under 900px wide, the project tree opens as a drawer from a button in the status bar, and closes on selection, on `Esc`, or on a click outside it. On wide windows, `[` or the chevron in the tree header collapses the tree, and the choice is remembered.
 
 ### Changed
 
