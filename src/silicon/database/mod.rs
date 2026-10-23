@@ -59,7 +59,9 @@ use super::model::SiliconTarget;
 ///
 /// Matching is case-insensitive and ignores `-`, `_` and spaces, so
 /// `ESP32-S3`, `esp32s3` and `esp32_s3` all resolve. STM32G431 also accepts
-/// its package/flash suffixes (`stm32g431cb`, `stm32g431kb`, ...). Any other
+/// its package/flash suffixes (`stm32g431cb`, `stm32g431kb`, ...) and, for the
+/// 48-pin parts, the package letter (`stm32g431cbu` UFQFPN48, `stm32g431cby`
+/// WLCSP49, `stm32g431cbt` LQFP48). Any other
 /// chip, including other members of the same family, returns `None`.
 pub fn find_target(query: &str) -> Option<&'static SiliconTarget> {
     let clean: String = query
@@ -80,6 +82,13 @@ fn stm32g431(suffix: &str) -> Option<&'static SiliconTarget> {
     let (package, flash) = match suffix.as_bytes() {
         [] => return Some(&stm32::STM32G431),
         [package, flash] => (package, flash),
+        [b'c', flash, b't'] => (&b'c', flash),
+        [b'c', flash, b'u'] => {
+            return b"68b".contains(flash).then_some(&stm32::STM32G431CU);
+        }
+        [b'c', flash, b'y'] => {
+            return b"68b".contains(flash).then_some(&stm32::STM32G431CY);
+        }
         _ => return None,
     };
     if !b"68b".contains(flash) {

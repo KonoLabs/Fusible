@@ -8,8 +8,8 @@
 //! Each package gets its own target listing only the GPIOs Table 12 bonds out
 //! (pin count letter per Table 101: K = 32, C = 48/49, R = 64, M = 80,
 //! V = 100 pins). `stm32g431c` lists the LQFP48 set, which UFQFPN48 and
-//! WLCSP49 also bond out, and a bare `stm32g431` lists the 32-pin set,
-//! which every package bonds out.
+//! WLCSP49 also bond out; `stm32g431cu` and `stm32g431cy` add their extra GPIOs, and a bare
+//! `stm32g431` lists the 32-pin set, which every package bonds out.
 //!
 //! Only signals that `PeripheralSignal` can express are listed: USART/UART
 //! TX, RX, CTS and RTS, SPI SCK, MISO, MOSI and NSS, I2C SCL and SDA, SWD and
@@ -148,6 +148,20 @@ static PINS_48: &[PinSpec] = &[
     PF0, PF1, PG10,
 ];
 
+/// UFQFPN48 (`stm32g431cbu`): the LQFP48 set plus PC4, PC6, PC10 and PC11, 42 GPIOs.
+static PINS_UFQFPN48: &[PinSpec] = &[
+    PA0, PA1, PA2, PA3, PA4, PA5, PA6, PA7, PA8, PA9, PA10, PA11, PA12, PA13, PA14, PA15, PB0, PB1,
+    PB2, PB3, PB4, PB5, PB6, PB7, PB8, PB9, PB10, PB11, PB12, PB13, PB14, PB15, PC4, PC6, PC10,
+    PC11, PC13, PC14, PC15, PF0, PF1, PG10,
+];
+
+/// WLCSP49 (`stm32g431cby`): the LQFP48 set plus PC4, PC6 and PC11, 41 GPIOs.
+static PINS_WLCSP49: &[PinSpec] = &[
+    PA0, PA1, PA2, PA3, PA4, PA5, PA6, PA7, PA8, PA9, PA10, PA11, PA12, PA13, PA14, PA15, PB0, PB1,
+    PB2, PB3, PB4, PB5, PB6, PB7, PB8, PB9, PB10, PB11, PB12, PB13, PB14, PB15, PC4, PC6, PC11,
+    PC13, PC14, PC15, PF0, PF1, PG10,
+];
+
 /// LQFP64 and UFBGA64 (`stm32g431r`): 52 GPIOs.
 static PINS_64: &[PinSpec] = &[
     PA0, PA1, PA2, PA3, PA4, PA5, PA6, PA7, PA8, PA9, PA10, PA11, PA12, PA13, PA14, PA15, PB0, PB1,
@@ -184,6 +198,8 @@ const fn target(name: &'static str, pins: &'static [PinSpec]) -> SiliconTarget {
 pub static STM32G431: SiliconTarget = target("stm32g431", PINS_32);
 pub static STM32G431K: SiliconTarget = target("stm32g431k", PINS_32);
 pub static STM32G431C: SiliconTarget = target("stm32g431c", PINS_48);
+pub static STM32G431CU: SiliconTarget = target("stm32g431cu", PINS_UFQFPN48);
+pub static STM32G431CY: SiliconTarget = target("stm32g431cy", PINS_WLCSP49);
 pub static STM32G431R: SiliconTarget = target("stm32g431r", PINS_64);
 pub static STM32G431M: SiliconTarget = target("stm32g431m", PINS_80);
 pub static STM32G431V: SiliconTarget = target("stm32g431v", PINS_100);

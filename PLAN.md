@@ -90,7 +90,9 @@ Fix: prefer the manufacturer part number for the display string, falling back to
 
 Test: a board with two chips carrying part numbers prints both part numbers in the hint. Keep asserting that selection still returns `None`, since the hint is cosmetic and must not change which chip is picked.
 
-### P2. Let `c`-package STM32G431 boards reach their extra pins
+### P2. Let `c`-package STM32G431 boards reach their extra pins (done, 0.11.3)
+
+Shipped as `stm32g431cbu` (UFQFPN48, 42 GPIOs) and `stm32g431cby` (WLCSP49, 41 GPIOs), named after the ordering scheme in DS12589 Table 101 rather than `cu`/`cw`.
 
 `src/silicon/database/stm32/mod.rs:185` maps `STM32G431C` to `PINS_48`. The `c` package letter covers LQFP48, UFQFPN48 and WLCSP49, and the latter two bond out 3 to 4 GPIOs that LQFP48 does not. Those pins are currently rejected as unknown, so a valid WLCSP49 design cannot pass `pin_mux`.
 

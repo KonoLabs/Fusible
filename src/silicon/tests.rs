@@ -1,6 +1,7 @@
 //! Silicon database, signal parsing, and pin-mux validation tests.
 
 mod mux;
+mod packages;
 mod stm32;
 
 use mux::assigned;

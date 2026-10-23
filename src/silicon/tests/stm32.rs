@@ -81,6 +81,8 @@ fn gates_pins_by_package() {
         ("stm32g431", 26),
         ("stm32g431kb", 26),
         ("stm32g431cb", 38),
+        ("stm32g431cbu", 42),
+        ("stm32g431cby", 41),
         ("stm32g431rb", 52),
         ("stm32g431mb", 66),
         ("stm32g431vb", 86),
