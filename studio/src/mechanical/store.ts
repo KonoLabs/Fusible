@@ -1,5 +1,6 @@
 import type * as THREE from "three";
 import { fetchModel } from "./fetch";
+import { errorMessage } from "./gltf";
 
 export interface MechanicalMeta {
   revision: string;
@@ -43,11 +44,6 @@ function emit(next: MechanicalState): void {
   shown = model;
 }
 
-/** Returns the manifest board whose circuit the studio payload last described; empty without a manifest. */
-export function mechanicalBoard(): string {
-  return board;
-}
-
 function currentKey(): string | null {
   return revision === null ? null : `${board}|${revision}`;
 }
@@ -64,10 +60,10 @@ function refresh(): void {
   emit({ status: "loading" });
   fetchModel(rev, board).then(
     (model) => (currentKey() === key ? emit({ status: "ready", model }) : disposeModel(model)),
-    (err: Error) => {
+    (reason: unknown) => {
       if (currentKey() !== key) return;
       requested = null;
-      emit({ status: "error", error: err.message || String(err) });
+      emit({ status: "error", error: errorMessage(reason) });
     }
   );
 }

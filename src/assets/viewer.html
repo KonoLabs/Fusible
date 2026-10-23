@@ -274,10 +274,25 @@
     .tree-item {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 4px;
       min-height: 34px;
       padding: 4px 8px 4px 16px;
       font-size: 11px;
+    }
+    .tree-select {
+      display: flex;
+      flex: 1;
+      min-width: 0;
+      align-items: center;
+      gap: 8px;
+      min-height: 26px;
+      padding: 0;
+      background: transparent;
+      border: none;
+      color: inherit;
+      font: inherit;
+      font-size: 11px;
+      text-align: left;
       cursor: pointer;
     }
     .tree-item:hover {
@@ -432,6 +447,12 @@
     }
     .fw-pin {
       display: flex;
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: inherit;
+      font: inherit;
+      text-align: left;
       flex-wrap: wrap;
       align-items: baseline;
       gap: 2px 8px;
@@ -468,6 +489,7 @@
       padding-left: 64px;
     }
     .fw-violation {
+      display: block;
       flex-basis: 100%;
       padding-left: 64px;
       color: var(--alert);
@@ -492,11 +514,27 @@
     }
     .run-item {
       display: flex;
+      width: 100%;
       gap: 8px;
       align-items: center;
       padding: 6px 16px;
+      background: transparent;
+      border: none;
+      color: inherit;
+      font: inherit;
       font-size: 11px;
+      text-align: left;
       cursor: pointer;
+    }
+    #run-error {
+      padding: 8px 16px;
+      color: var(--alert);
+      font-size: 11px;
+      line-height: 1.4;
+      background: rgba(197, 84, 84, 0.1);
+    }
+    #run-error[hidden] {
+      display: none;
     }
     .run-item:hover {
       background: var(--surface-hover);
@@ -1087,12 +1125,12 @@
     <aside id="sidebar">
       <div class="sidebar-card">
         <div class="sidebar-tabs">
-          <button class="sidebar-tab-btn active" onclick="switchSidebarTab('inspector')">INSPECT</button>
-          <button class="sidebar-tab-btn" onclick="switchSidebarTab('components')">PARTS</button>
-          <button class="sidebar-tab-btn" onclick="switchSidebarTab('nets')">NETS</button>
-          <button class="sidebar-tab-btn" onclick="switchSidebarTab('checks')">CHECKS</button>
-          <button class="sidebar-tab-btn" onclick="switchSidebarTab('runs')">RUNS</button>
-          <button class="sidebar-tab-btn" onclick="switchSidebarTab('pins')">PINS</button>
+          <button class="sidebar-tab-btn active" data-tab="inspector" onclick="switchSidebarTab('inspector')">INSPECT</button>
+          <button class="sidebar-tab-btn" data-tab="components" onclick="switchSidebarTab('components')">PARTS</button>
+          <button class="sidebar-tab-btn" data-tab="nets" onclick="switchSidebarTab('nets')">NETS</button>
+          <button class="sidebar-tab-btn" data-tab="checks" onclick="switchSidebarTab('checks')">CHECKS</button>
+          <button class="sidebar-tab-btn" data-tab="runs" onclick="switchSidebarTab('runs')">RUNS</button>
+          <button class="sidebar-tab-btn" data-tab="pins" onclick="switchSidebarTab('pins')">PINS</button>
           <button class="btn icon-only" onclick="toggleSidebar(false)" title="Hide panel (\)" aria-label="Hide panel"><iconify-icon icon="pixelarticons:chevron-right"></iconify-icon></button>
         </div>
 
@@ -1128,6 +1166,7 @@
             <button class="btn" data-action="build">BUILD ALL</button>
             <button class="btn" data-action="body">BODIES</button>
           </div>
+          <div id="run-error" role="alert" hidden></div>
           <div id="run-list"></div>
           <pre id="run-log" aria-label="Run log"></pre>
         </div>
@@ -1150,6 +1189,7 @@
     let currentView = 'schematic';
     let lastCircuitJson = null;
     let lastRevision = null;
+    let lastBoard = '';
 
     const tooltip = document.getElementById('hover-tooltip');
     const hosts = {
@@ -1279,20 +1319,23 @@
 
     function switchSidebarTab(tabId) {
       document.querySelectorAll('.sidebar-tab-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.getAttribute('onclick').includes(tabId));
+        btn.classList.toggle('active', btn.dataset.tab === tabId);
       });
       document.querySelectorAll('.sidebar-pane').forEach(p => p.classList.remove('active'));
       const activePane = document.getElementById(`pane-${tabId}`);
       if (activePane) activePane.classList.add('active');
     }
 
-    function toggleSidebar(open) {
+    function toggleSidebar(open, persist = true) {
       const collapsed = !open;
       document.body.classList.toggle('sidebar-collapsed', collapsed);
       document.querySelector('.sidebar-card').inert = collapsed;
+      if (!persist) return;
       try {
         localStorage.setItem('fusible.sidebarCollapsed', collapsed ? '1' : '0');
-      } catch (err) {}
+      } catch (err) {
+        console.warn('cannot remember the panel state', err);
+      }
     }
 
     function openSidebar(tabId) {
@@ -1631,7 +1674,8 @@
       }
       if (typeof data.revision === 'string') {
         lastRevision = data.revision;
-        if (window.Tscircuit) window.Tscircuit.setMechanicalRevision(lastRevision, data.board || '');
+        lastBoard = data.board || '';
+        if (window.Tscircuit) window.Tscircuit.setMechanicalRevision(lastRevision, lastBoard);
       }
       if (data.circuit_json) {
         lastCircuitJson = data.circuit_json;
@@ -1642,7 +1686,7 @@
     }
 
     window.addEventListener('tscircuit-ready', () => {
-      if (lastRevision !== null) window.Tscircuit.setMechanicalRevision(lastRevision, window.Project.board());
+      if (lastRevision !== null) window.Tscircuit.setMechanicalRevision(lastRevision, lastBoard);
       initMechanical();
       switchView(currentView);
     });

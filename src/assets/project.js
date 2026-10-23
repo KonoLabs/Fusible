@@ -1,5 +1,7 @@
 (() => {
-  const state = { project: null, board: null, boards: {}, health: {}, runs: [], activeRun: null, item: null };
+  const MAX_LINES = 2000;
+  const MAX_ORPHAN_RUNS = 8;
+  const state = { project: null, board: null, boards: {}, health: {}, runs: [], orphans: {}, activeRun: null, item: null };
   const STATUS_TEXT = { running: 'RUNNING', ok: 'OK', fuse_blown: 'FUSE BLOWN', error: 'FAILED' };
   const GROUPS = [
     ['boards', 'board', 'BOARDS', 'check', 'Check this board'],
@@ -9,6 +11,7 @@
 
   const byId = (id) => document.getElementById(id);
   const icon = (name) => `<iconify-icon icon="pixelarticons:${name}"></iconify-icon>`;
+  const isBusy = () => state.runs.some((run) => run.status === 'running');
 
   async function getJson(url) {
     const response = await fetch(url, { cache: 'no-store' });
@@ -23,6 +26,11 @@
 
   function findItem(kind, name) {
     return itemsOf(kind).find((item) => item.name === name);
+  }
+
+  function firstBoardName() {
+    const first = state.project && state.project.boards[0];
+    return (first && first.name) || '';
   }
 
   function healthOf(board) {
@@ -46,11 +54,16 @@
 
   function rowHtml(kind, item, action, hint) {
     const key = `${kind}:${item.name}`;
-    const run = `<button class="tree-run" data-action="${action}" data-target="${escapeHtml(item.name)}" title="${hint}" aria-label="${hint}">${icon('play')}</button>`;
-    return `<div class="tree-item${state.item === key ? ' selected' : ''}" data-kind="${kind}" data-name="${escapeHtml(item.name)}" tabindex="0">
-      <span class="tree-dot ${dotClass(kind, item)}"></span>
-      <span class="tree-name">${escapeHtml(item.name)}</span>
-      <span class="tree-sub">${escapeHtml(subLabel(kind, item))}</span>${run}</div>`;
+    const selected = state.item === key;
+    const name = escapeHtml(item.name);
+    return `<div class="tree-item${selected ? ' selected' : ''}" data-kind="${kind}" data-name="${name}">
+      <button class="tree-select" ${selected ? 'aria-current="true"' : ''}>
+        <span class="tree-dot ${dotClass(kind, item)}"></span>
+        <span class="tree-name">${name}</span>
+        <span class="tree-sub">${escapeHtml(subLabel(kind, item))}</span>
+      </button>
+      <button class="tree-run" data-action="${action}" data-target="${name}" title="${hint}" aria-label="${hint}: ${name}">${icon('play')}</button>
+    </div>`;
   }
 
   function renderTree() {
@@ -71,18 +84,37 @@
     state.board = name;
     resetInspector();
     const data = state.boards[name];
-    if (data) updateStudio(data);
-    else getJson(`/api/circuit?board=${encodeURIComponent(name)}`).then(updateStudio).catch(() => {});
+    if (data) {
+      updateStudio(data);
+      return;
+    }
+    getJson(`/api/circuit?board=${encodeURIComponent(name)}`)
+      .then((fresh) => {
+        if (state.board === name) updateStudio(fresh);
+      })
+      .catch((err) => {
+        console.warn('board load failed', err);
+        if (state.board === name) showStatus(`BOARD ${name.toUpperCase()} UNAVAILABLE: ${String(err.message || err).toUpperCase()}`);
+      });
   }
 
   function boardOfItem(kind, item) {
-    if (kind === 'board') return item.name;
-    return item.board || state.project.boards[0].name || '';
+    return kind === 'board' ? item.name : item.board || firstBoardName();
   }
 
   function applyBody(kind, item) {
     if (!window.Tscircuit) return;
     window.Tscircuit.setMechanicalBody(kind === 'body' ? item.name : null, kind === 'body' ? item.kind : '');
+  }
+
+  function rememberItem() {
+    try {
+      const url = new URL(location.href);
+      url.searchParams.set('item', state.item);
+      history.replaceState(null, '', url);
+    } catch (err) {
+      console.warn('cannot record the selection in the URL', err);
+    }
   }
 
   function select(kind, name) {
@@ -95,9 +127,7 @@
     applyBody(kind, item);
     if (kind === 'body') switchView('mechanical');
     renderTree();
-    try {
-      history.replaceState(null, '', `?item=${encodeURIComponent(state.item)}`);
-    } catch (err) {}
+    rememberItem();
   }
 
   function noteHealth(board, data) {
@@ -105,23 +135,25 @@
     if (state.project) renderTree();
   }
 
-  function getRun(id) {
-    let run = state.runs.find((r) => r.id === id);
-    if (!run) {
-      run = { id, label: `run ${id}`, status: 'running', lines: [] };
-      state.runs.push(run);
-    }
+  function adopt(run) {
+    state.runs.push(run);
+    (state.orphans[run.id] || []).forEach((line) => addLine(run, line));
+    delete state.orphans[run.id];
     return run;
   }
 
+  function knownRun(id, label) {
+    return state.runs.find((r) => r.id === id) || (label ? adopt({ id, label, status: 'running', lines: [] }) : null);
+  }
+
   function renderRunList() {
-    const busy = state.runs.some((r) => r.status === 'running');
+    const busy = isBusy();
     document.querySelectorAll('#runs-toolbar .btn').forEach((btn) => { btn.disabled = busy; });
     byId('run-list').innerHTML = state.runs.slice().reverse().map((run) => `
-      <div class="run-item${run.id === state.activeRun ? ' selected' : ''}" data-run="${run.id}">
-        <span class="run-status ${run.status}">${STATUS_TEXT[run.status] || run.status}</span>
+      <button class="run-item${run.id === state.activeRun ? ' selected' : ''}" data-run="${escapeHtml(run.id)}" aria-pressed="${run.id === state.activeRun}">
+        <span class="run-status ${escapeHtml(run.status)}">${escapeHtml(STATUS_TEXT[run.status] || run.status)}</span>
         <span class="run-label">${escapeHtml(run.label)}</span>
-      </div>`).join('') || '<div class="empty-state"><span>NO RUNS YET. PRESS ▶ ON AN ITEM.</span></div>';
+      </button>`).join('') || '<div class="empty-state"><span>NO RUNS YET. PRESS ▶ ON AN ITEM.</span></div>';
   }
 
   function renderLog() {
@@ -130,45 +162,72 @@
     byId('run-log').scrollTop = byId('run-log').scrollHeight;
   }
 
-  function appendLog(id, line) {
-    const run = getRun(id);
+  function showRunError(message) {
+    const box = byId('run-error');
+    box.textContent = String(message || '').toUpperCase();
+    box.hidden = !message;
+  }
+
+  function addLine(run, line) {
+    if (run.lines.length >= MAX_LINES) return;
     run.lines.push(line);
-    if (id !== state.activeRun) return;
+    if (run.id !== state.activeRun) return;
     const log = byId('run-log');
     const atEnd = log.scrollTop + log.clientHeight >= log.scrollHeight - 24;
-    log.append(`${log.textContent ? '\n' : ''}${line}`);
+    log.append(`${run.lines.length > 1 ? '\n' : ''}${line}`);
     if (atEnd) log.scrollTop = log.scrollHeight;
   }
 
-  function finishRun(id, status) {
-    getRun(id).status = status;
-    renderRunList();
-    window.FirmwareView.onRun();
+  function appendLog(id, line) {
+    const run = state.runs.find((r) => r.id === id);
+    if (run) return addLine(run, line);
+    const ids = Object.keys(state.orphans);
+    if (!(id in state.orphans) && ids.length >= MAX_ORPHAN_RUNS) delete state.orphans[ids[0]];
+    const pending = (state.orphans[id] = state.orphans[id] || []);
+    if (pending.length < MAX_LINES) pending.push(line);
   }
 
-  async function startRun(action, target) {
+  function applyRunEvent(data) {
+    const run = knownRun(data.run, data.label);
+    if (!run) return;
+    if (data.label) run.label = data.label;
+    if (data.status) run.status = data.status;
+    renderRunList();
+    window.FirmwareView.onRun(run.status);
+  }
+
+  async function postRun(action, target) {
     const response = await fetch('/api/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(target ? { action, target } : { action }),
     });
     const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
+    return body.run;
+  }
+
+  async function startRun(action, target) {
     openSidebar('runs');
-    if (!response.ok) {
-      byId('run-log').textContent = (body.error || `HTTP ${response.status}`).toUpperCase();
+    let id;
+    try {
+      id = await postRun(action, target);
+    } catch (err) {
+      showRunError(err.message || err);
       return;
     }
-    const run = getRun(body.run);
+    showRunError('');
+    const run = knownRun(id, target ? `${action} ${target}` : `${action} all`);
     run.label = target ? `${action} ${target}` : `${action} all`;
     state.activeRun = run.id;
     renderRunList();
     renderLog();
+    window.FirmwareView.onRun(run.status);
   }
 
   function onTreeClick(event) {
     const runButton = event.target.closest('.tree-run');
     if (runButton) {
-      event.stopPropagation();
       startRun(runButton.dataset.action, runButton.dataset.target);
       return;
     }
@@ -178,13 +237,6 @@
 
   function bindEvents() {
     byId('project-tree').addEventListener('click', onTreeClick);
-    byId('project-tree').addEventListener('keydown', (event) => {
-      const row = event.target.closest('.tree-item');
-      if (row && (event.key === 'Enter' || event.key === ' ')) {
-        event.preventDefault();
-        select(row.dataset.kind, row.dataset.name);
-      }
-    });
     byId('runs-toolbar').addEventListener('click', (event) => {
       const btn = event.target.closest('.btn');
       if (btn && !btn.disabled) startRun(btn.dataset.action);
@@ -193,6 +245,7 @@
       const row = event.target.closest('.run-item');
       if (!row) return;
       state.activeRun = Number(row.dataset.run);
+      showRunError('');
       renderRunList();
       renderLog();
     });
@@ -203,8 +256,7 @@
     const [kind, ...rest] = wanted.split(':');
     const name = rest.join(':');
     if (findItem(kind, name)) return [kind, name];
-    const first = state.project.boards[0];
-    return ['board', first.name];
+    return ['board', firstBoardName()];
   }
 
   async function init() {
@@ -212,12 +264,13 @@
       state.project = await getJson('/api/project');
       state.runs = await getJson('/api/runs');
     } catch (err) {
+      console.warn('project unavailable', err);
       return;
     }
     state.project.boards.forEach((b) => { b.name = b.name || ''; });
     state.activeRun = state.runs.length ? state.runs[state.runs.length - 1].id : null;
     bindEvents();
-    state.board = state.project.boards[0] ? state.project.boards[0].name : '';
+    state.board = firstBoardName();
     const [kind, name] = state.project.boards.length ? initialItem() : ['board', ''];
     state.item = `${kind}:${name}`;
     renderTree();
@@ -228,7 +281,7 @@
 
   function handle(data) {
     if (data.event === 'log') return appendLog(data.run, data.line), true;
-    if (data.event === 'run') return finishRun(data.run, data.status), true;
+    if (data.event === 'run') return applyRunEvent(data), true;
     const board = data.board || '';
     state.boards[board] = data;
     noteHealth(board, data);
@@ -243,7 +296,5 @@
     if (item) applyBody(kind, item);
   });
 
-  window.Project = { init, handle, board: () => state.board || '' };
-  window.Project.runs = () => state.runs;
-  window.Project.startRun = startRun;
+  window.Project = { init, handle, board: () => state.board || '', runs: () => state.runs, startRun, isBusy };
 })();
