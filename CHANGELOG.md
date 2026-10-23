@@ -7,6 +7,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-10-23
+
 ### Added
 
 - Rules now have a severity. A warning prints but leaves the exit code at 0; an error blows the fuse as before.
