@@ -3,7 +3,7 @@
 use crate::silicon::*;
 
 fn af(pin: &str, signal: PeripheralSignal) -> Option<u8> {
-    let chip = find_target("stm32g431").unwrap();
+    let chip = find_target("stm32g431vb").unwrap();
     chip.find_pin(pin)?.get_af(&signal).map(|f| f.af_number)
 }
 
@@ -21,7 +21,7 @@ fn covers_every_gpio_of_the_largest_package() {
 
 #[test]
 fn rejects_pins_that_do_not_exist() {
-    let chip = find_target("stm32g431").unwrap();
+    let chip = find_target("stm32g431vb").unwrap();
     for pin in ["PA16", "PB16", "PC16", "PF3", "PG0", "PG9"] {
         assert!(chip.find_pin(pin).is_none(), "{pin} must not exist");
     }
@@ -43,7 +43,7 @@ fn matches_datasheet_alternate_functions() {
 
 #[test]
 fn omits_signals_the_datasheet_does_not_list() {
-    let chip = find_target("stm32g431").unwrap();
+    let chip = find_target("stm32g431vb").unwrap();
     let pc13 = chip.find_pin("PC13").unwrap();
     assert!(pc13.functions.iter().all(|f| f.af_number != 7));
     assert_eq!(af("PB6", PeripheralSignal::I2cScl(1)), None);
@@ -53,10 +53,50 @@ fn omits_signals_the_datasheet_does_not_list() {
 
 #[test]
 fn marks_adc_pins_analog() {
-    let chip = find_target("stm32g431").unwrap();
+    let chip = find_target("stm32g431vb").unwrap();
     assert!(chip.find_pin("PC4").unwrap().capabilities.is_analog);
     assert!(!chip.find_pin("PA9").unwrap().capabilities.is_analog);
     assert_eq!(af("PC4", PeripheralSignal::AdcChannel(2, 5)), Some(0));
     assert_eq!(af("PC0", PeripheralSignal::AdcChannel(1, 6)), Some(0));
     assert_eq!(af("PC0", PeripheralSignal::AdcChannel(2, 6)), Some(0));
+}
+
+#[test]
+fn gates_pins_by_package() {
+    let bonded = |chip: &str, pin: &str| find_target(chip).unwrap().find_pin(pin).is_some();
+    assert!(bonded("stm32g431cb", "PA9"));
+    assert!(!bonded("stm32g431cb", "PE5"));
+    assert!(!bonded("stm32g431cb", "PD2"));
+    assert!(!bonded("stm32g431cb", "PC4"));
+    assert!(!bonded("stm32g431kb", "PB10"));
+    assert!(!bonded("stm32g431kb", "PC13"));
+    assert!(bonded("stm32g431kb", "PB8"));
+    assert!(bonded("stm32g431rb", "PD2"));
+    assert!(!bonded("stm32g431rb", "PD0"));
+    assert!(bonded("stm32g431mb", "PE7"));
+    assert!(!bonded("stm32g431mb", "PE6"));
+    assert!(bonded("stm32g431vb", "PE5"));
+    assert!(find_target("stm32g431gb").is_none());
+    for (chip, count) in [
+        ("stm32g431", 26),
+        ("stm32g431kb", 26),
+        ("stm32g431cb", 38),
+        ("stm32g431rb", 52),
+        ("stm32g431mb", 66),
+        ("stm32g431vb", 86),
+    ] {
+        assert_eq!(find_target(chip).unwrap().pins.len(), count, "{chip}");
+    }
+}
+
+#[test]
+fn pin_mux_flags_pins_the_package_does_not_bond() {
+    let chip = find_target("stm32g431cb").unwrap();
+    let conflicts = validate_pin_assignments(chip, &[super::assigned("PE5", "UART1_TX", false)]);
+    assert!(
+        conflicts
+            .iter()
+            .any(|c| matches!(c, PinConflict::UnknownPin { pin_name, .. } if pin_name == "PE5")),
+        "{conflicts:?}"
+    );
 }
