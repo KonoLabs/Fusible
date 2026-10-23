@@ -90,7 +90,8 @@ Fusible unifies the hardware development workflow by wrapping tscircuit commands
   - [x] `fusible body kit <board>` exports a reference kit (`kit.json` with outline, holes, footprints, edge openings; `board.step` for TSX entries) to model around. Component heights and keep-out volumes are still to do.
   - [x] Studio draws authored bodies (GLB directly, STEP and STL converted with occt-wasm) in the board frame.
   - Studio draws the board outline next to an authored body, so you can see whether they line up.
-  - Studio firmware view: a pin map from the generated `pins.rs` data, with a click-through to the net on the PCB.
+  - [x] Studio firmware view: a pin map from the generated `pins.rs` data, with a click-through to the net or connected part, and a `BUILD` button.
+  - [x] Project tree drawer on narrow windows, and a collapse shortcut on wide ones.
 - [ ] **Milestone 16: Assembly and cross-world fuse rules**:
   - `assembly:` places boards and bodies in one coordinate frame and exports `dist/assembly.{step,glb}`.
   - `links:` declares board-to-board wiring; `harness_mismatch` blows the fuse on pin or net mismatches.

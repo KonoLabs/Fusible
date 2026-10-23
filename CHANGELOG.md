@@ -16,6 +16,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 - Studio draws authored bodies. Selecting a body declared with `source:` opens the `BODIES` tab on that file, in the board frame. GLB passes through, STEP and STL are converted with `occt-wasm` and cached by path, modification time, and size. The tree shows `MISSING` for a source file that does not exist.
 - `GET /api/bodies/<name>.glb` serves the GLB of an authored body. The URL carries only the body name, checked against the manifest, so no file outside the declared sources can be read. Files over 64 MiB and unsupported types answer 422.
 - Dev server endpoints: `GET /api/project`, `GET /api/runs`, `POST /api/run`, and a `board` query on `/api/circuit` and `/api/mechanical`. Event stream messages for a board carry a `board` field, and run output arrives as `log` and `run` events.
+- Studio firmware view. Selecting a firmware in the project tree opens a `PINS` tab with its pin map: the board, MCU, and framework, every mapped pin grouped by peripheral with its signal, net, connected part, and generated Rust name, and `pin_mux` conflicts marked on their pins. Clicking a pin inspects the net or the connected part. A `BUILD` button runs the firmware build and shows its last result. The data comes from the same code that writes `pins.rs`, through the new `GET /api/firmware?name=<firmware>`, which only accepts names from `fusible.yml`.
+- On windows under 900px wide, the project tree opens as a drawer from a button in the status bar, and closes on selection, on `Esc`, or on a click outside it. On wide windows, `[` or the chevron in the tree header collapses the tree, and the choice is remembered.
 
 ### Changed
 

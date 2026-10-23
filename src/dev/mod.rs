@@ -3,6 +3,7 @@ mod assets;
 mod authored;
 mod bodies;
 mod body;
+mod firmware;
 pub mod hub;
 pub mod pipeline;
 mod project;
@@ -24,6 +25,10 @@ mod authored_support;
 mod authored_tests;
 #[cfg(test)]
 mod body_tests;
+#[cfg(test)]
+mod firmware_tests;
+#[cfg(test)]
+mod panel_scripts_tests;
 #[cfg(test)]
 mod runs_tests;
 #[cfg(test)]

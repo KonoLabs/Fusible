@@ -23,6 +23,7 @@ pub(super) struct Slot {
     pub payload: Arc<Mutex<String>>,
     pub health: Arc<Mutex<Health>>,
     pub body: BodyCache,
+    source: Arc<Mutex<Option<Arc<str>>>>,
 }
 
 impl Slot {
@@ -33,7 +34,20 @@ impl Slot {
             payload: Arc::new(Mutex::new(String::new())),
             health: Arc::default(),
             body: BodyCache::default(),
+            source: Arc::default(),
         }
+    }
+
+    /// Records the Circuit JSON source of the latest rebuild, `None` when the board failed to load.
+    pub(super) fn set_source(&self, source: Option<&str>) {
+        if let Ok(mut lock) = self.source.lock() {
+            *lock = source.map(Arc::from);
+        }
+    }
+
+    /// The Circuit JSON source of the latest rebuild.
+    pub(super) fn source(&self) -> Option<Arc<str>> {
+        self.source.lock().ok().and_then(|s| s.clone())
     }
 
     pub(super) fn payload(&self) -> String {

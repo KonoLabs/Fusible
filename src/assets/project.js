@@ -91,7 +91,7 @@
     state.item = `${kind}:${name}`;
     const board = boardOfItem(kind, item);
     if (board !== state.board) showBoard(board);
-    if (kind === 'firmware') openSidebar('runs');
+    if (kind === 'firmware') window.FirmwareView.show(name);
     applyBody(kind, item);
     if (kind === 'body') switchView('mechanical');
     renderTree();
@@ -143,6 +143,7 @@
   function finishRun(id, status) {
     getRun(id).status = status;
     renderRunList();
+    window.FirmwareView.onRun();
   }
 
   async function startRun(action, target) {
@@ -231,6 +232,7 @@
     const board = data.board || '';
     state.boards[board] = data;
     noteHealth(board, data);
+    window.FirmwareView.onBoard(board);
     if (state.board === null) state.board = board;
     return board !== state.board;
   }
@@ -242,4 +244,6 @@
   });
 
   window.Project = { init, handle, board: () => state.board || '' };
+  window.Project.runs = () => state.runs;
+  window.Project.startRun = startRun;
 })();

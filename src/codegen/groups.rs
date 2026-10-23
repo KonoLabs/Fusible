@@ -6,7 +6,7 @@ use super::naming::unique_name;
 use super::pins::PinMapping;
 
 /// Groups pins into peripheral buckets keyed by group name.
-pub(super) fn categorize_pins(pins: &[PinMapping]) -> BTreeMap<String, Vec<&PinMapping>> {
+pub(crate) fn categorize_pins(pins: &[PinMapping]) -> BTreeMap<String, Vec<&PinMapping>> {
     let mut groups: BTreeMap<String, Vec<&PinMapping>> = BTreeMap::new();
     for pin in pins {
         groups
@@ -37,7 +37,7 @@ fn group_of(signal_name: &str) -> String {
 }
 
 /// Unique struct field names for one peripheral group, in pin order.
-pub(super) fn field_names(pins: &[&PinMapping], group_name: &str) -> Vec<String> {
+pub(crate) fn field_names(pins: &[&PinMapping], group_name: &str) -> Vec<String> {
     let mut used = BTreeSet::new();
     pins.iter()
         .map(|pin| unique_name(to_field_name(&pin.signal_name, group_name), &mut used))
