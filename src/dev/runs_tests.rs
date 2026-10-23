@@ -31,8 +31,7 @@ fn wait_until_done(runs: &Runs) -> serde_json::Value {
 fn run_collects_both_streams_and_maps_the_exit_code() {
     let runs = Runs::default();
     let hub = ClientHub::default();
-    let (tx, rx) = std::sync::mpsc::channel();
-    hub.add_client(tx);
+    let rx = hub.subscribe(Vec::new);
     runs.start(&hub, "demo".into(), shell("echo out; echo err >&2; exit 1"))
         .unwrap();
     let snapshot = wait_until_done(&runs);
@@ -77,6 +76,41 @@ fn unspawnable_command_is_an_error_run() {
         .as_str()
         .unwrap()
         .contains("cannot start"));
+}
+
+#[test]
+fn run_events_carry_the_label_when_the_run_starts_and_when_it_ends() {
+    let runs = Runs::default();
+    let hub = ClientHub::default();
+    let rx = hub.subscribe(Vec::new);
+    runs.start(&hub, "check main".into(), shell("exit 0"))
+        .unwrap();
+    wait_until_done(&runs);
+    let events: Vec<String> = rx
+        .try_iter()
+        .map(|m| String::from_utf8(m).unwrap())
+        .collect();
+    let first = &events[0];
+    assert!(first.contains(r#""event":"run""#) && first.contains(r#""label":"check main""#));
+    assert!(first.contains(r#""status":"running""#));
+    let last = events.last().unwrap();
+    assert!(last.contains(r#""label":"check main""#) && last.contains(r#""status":"ok""#));
+}
+
+#[test]
+fn a_run_that_hangs_is_killed_and_frees_the_slot() {
+    let runs = Runs::default();
+    let hub = ClientHub::default();
+    runs.start_with(
+        &hub,
+        "hang".into(),
+        shell("sleep 30"),
+        Duration::from_millis(200),
+    )
+    .unwrap();
+    let snapshot = wait_until_done(&runs);
+    assert_eq!(snapshot[0]["status"], "error");
+    assert!(runs.start(&hub, "next".into(), shell("true")).is_ok());
 }
 
 #[test]

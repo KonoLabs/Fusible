@@ -2,7 +2,7 @@ use std::path::Path;
 
 use super::project::project_json;
 use super::run_request::parse;
-use super::server::{is_allowed_origin, query_param};
+use super::server::query_param;
 use super::state::State;
 use crate::commands::target::BoardTarget;
 use crate::config::FusibleConfig;
@@ -50,19 +50,11 @@ fn query_params_are_decoded() {
 }
 
 #[test]
-fn origin_must_be_this_dev_server() {
-    assert!(is_allowed_origin(None, 3020));
-    assert!(is_allowed_origin(Some("http://localhost:3020"), 3020));
-    assert!(!is_allowed_origin(Some("http://localhost:3021"), 3020));
-    assert!(!is_allowed_origin(Some("https://evil.example"), 3020));
-}
-
-#[test]
 fn runs_only_accept_manifest_names_of_the_right_kind() {
     let cfg = manifest();
     let spec = parse(r#"{"action":"build","target":"sensor-fw"}"#, Some(&cfg)).unwrap();
     assert_eq!(spec.label, "build sensor-fw");
-    assert_eq!(spec.args, ["build", "sensor-fw"]);
+    assert_eq!(spec.args, ["build", "--", "sensor-fw"]);
     assert_eq!(
         parse(r#"{"action":"check"}"#, Some(&cfg)).unwrap().args,
         ["check"]

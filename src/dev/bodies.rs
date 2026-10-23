@@ -1,6 +1,6 @@
-//! `GET /api/bodies/<name>.glb`: the GLB of an authored body, built on a spawned thread.
+//! `GET /api/bodies/<name>.glb`: the GLB of an authored body.
 
-use std::thread;
+use std::path::Path;
 
 use miette::Diagnostic;
 use tiny_http::Request;
@@ -26,30 +26,39 @@ fn describe(error: crate::commands::body::BodyError) -> String {
     }
 }
 
-fn build(path: &str) -> Result<Vec<u8>, Failure> {
-    let bad = |status, message: &str| Failure {
-        status,
-        message: message.to_string(),
-    };
-    let name = body_name(path).ok_or_else(|| bad(400, "bad body name"))?;
-    let (_, cfg) = FusibleConfig::nearest().ok_or_else(|| bad(404, "no fusible.yml found"))?;
-    let cache = generator_dir().join("authored");
-    authored_glb(&cfg, &name, &cache, |input, format, output| {
-        convert_to_glb(input, format, output).map_err(describe)
-    })
+/// Hides where files live: the cache directory becomes `<cache>`, the project directory `.`.
+pub(super) fn scrub(message: &str, root: &Path, cache: &Path) -> String {
+    let root_prefix = format!("{}{}", root.display(), std::path::MAIN_SEPARATOR);
+    message
+        .replace(&cache.display().to_string(), "<cache>")
+        .replace(&root_prefix, "")
+        .replace(&root.display().to_string(), ".")
 }
 
-/// Answers `request` for the body named in `path` without blocking the request loop.
+fn build(path: &str) -> Result<Vec<u8>, Failure> {
+    let bad = |status, message: &str| Failure::new(status, message);
+    let name = body_name(path).ok_or_else(|| bad(400, "bad body name"))?;
+    let (manifest, cfg) =
+        FusibleConfig::nearest().ok_or_else(|| bad(404, "no fusible.yml found"))?;
+    let root = manifest.parent().unwrap_or(Path::new("."));
+    let cache = generator_dir();
+    authored_glb(
+        &cfg,
+        &name,
+        &cache.join("authored"),
+        |input, format, output| convert_to_glb(input, format, output).map_err(describe),
+    )
+    .map_err(|failure| Failure::new(failure.status, scrub(&failure.message, root, &cache)))
+}
+
+/// Answers `request` for the body named in `path`, on the thread the server gave this request.
 pub(super) fn serve(request: Request, path: &str) {
-    let path = path.to_string();
-    thread::spawn(move || {
-        let response = match build(&path) {
-            Ok(glb) => http_response(200, "model/gltf-binary", glb),
-            Err(failure) => {
-                let body = serde_json::json!({ "error": failure.message }).to_string();
-                http_response(failure.status, "application/json", body.into_bytes())
-            }
-        };
-        let _ = request.respond(no_store(response));
-    });
+    let response = match build(path) {
+        Ok(glb) => http_response(200, "model/gltf-binary", glb),
+        Err(failure) => {
+            let body = serde_json::json!({ "error": failure.message }).to_string();
+            http_response(failure.status, "application/json", body.into_bytes())
+        }
+    };
+    let _ = request.respond(no_store(response));
 }

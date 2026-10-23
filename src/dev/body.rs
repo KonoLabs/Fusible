@@ -4,13 +4,13 @@
 //! the GLB bytes for the current revision. See
 //! [`BodyPreview`](crate::commands::body::BodyPreview) for the frame.
 
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
-use std::thread;
+use std::sync::{Arc, Mutex};
 
 use miette::Diagnostic;
 use tiny_http::{Header, Request};
 
 use super::assets::{http_response, HttpResponse};
+use super::limiter::{conversions, lock};
 use crate::commands::body::{preview, preview_config, BodyPreview};
 
 const JSON: &str = "application/json";
@@ -43,13 +43,10 @@ impl BodyCache {
         };
     }
 
-    /// Answers `request` on a spawned thread so the request loop never blocks on generation.
+    /// Answers `request` on the calling thread, which the server dedicates to this request.
     pub fn serve(&self, request: Request, glb: bool) {
-        let cache = self.clone();
         let board = lock(&self.current).board.clone();
-        thread::spawn(move || {
-            let _ = request.respond(cache.response(glb, |json| generate(json, board.as_deref())));
-        });
+        let _ = request.respond(self.response(glb, |json| generate(json, board.as_deref())));
     }
 
     /// Returns the preview for the current revision, generating it at most once per revision.
@@ -91,11 +88,8 @@ impl BodyCache {
     }
 }
 
-fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
-    mutex.lock().unwrap_or_else(PoisonError::into_inner)
-}
-
 fn generate(json: &str, board: Option<&str>) -> Generated {
+    let _slot = conversions().acquire();
     preview(json, preview_config(board))
         .map(Arc::new)
         .map_err(|e| match e.help() {

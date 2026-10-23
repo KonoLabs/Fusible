@@ -4,15 +4,35 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use super::body::BodyCache;
-use super::hub::ClientHub;
-use super::runs::Runs;
 use crate::commands::target::BoardTarget;
 
+pub(super) use super::shared::State;
+
 /// The latest fuse result of a board, as shown in the project tree.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+///
+/// Until the first build finishes the fuse counts as blown, so an unchecked board never
+/// shows as intact.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct Health {
     pub fuse_blown: bool,
     pub violations: usize,
+}
+
+impl Default for Health {
+    fn default() -> Self {
+        Self {
+            fuse_blown: true,
+            violations: 0,
+        }
+    }
+}
+
+/// What the latest rebuild of a board produced, kept together so readers see one build.
+#[derive(Default)]
+struct Snapshot {
+    payload: String,
+    health: Health,
+    source: Option<Arc<str>>,
 }
 
 /// One served board: its manifest name, entry file, latest payload, and body preview cache.
@@ -20,10 +40,8 @@ pub(super) struct Health {
 pub(super) struct Slot {
     pub name: Option<String>,
     pub entry: PathBuf,
-    pub payload: Arc<Mutex<String>>,
-    pub health: Arc<Mutex<Health>>,
     pub body: BodyCache,
-    source: Arc<Mutex<Option<Arc<str>>>>,
+    latest: Arc<Mutex<Snapshot>>,
 }
 
 impl Slot {
@@ -31,57 +49,50 @@ impl Slot {
         Self {
             name: board.name.clone(),
             entry: board.entry.clone(),
-            payload: Arc::new(Mutex::new(String::new())),
-            health: Arc::default(),
             body: BodyCache::default(),
-            source: Arc::default(),
+            latest: Arc::default(),
         }
     }
 
-    /// Records the Circuit JSON source of the latest rebuild, `None` when the board failed to load.
+    /// Stores the payload, fuse result, and Circuit JSON source of one rebuild together.
+    ///
+    /// The source is `None` when the board failed to load.
+    pub(super) fn publish(&self, payload: String, health: Health, source: Option<Arc<str>>) {
+        if let Ok(mut latest) = self.latest.lock() {
+            *latest = Snapshot {
+                payload,
+                health,
+                source,
+            };
+        }
+    }
+
+    /// Records only the Circuit JSON source, for tests that skip the pipeline.
+    #[cfg(test)]
     pub(super) fn set_source(&self, source: Option<&str>) {
-        if let Ok(mut lock) = self.source.lock() {
-            *lock = source.map(Arc::from);
+        if let Ok(mut latest) = self.latest.lock() {
+            latest.source = source.map(Arc::from);
         }
     }
 
     /// The Circuit JSON source of the latest rebuild.
     pub(super) fn source(&self) -> Option<Arc<str>> {
-        self.source.lock().ok().and_then(|s| s.clone())
+        self.latest.lock().ok().and_then(|l| l.source.clone())
     }
 
     pub(super) fn payload(&self) -> String {
-        self.payload.lock().map(|p| p.clone()).unwrap_or_default()
+        self.latest
+            .lock()
+            .map(|l| l.payload.clone())
+            .unwrap_or_default()
     }
 
     pub(super) fn health(&self) -> Health {
-        self.health.lock().map(|h| *h).unwrap_or_default()
-    }
-}
-
-#[derive(Clone)]
-pub(super) struct State {
-    pub hub: ClientHub,
-    pub bundle: Arc<Mutex<Option<String>>>,
-    pub slots: Arc<Vec<Slot>>,
-    pub runs: Runs,
-}
-
-impl State {
-    pub(super) fn new(boards: &[BoardTarget]) -> Self {
-        Self {
-            hub: ClientHub::default(),
-            bundle: Arc::default(),
-            slots: Arc::new(boards.iter().map(Slot::new).collect()),
-            runs: Runs::default(),
-        }
+        self.latest.lock().map(|l| l.health).unwrap_or_default()
     }
 
-    /// Finds the slot for `board`; without a name, the first one.
-    pub(super) fn slot(&self, board: Option<&str>) -> Option<&Slot> {
-        match board {
-            Some(name) => self.slots.iter().find(|s| s.name.as_deref() == Some(name)),
-            None => self.slots.first(),
-        }
+    /// Whether the first build of this board has finished.
+    pub(super) fn is_ready(&self) -> bool {
+        self.latest.lock().is_ok_and(|l| !l.payload.is_empty())
     }
 }

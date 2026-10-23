@@ -2,7 +2,7 @@ use std::path::Path;
 
 use super::authored::authored_glb;
 use super::authored_support::{failure, manifest, no_convert, Dir};
-use super::bodies::body_name;
+use super::bodies::{body_name, scrub};
 
 #[test]
 fn names_come_from_the_url_and_must_be_manifest_bodies() {
@@ -50,4 +50,17 @@ fn unsupported_types_and_oversized_files_are_422() {
     assert_eq!((status, message.contains("unsupported")), (422, true));
     let (status, message) = failure(authored_glb(&cfg, "big", &dir.cache(), no_convert));
     assert_eq!((status, message.contains("64 MiB")), (422, true));
+}
+
+#[test]
+fn messages_do_not_show_where_files_live() {
+    let root = Path::new("/home/me/project");
+    let cache = Path::new("/home/me/.cache/fusible/body-1");
+    let raw = "source file \"/home/me/project/bodies/a.step\" failed in /home/me/.cache/fusible/body-1/authored";
+    let shown = scrub(raw, root, cache);
+    assert_eq!(
+        shown,
+        "source file \"bodies/a.step\" failed in <cache>/authored"
+    );
+    assert_eq!(scrub("in /home/me/project", root, cache), "in .");
 }

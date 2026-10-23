@@ -1,18 +1,21 @@
 //! Build runs started from the studio: one child process at a time, logs streamed to clients.
 
-use std::io::{BufRead, BufReader, Read};
-use std::process::{Command, Stdio};
+use std::process::Command;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex};
 use std::thread;
+use std::time::Duration;
 
 use serde::Serialize;
 
 use super::hub::ClientHub;
+use super::limiter::lock;
+use super::run_exec::execute;
 pub(super) use super::run_status::Status;
 
 const MAX_LINES: usize = 2000;
 const MAX_RUNS: usize = 10;
+const RUN_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 
 #[derive(Debug, Clone, Serialize)]
 pub(super) struct Run {
@@ -33,8 +36,24 @@ pub(super) struct Runs {
     next: Arc<AtomicU64>,
 }
 
-fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
-    mutex.lock().unwrap_or_else(PoisonError::into_inner)
+/// Frees the run slot when the run thread ends, even by panicking.
+struct Finisher {
+    runs: Runs,
+    hub: ClientHub,
+    id: u64,
+    status: Status,
+}
+
+impl Finisher {
+    fn complete(mut self, status: Status) {
+        self.status = status;
+    }
+}
+
+impl Drop for Finisher {
+    fn drop(&mut self) {
+        self.runs.finish(&self.hub, self.id, self.status);
+    }
 }
 
 impl Runs {
@@ -50,12 +69,31 @@ impl Runs {
         label: String,
         command: Command,
     ) -> Result<u64, Busy> {
+        self.start_with(hub, label, command, RUN_TIMEOUT)
+    }
+
+    /// Like [`Runs::start`], killing the command when it runs longer than `timeout`.
+    pub(super) fn start_with(
+        &self,
+        hub: &ClientHub,
+        label: String,
+        command: Command,
+        timeout: Duration,
+    ) -> Result<u64, Busy> {
         let id = self.register(&label)?;
-        let runs = self.clone();
-        let hub = hub.clone();
+        let event = serde_json::json!({ "event": "run", "run": id, "label": label, "status": Status::Running });
+        hub.broadcast(&event.to_string());
+        let (runs, hub) = (self.clone(), hub.clone());
         thread::spawn(move || {
-            let code = runs.execute(&hub, id, command);
-            runs.finish(&hub, id, Status::from_code(code));
+            let finisher = Finisher {
+                runs: runs.clone(),
+                hub: hub.clone(),
+                id,
+                status: Status::Error,
+            };
+            let sink = move |line: &str| runs.log(&hub, id, line);
+            let code = execute(command, timeout, sink);
+            finisher.complete(Status::from_code(code));
         });
         Ok(id)
     }
@@ -78,47 +116,6 @@ impl Runs {
         Ok(id)
     }
 
-    fn execute(&self, hub: &ClientHub, id: u64, mut command: Command) -> Option<i32> {
-        command
-            .env("NO_COLOR", "1")
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
-        let mut child = match command.spawn() {
-            Ok(child) => child,
-            Err(err) => {
-                self.log(hub, id, &format!("cannot start the command: {err}"));
-                return None;
-            }
-        };
-        let readers: Vec<_> = [
-            child.stdout.take().map(|s| self.pump(hub, id, s)),
-            child.stderr.take().map(|s| self.pump(hub, id, s)),
-        ]
-        .into_iter()
-        .flatten()
-        .collect();
-        let status = child.wait().ok();
-        readers.into_iter().for_each(|reader| {
-            let _ = reader.join();
-        });
-        status.and_then(|s| s.code())
-    }
-
-    fn pump(
-        &self,
-        hub: &ClientHub,
-        id: u64,
-        stream: impl Read + Send + 'static,
-    ) -> thread::JoinHandle<()> {
-        let (runs, hub) = (self.clone(), hub.clone());
-        thread::spawn(move || {
-            for line in BufReader::new(stream).lines().map_while(Result::ok) {
-                runs.log(&hub, id, &line);
-            }
-        })
-    }
-
     fn log(&self, hub: &ClientHub, id: u64, line: &str) {
         if let Some(run) = lock(&self.list).iter_mut().find(|run| run.id == id) {
             if run.lines.len() < MAX_LINES {
@@ -129,11 +126,15 @@ impl Runs {
     }
 
     fn finish(&self, hub: &ClientHub, id: u64, status: Status) {
-        if let Some(run) = lock(&self.list).iter_mut().find(|run| run.id == id) {
-            run.status = status;
-        }
-        hub.broadcast(
-            &serde_json::json!({ "event": "run", "run": id, "status": status }).to_string(),
-        );
+        let mut list = lock(&self.list);
+        let Some(run) = list.iter_mut().find(|run| run.id == id) else {
+            return;
+        };
+        run.status = status;
+        let label = run.label.clone();
+        drop(list);
+        let event =
+            serde_json::json!({ "event": "run", "run": id, "label": label, "status": status });
+        hub.broadcast(&event.to_string());
     }
 }

@@ -45,6 +45,7 @@ pub(super) fn parse(body: &str, cfg: Option<&FusibleConfig>) -> Result<Spec, Str
             return Err(format!("`{target}` is not a valid target for `{label}`"));
         }
         label = format!("{label} {target}");
+        args.push("--".into());
         args.push(target);
     }
     Ok(Spec { label, args })

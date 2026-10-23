@@ -4,15 +4,16 @@
 //! body name, never a path. GLB is served as is. STEP and STL are converted to GLB with
 //! occt-wasm and cached by path, modification time, and size.
 
-use std::collections::hash_map::DefaultHasher;
-use std::fs::Metadata;
-use std::hash::{Hash, Hasher};
+use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::time::UNIX_EPOCH;
 
+use super::authored_cache::{cache_key, cached_conversion};
 use crate::config::FusibleConfig;
 
 const MAX_BYTES: u64 = 64 * 1024 * 1024;
+
+/// Text that marks a conversion error as a timeout, which is reported as a 504.
+pub(super) const TIMEOUT_MARK: &str = "timed out after";
 
 /// Why a body GLB could not be served, with the HTTP status that reports it.
 #[derive(Debug, PartialEq, Eq)]
@@ -22,7 +23,7 @@ pub(super) struct Failure {
 }
 
 impl Failure {
-    fn new(status: u16, message: impl Into<String>) -> Self {
+    pub(super) fn new(status: u16, message: impl Into<String>) -> Self {
         Self {
             status,
             message: message.into(),
@@ -55,52 +56,6 @@ fn source_of(cfg: &FusibleConfig, name: &str) -> Result<PathBuf, Failure> {
     })
 }
 
-/// Hashes the path alone, then the path with its modification time and size.
-pub(super) fn cache_key(path: &Path, meta: &Metadata) -> String {
-    let nanos = meta
-        .modified()
-        .ok()
-        .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
-        .map_or(0, |d| d.as_nanos());
-    let mut by_path = DefaultHasher::new();
-    path.hash(&mut by_path);
-    let mut by_state = DefaultHasher::new();
-    (path, nanos, meta.len()).hash(&mut by_state);
-    format!("{:016x}-{:016x}", by_path.finish(), by_state.finish())
-}
-
-fn prune_stale(cache_dir: &Path, key: &str) {
-    let prefix = key.split('-').next().unwrap_or(key);
-    let stale = std::fs::read_dir(cache_dir).into_iter().flatten().flatten();
-    for entry in stale {
-        let name = entry.file_name().to_string_lossy().into_owned();
-        if name.starts_with(prefix) && !name.starts_with(key) {
-            let _ = std::fs::remove_file(entry.path());
-        }
-    }
-}
-
-fn cached_conversion(
-    source: &Path,
-    format: &str,
-    key: &str,
-    cache_dir: &Path,
-    convert: &impl Fn(&Path, &str, &Path) -> Result<(), String>,
-) -> Result<Vec<u8>, Failure> {
-    let cached = cache_dir.join(format!("{key}.glb"));
-    if let Ok(bytes) = std::fs::read(&cached) {
-        return Ok(bytes);
-    }
-    let io = |e: std::io::Error| Failure::new(500, format!("cannot use the body cache: {e}"));
-    std::fs::create_dir_all(cache_dir).map_err(io)?;
-    let partial = cache_dir.join(format!("{key}.{}.part", std::process::id()));
-    convert(source, format, &partial)
-        .map_err(|e| Failure::new(422, format!("conversion failed: {e}")))?;
-    std::fs::rename(&partial, &cached).map_err(io)?;
-    prune_stale(cache_dir, key);
-    std::fs::read(&cached).map_err(io)
-}
-
 /// Returns the GLB bytes of the authored body `name`, converting and caching when needed.
 ///
 /// `convert(source, format, output)` writes the GLB of a STEP or STL file to `output`.
@@ -129,10 +84,24 @@ pub(super) fn authored_glb(
         return Err(Failure::new(422, message));
     };
     match kind {
-        Kind::Glb => std::fs::read(&source).map_err(|e| Failure::new(500, e.to_string())),
+        Kind::Glb => read_capped(&source),
         Kind::Convert(format) => {
             let key = cache_key(&source, &meta);
             cached_conversion(&source, format, &key, cache_dir, &convert)
         }
     }
+}
+
+/// Reads `path`, refusing more than [`MAX_BYTES`] even when the file grew after the size check.
+fn read_capped(path: &Path) -> Result<Vec<u8>, Failure> {
+    let io = |e: std::io::Error| Failure::new(500, e.to_string());
+    let mut bytes = Vec::new();
+    let file = std::fs::File::open(path).map_err(io)?;
+    file.take(MAX_BYTES + 1)
+        .read_to_end(&mut bytes)
+        .map_err(io)?;
+    if bytes.len() as u64 > MAX_BYTES {
+        return Err(Failure::new(422, "source file is larger than 64 MiB"));
+    }
+    Ok(bytes)
 }

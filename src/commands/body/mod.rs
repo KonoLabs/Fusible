@@ -13,6 +13,7 @@ mod eject_edit;
 mod eject_manifest;
 mod error;
 mod generator;
+mod generator_setup;
 mod jobs;
 mod kit;
 mod kit_data;
@@ -23,6 +24,8 @@ mod yaml_lines;
 
 #[cfg(test)]
 mod eject_tests;
+#[cfg(test)]
+mod generator_tests;
 #[cfg(test)]
 mod kit_tests;
 #[cfg(test)]

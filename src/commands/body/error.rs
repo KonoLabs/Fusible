@@ -90,6 +90,13 @@ pub enum BodyError {
     )]
     BunMissing,
 
+    #[error("the generator timed out after {seconds} s (`{command}`)")]
+    #[diagnostic(
+        code(fusible::body::generator_timeout),
+        help("the model may be too complex; simplify it or convert it outside Fusible")
+    )]
+    GeneratorTimeout { command: String, seconds: u64 },
+
     #[error("enclosure generator failed (`{command}`, exit code {code:?})")]
     #[diagnostic(code(fusible::body::generator_failed), help("{stderr}"))]
     GeneratorFailed {

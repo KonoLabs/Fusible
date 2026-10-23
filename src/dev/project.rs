@@ -52,6 +52,7 @@ fn board_items(state: &State, root: &Path) -> Vec<Value> {
                 "entry": slot.entry.strip_prefix(root).unwrap_or(&slot.entry),
                 "fuse_blown": health.fuse_blown,
                 "violations": health.violations,
+                "pending": !slot.is_ready(),
             })
         })
         .collect()

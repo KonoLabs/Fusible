@@ -26,6 +26,14 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ### Fixed
 
+- A Studio run can no longer wedge the dev server. Output that is not UTF-8 no longer stops the log, a run is killed after 30 minutes, a child that leaves a process holding its pipe no longer keeps the run open, and a panic frees the run slot. Lines are cut at 4096 bytes.
+- Run events carry the run label. A `run` event with status `running` is sent when a run starts, and one with the final status when it ends.
+- The event stream keeps a bounded queue per client and drops one that stops reading. A new client is registered before its first snapshot, so it cannot miss an update.
+- Every `/api/*` request and `/events` is refused when the browser marks it `Sec-Fetch-Site: cross-site` or `same-site`, or sends a foreign `Origin`. Before, only `POST /api/run` was checked.
+- `GET /api/circuit?board=<unknown>` answers 404. The dev server handles each request on its own thread, so a client that stalls mid-request no longer freezes it, and answers 503 beyond 64 concurrent requests. Boards build in the background at startup.
+- Until its first build finishes, a board counts as a blown fuse and `/api/project` marks it `pending`.
+- Body conversion and previews run at most two at a time. Two requests for the same authored file convert it once, temporary files are unique, and pruning leaves the files another request is writing. Bun is stopped after 120 seconds, answered as a 504. Error messages show paths relative to the project and `<cache>` for the cache directory.
+- A run passes the target after `--`, so a board named like a flag cannot be read as one.
 - The Studio BODIES tab previews the generated body fitted around the board being viewed. Before, it always used the first generated body of the manifest, so `fusible dev sensor` could show the enclosure of `main`.
 
 ## [0.12.0] - 2026-10-23

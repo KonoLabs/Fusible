@@ -1,7 +1,10 @@
 use std::cell::{Cell, RefCell};
 use std::path::Path;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::Duration;
 
-use super::authored::{authored_glb, cache_key};
+use super::authored::authored_glb;
+use super::authored_cache::cache_key;
 use super::authored_support::{failure, manifest, Dir};
 
 #[test]
@@ -75,4 +78,64 @@ fn project_flags_a_missing_authored_source() {
     assert_eq!(exists("present"), true);
     assert_eq!(exists("absent"), false);
     assert!(exists("lid").is_null());
+}
+
+#[test]
+fn overlapping_requests_for_one_file_convert_it_once() {
+    let dir = Dir::new();
+    let cfg = manifest(&[("case", &dir.file("case.step", b"v1"))]);
+    let calls = AtomicUsize::new(0);
+    let convert = |_: &Path, _: &str, out: &Path| {
+        calls.fetch_add(1, Ordering::SeqCst);
+        std::thread::sleep(Duration::from_millis(150));
+        std::fs::write(out, b"glb").map_err(|e| e.to_string())
+    };
+    let cache = dir.cache();
+    let served: Vec<Vec<u8>> = std::thread::scope(|scope| {
+        let workers: Vec<_> = (0..4)
+            .map(|_| scope.spawn(|| authored_glb(&cfg, "case", &cache, convert).unwrap()))
+            .collect();
+        workers.into_iter().map(|w| w.join().unwrap()).collect()
+    });
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+    assert!(served.iter().all(|bytes| bytes == b"glb"));
+    assert_eq!(dir.glbs(), 1);
+}
+
+#[test]
+fn a_conversion_timeout_is_a_504_and_leaves_no_partial_file() {
+    let dir = Dir::new();
+    let cfg = manifest(&[("case", &dir.file("case.step", b"x"))]);
+    let hang = |_: &Path, _: &str, out: &Path| {
+        std::fs::write(out, b"half").unwrap();
+        Err("the generator timed out after 120 s".to_string())
+    };
+    let (status, message) = failure(authored_glb(&cfg, "case", &dir.cache(), hang));
+    assert_eq!(status, 504);
+    assert!(message.contains("timed out after"));
+    let leftovers = std::fs::read_dir(dir.cache()).unwrap().count();
+    assert_eq!(leftovers, 0);
+}
+
+#[test]
+fn pruning_removes_old_glbs_but_not_files_another_request_is_writing() {
+    let dir = Dir::new();
+    let step = dir.file("case.step", b"v1");
+    let cfg = manifest(&[("case", &step)]);
+    let convert =
+        |_: &Path, _: &str, out: &Path| std::fs::write(out, b"g").map_err(|e| e.to_string());
+    authored_glb(&cfg, "case", &dir.cache(), convert).unwrap();
+    let key = cache_key(&step, &std::fs::metadata(&step).unwrap());
+    let prefix = key.split('-').next().unwrap();
+    let in_flight = dir
+        .cache()
+        .join(format!("{prefix}-0000000000000000.99.7.part"));
+    std::fs::write(&in_flight, b"writing").unwrap();
+    std::fs::write(&step, b"version two").unwrap();
+    authored_glb(&cfg, "case", &dir.cache(), convert).unwrap();
+    assert!(
+        in_flight.exists(),
+        "an in-flight .part file must survive pruning"
+    );
+    assert_eq!(dir.glbs(), 1);
 }

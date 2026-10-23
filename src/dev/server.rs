@@ -1,4 +1,3 @@
-use std::sync::mpsc;
 use std::thread;
 
 use tiny_http::{Request, Response, Server};
@@ -7,29 +6,14 @@ use super::api;
 use super::assets::static_response;
 use super::bodies;
 use super::firmware;
+use super::guard::{is_allowed_host, is_same_origin};
 use super::hub::stream_events;
-use super::refresh::{rebuild_trigger, refresh, watch_dir};
-use super::state::State;
+use super::limiter::handlers;
+use super::refresh::{load_bundle, rebuild_trigger, refresh, watch_dir};
+use super::run_api;
+use super::state::{Slot, State};
 use super::watcher::start_file_watcher;
 use crate::commands::target::BoardTarget;
-
-/// Accepts only loopback Host headers bound to the dev server port, blocking DNS rebinding.
-pub(super) fn is_allowed_host(host: Option<&str>, port: u16) -> bool {
-    host.is_some_and(|h| {
-        ["localhost", "127.0.0.1", "[::1]"]
-            .iter()
-            .any(|name| h.eq_ignore_ascii_case(&format!("{name}:{port}")))
-    })
-}
-
-/// Accepts a missing Origin, or one that is a loopback page served by this dev server.
-pub(super) fn is_allowed_origin(origin: Option<&str>, port: u16) -> bool {
-    origin.is_none_or(|o| {
-        ["localhost", "127.0.0.1", "[::1]"]
-            .iter()
-            .any(|name| o.eq_ignore_ascii_case(&format!("http://{name}:{port}")))
-    })
-}
 
 /// Returns the percent-decoded value of `key` in the URL's query string; empty counts as absent.
 pub(super) fn query_param(url: &str, key: &str) -> Option<String> {
@@ -70,6 +54,11 @@ fn handle(request: Request, state: &State, port: u16) {
         return;
     }
     let path = route_path(request.url()).to_string();
+    let guarded = path.starts_with("/api/") || path == "/events";
+    if guarded && !is_same_origin(&request, port) {
+        let _ = request.respond(Response::from_string("Forbidden").with_status_code(403));
+        return;
+    }
     match path.as_str() {
         "/api/mechanical" => api::body_preview(request, state, false),
         "/api/mechanical.glb" => api::body_preview(request, state, true),
@@ -78,7 +67,7 @@ fn handle(request: Request, state: &State, port: u16) {
         "/api/runs" => api::runs(request, state),
         p if p.starts_with("/api/bodies/") => bodies::serve(request, p),
         "/api/firmware" => firmware::serve(request, state),
-        "/api/run" => api::start_run(request, state, port),
+        "/api/run" => run_api::start_run(request, state, port),
         "/events" => subscribe(request, state),
         _ => {
             let bundle = state.bundle.lock().ok().and_then(|lock| lock.clone());
@@ -90,12 +79,38 @@ fn handle(request: Request, state: &State, port: u16) {
 }
 
 fn subscribe(request: Request, state: &State) {
-    let (tx, rx) = mpsc::channel();
-    for slot in state.slots.iter() {
-        let _ = tx.send(format!("data: {}\n\n", slot.payload()).into_bytes());
-    }
-    state.hub.add_client(tx);
+    let ready = || {
+        state
+            .slots
+            .iter()
+            .map(Slot::payload)
+            .filter(|p| !p.is_empty())
+    };
+    let rx = state.hub.subscribe(|| ready().collect());
     thread::spawn(move || stream_events(request, rx));
+}
+
+/// Handles each request on its own thread so a stalled client cannot block the others.
+///
+/// At most [`limiter::handlers`] requests run at once; the rest get a 503.
+fn dispatch(request: Request, state: &State, port: u16) {
+    let Some(permit) = handlers().try_acquire() else {
+        let _ = request.respond(Response::from_string("Busy").with_status_code(503));
+        return;
+    };
+    let state = state.clone();
+    thread::spawn(move || {
+        handle(request, &state, port);
+        drop(permit);
+    });
+}
+
+/// Builds every board in the background, so the server answers while compiles run.
+fn refresh_all(state: &State) {
+    for slot in state.slots.iter() {
+        let (slot, state) = (slot.clone(), state.clone());
+        thread::spawn(move || refresh(&slot, &state));
+    }
 }
 
 pub fn run_dev_server(
@@ -106,13 +121,14 @@ pub fn run_dev_server(
     let server =
         Server::http(&addr).map_err(|e| format!("cannot bind dev server to {addr}: {e}"))?;
     let state = State::new(&boards);
-    state.slots.iter().for_each(|slot| refresh(slot, &state));
+    load_bundle(&state);
     if state.bundle.lock().is_ok_and(|bundle| bundle.is_none()) {
         eprintln!(
             "⚠ This fusible build has no studio bundle: schematic, PCB and 3D fall back to native previews. \
 Install a GitHub release binary, or run `bun install && bun run build` in studio/ and rebuild."
         );
     }
+    refresh_all(&state);
     println!("⚡ Fusible Dev Server running at http://localhost:{port} (press Ctrl+C to quit)");
     let _watchers = state
         .slots
@@ -123,7 +139,7 @@ Install a GitHub release binary, or run `bun install && bun run build` in studio
         })
         .collect::<Result<Vec<_>, _>>()?;
     for request in server.incoming_requests() {
-        handle(request, &state, port);
+        dispatch(request, &state, port);
     }
     Ok(())
 }
