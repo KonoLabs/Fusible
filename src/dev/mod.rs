@@ -1,5 +1,7 @@
 mod api;
 mod assets;
+mod authored;
+mod bodies;
 mod body;
 pub mod hub;
 pub mod pipeline;
@@ -14,6 +16,12 @@ pub mod watcher;
 
 #[cfg(test)]
 mod api_tests;
+#[cfg(test)]
+mod authored_cache_tests;
+#[cfg(test)]
+mod authored_support;
+#[cfg(test)]
+mod authored_tests;
 #[cfg(test)]
 mod body_tests;
 #[cfg(test)]

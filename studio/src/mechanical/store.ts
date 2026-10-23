@@ -43,14 +43,13 @@ function emit(next: MechanicalState): void {
   shown = model;
 }
 
-function currentKey(): string | null {
-  return revision === null ? null : `${board}|${revision}`;
+/** Returns the manifest board whose circuit the studio payload last described; empty without a manifest. */
+export function mechanicalBoard(): string {
+  return board;
 }
 
-function fail(key: string, err: Error): void {
-  if (currentKey() !== key) return;
-  requested = null;
-  emit({ status: "error", error: err.message || String(err) });
+function currentKey(): string | null {
+  return revision === null ? null : `${board}|${revision}`;
 }
 
 function disposeModel(model: MechanicalModel): void {
@@ -65,7 +64,11 @@ function refresh(): void {
   emit({ status: "loading" });
   fetchModel(rev, board).then(
     (model) => (currentKey() === key ? emit({ status: "ready", model }) : disposeModel(model)),
-    (err: Error) => fail(key, err)
+    (err: Error) => {
+      if (currentKey() !== key) return;
+      requested = null;
+      emit({ status: "error", error: err.message || String(err) });
+    }
   );
 }
 

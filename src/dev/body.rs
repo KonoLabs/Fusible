@@ -117,7 +117,7 @@ pub(super) fn meta_json(revision: &str, p: &BodyPreview) -> String {
     .to_string()
 }
 
-fn no_store(response: HttpResponse) -> HttpResponse {
+pub(super) fn no_store(response: HttpResponse) -> HttpResponse {
     let header = Header::from_bytes(&b"Cache-Control"[..], &b"no-store"[..]).expect("valid header");
     response.with_header(header)
 }

@@ -77,5 +77,12 @@ fn body_item(name: &str, body: &BodyConfig, root: &Path) -> Value {
         .source
         .as_deref()
         .map(|p| p.strip_prefix(root).unwrap_or(p));
-    json!({ "name": name, "kind": kind, "board": body.board, "source": source })
+    let exists = body.source.as_deref().map(Path::is_file);
+    json!({
+        "name": name,
+        "kind": kind,
+        "board": body.board,
+        "source": source,
+        "exists": exists,
+    })
 }
