@@ -81,8 +81,18 @@ Fusible unifies the hardware development workflow by wrapping tscircuit commands
   - Multi-layer 3D A* pathfinder supporting 45-degree and 90-degree traces and via transitions.
   - Bidirectional KiCad syncer (`fusible diff` and `fusible sync`) with pure Rust S-expression parser and `manual-edits.json` synchronization.
   - Vitrine brutalist dark UI redesign and Three.js 3D PCB board previewer embedded in `fusible dev` (`03 // 3D VIEW`).
+- [x] **Milestone 14: One project, three worlds** (Unreleased):
+  - Named `boards`, `firmware`, and `bodies` in `fusible.yml`; every command takes a name as its target.
+  - Bodies are authored (`source:`, optional `build:`) or generated (`generate: enclosure`).
+- [ ] **Milestone 15: Bodies workflow**:
+  - `fusible body eject <name>` turns a generated body into an authored file you edit in your CAD tool.
+  - `fusible body kit <board>` exports a reference kit (board STEP, hole positions, connector openings, keep-out volumes) to model around.
+- [ ] **Milestone 16: Assembly and cross-world fuse rules**:
+  - `assembly:` places boards and bodies in one coordinate frame and exports `dist/assembly.{step,glb}`.
+  - `links:` declares board-to-board wiring; `harness_mismatch` blows the fuse on pin or net mismatches.
+  - `hole_misaligned`, `connector_blocked`, and `body_interference` check boards against bodies.
 - [x] **Milestone 13: Fuse-gated 3D enclosure generator** (`v0.8.20`):
-  - `fusible mechanical` builds a base + lid from the `pcb_board` outline with screw bosses, edge-connector notches, and lid vents.
+  - `fusible mechanical` (now `fusible body`) builds a base + lid from the `pcb_board` outline with screw bosses, edge-connector notches, and lid vents.
   - Layout runs in Rust; an embedded bun script drives OpenCascade (`occt-wasm`) and writes STEP, STL, GLB, or BREP.
 
 ## 5. Phase 2: Turnkey Automation

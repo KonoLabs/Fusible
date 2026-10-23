@@ -9,7 +9,7 @@ use clap::{Parser, Subcommand};
 
 mod args;
 
-pub use args::{ExportArgs, InitArgs, MechanicalArgs, RouteArgs, SyncArgs};
+pub use args::{BodyArgs, ExportArgs, InitArgs, RouteArgs, SyncArgs};
 
 /// Fusible — electronic linter & hardware-firmware bridge for tscircuit.
 #[derive(Debug, Parser)]
@@ -78,9 +78,14 @@ pub enum Commands {
     /// Export tscircuit code to various formats (gerbers, svg, glb, etc.)
     Export(ExportArgs),
 
-    /// Generate a 3D enclosure model (base + lid) from the board outline
-    #[command(alias = "case", alias = "housing")]
-    Mechanical(MechanicalArgs),
+    /// Build the physical bodies: authored CAD files and generated enclosures
+    #[command(
+        alias = "bodies",
+        alias = "mechanical",
+        alias = "case",
+        alias = "housing"
+    )]
+    Body(BodyArgs),
 
     /// Run the autorouter to solve circuit traces
     Route(RouteArgs),

@@ -4,14 +4,14 @@ use miette::Diagnostic;
 use thiserror::Error;
 
 use crate::commands::check::{load_circuit_source, CheckError};
-use crate::commands::target::{resolve_entry, MissingTargetError};
+use crate::commands::target::{resolve_entry, TargetError};
 use crate::router::{route_circuit, RouteOptions};
 
 #[derive(Debug, Error, Diagnostic)]
 pub enum RouteCommandError {
     #[error(transparent)]
     #[diagnostic(transparent)]
-    MissingTarget(#[from] MissingTargetError),
+    Target(#[from] TargetError),
 
     #[error(transparent)]
     #[diagnostic(transparent)]

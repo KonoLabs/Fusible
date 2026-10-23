@@ -3,11 +3,11 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use crate::cli::{ExportArgs, MechanicalArgs, RouteArgs, SyncArgs};
+use crate::cli::{BodyArgs, ExportArgs, RouteArgs, SyncArgs};
 use crate::commands;
+use crate::commands::body::BodyError;
 use crate::commands::check::CheckError;
-use crate::commands::mechanical::MechanicalError;
-use crate::config::MechanicalConfig;
+use crate::config::EnclosureConfig;
 use crate::router::RouteOptions;
 use crate::{fail, tool_exit, EXIT_TOOL_ERROR, EXIT_VIOLATIONS};
 
@@ -57,9 +57,9 @@ pub fn export(args: ExportArgs) -> ExitCode {
     }
 }
 
-/// Generates the enclosure model from CLI overrides.
-pub fn mechanical(args: MechanicalArgs) -> ExitCode {
-    let overrides = MechanicalConfig {
+/// Builds the project bodies; CLI flags override generated enclosure settings.
+pub fn body(args: BodyArgs) -> ExitCode {
+    let overrides = EnclosureConfig {
         format: args.format,
         out_dir: args.output,
         wall_thickness: args.wall_thickness,
@@ -68,9 +68,9 @@ pub fn mechanical(args: MechanicalArgs) -> ExitCode {
         ventilation: args.ventilation,
         mounting: args.no_mounting.then_some(false),
     };
-    match commands::mechanical::run(args.file, overrides, args.skip_lint) {
+    match commands::body::run(args.target, overrides, args.skip_lint) {
         Ok(()) => ExitCode::SUCCESS,
-        Err(MechanicalError::Check(CheckError::FuseBlown(blown))) => fail(blown, EXIT_VIOLATIONS),
+        Err(BodyError::Check(CheckError::FuseBlown(blown))) => fail(blown, EXIT_VIOLATIONS),
         Err(err) => fail(err, EXIT_TOOL_ERROR),
     }
 }

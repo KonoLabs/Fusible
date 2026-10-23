@@ -68,19 +68,27 @@ pub(super) fn manifest(project_name: &str, mcu_chip: &str) -> String {
     format!(
         r#"name: {yaml_name}
 
-hardware:
-  entry: hardware/index.tsx
-  out_dir: dist
-  port: 3020
-
-mcu:
-  chip: {mcu_chip}
+boards:
+  main:
+    entry: hardware/index.tsx
+    out_dir: dist
+    port: 3020
+    mcu: {mcu_chip}
 
 firmware:
-  path: apps/firmware
-  framework: esp-idf
-  pins_rs: apps/firmware/src/pins.rs
-  build_cmd: cargo test
+  app:
+    board: main
+    path: apps/firmware
+    framework: esp-idf
+    pins_rs: apps/firmware/src/pins.rs
+    build_cmd: cargo test
+
+# bodies:
+#   enclosure:
+#     generate: enclosure            # Fusible owns this file and regenerates it
+#     around: main
+#   bracket:
+#     source: bodies/bracket.step    # authored in any CAD tool, never overwritten
 "#
     )
 }

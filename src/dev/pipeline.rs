@@ -4,8 +4,8 @@ use std::path::Path;
 
 use serde::Serialize;
 
-use crate::commands::check::{load_circuit_source, resolve_mcu};
-use crate::config::FusibleConfig;
+use crate::commands::check::load_circuit_source;
+use crate::commands::target::board_for_entry;
 use crate::linter::{LintContext, Linter, Severity};
 use crate::netlist::Netlist;
 use crate::parser::{self, Circuit};
@@ -32,10 +32,13 @@ pub struct DevPayload {
 
 /// Builds the studio payload for `entry`, returning the Circuit JSON source text alongside it.
 pub fn execute_pipeline(entry: &Path) -> (DevPayload, Option<String>) {
-    let board_name = board_name(entry);
+    let board = board_for_entry(entry);
     match load_circuit_source(entry) {
-        Ok((json_path, source)) => (analyze(board_name, &json_path, &source), Some(source)),
-        Err(err) => (source_failure(board_name, err.to_string()), None),
+        Ok((json_path, source)) => {
+            let payload = analyze(board.title, board.mcu.as_deref(), &json_path, &source);
+            (payload, Some(source))
+        }
+        Err(err) => (source_failure(board.title, err.to_string()), None),
     }
 }
 
@@ -44,19 +47,6 @@ pub fn revision(source: &str) -> String {
     let mut hasher = DefaultHasher::new();
     source.hash(&mut hasher);
     format!("{:016x}", hasher.finish())
-}
-
-fn board_name(entry: &Path) -> String {
-    FusibleConfig::find_and_load(Path::new("."))
-        .ok()
-        .flatten()
-        .and_then(|(_, cfg)| cfg.name)
-        .unwrap_or_else(|| {
-            entry
-                .file_stem()
-                .map(|s| s.to_string_lossy().to_string())
-                .unwrap_or_else(|| "Board".to_string())
-        })
 }
 
 fn diagnostic(rule: &str, message: String, help: &str) -> DevDiagnostic {
@@ -81,7 +71,7 @@ fn source_failure(board_name: String, message: String) -> DevPayload {
     }
 }
 
-fn analyze(board_name: String, json_path: &Path, source: &str) -> DevPayload {
+fn analyze(board_name: String, mcu: Option<&str>, json_path: &Path, source: &str) -> DevPayload {
     let mut payload = DevPayload {
         board_name,
         fuse_blown: true,
@@ -90,7 +80,7 @@ fn analyze(board_name: String, json_path: &Path, source: &str) -> DevPayload {
         revision: revision(source),
     };
     match parser::parse(source, json_path) {
-        Ok(circuit) => lint(&mut payload, &circuit),
+        Ok(circuit) => lint(&mut payload, &circuit, mcu),
         Err(err) => payload.diagnostics.push(diagnostic(
             "parse_error",
             err.to_string(),
@@ -100,10 +90,9 @@ fn analyze(board_name: String, json_path: &Path, source: &str) -> DevPayload {
     payload
 }
 
-fn lint(payload: &mut DevPayload, circuit: &Circuit) {
+fn lint(payload: &mut DevPayload, circuit: &Circuit, mcu: Option<&str>) {
     let netlist = Netlist::from_circuit(circuit);
-    let target_mcu = resolve_mcu(None);
-    let ctx = LintContext::new(circuit, &netlist).with_mcu(target_mcu.as_deref());
+    let ctx = LintContext::new(circuit, &netlist).with_mcu(mcu);
     let violations = Linter::default().run_with_context(&ctx);
     payload.fuse_blown = violations.iter().any(|v| v.severity == Severity::Error);
     payload.diagnostics = violations

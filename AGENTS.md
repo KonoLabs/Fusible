@@ -44,8 +44,9 @@ Fusible/
     │   ├── build.rs         # Full build pipeline
     │   ├── doctor.rs        # Toolchain health inspection & runner auto-setup
     │   ├── init.rs          # fusible.yml scaffolding
-    │   └── target.rs        # Path resolution from manifest & conventions
-    ├── config/              # fusible.yml manifest parser & discovery
+    │   ├── body/            # Authored and generated bodies (enclosure generator)
+    │   └── target/          # Board targets from names, files, manifest & conventions
+    ├── config/              # fusible.yml: named boards, firmware, bodies; legacy form
     ├── linter/              # Rules implementation
     │   ├── diagnostics.rs   # miette diagnostics for violations
     │   └── rules/           # Individual rules (unconnected_net, ghost_net, malformed_element)
@@ -83,7 +84,7 @@ Commit messages MUST adhere to [Conventional Commits](https://www.conventionalco
 
 ## 4. Fusible CLI Commands Reference
 
-- `fusible check [FILE] [--mcu <MCU>]`: Runs the electrical linter on Circuit JSON or TSX file. Falls back to cached `dist/circuit.json` if runner is absent.
+- `fusible check [TARGET] [--mcu <MCU>]`: Runs the electrical linter on a board name, Circuit JSON, or TSX file. Without a target it checks every board of `fusible.yml`. Falls back to cached `dist/circuit.json` if runner is absent.
 - `fusible dev [FILE] [-p <PORT>]`: Launches interactive hot-reloading webview.
 - `fusible export [FILE] [--preset <PRESET>] [-f <FORMAT>] [-o <PATH>]`:
   - **Fuse-gated**: Validates rules before creating any files.
@@ -93,5 +94,6 @@ Commit messages MUST adhere to [Conventional Commits](https://www.conventionalco
   - `--preset all`: Runs all three presets.
   - `-f <FORMAT>`: Direct export (`gerbers`, `pcb-svg`, `step`, `glb`, `kicad_zip`, etc.).
   - `--skip-lint`: Bypasses electrical rule checking (for drafts only).
+- `fusible body [TARGET]`: Builds physical bodies. A body is authored (`source:`, optional `build:` command) or generated (`generate: enclosure`, fuse-gated). TARGET is a body name or a board.
 - `fusible doctor [--install]`: Inspects bun/node/npm/tsci toolchains and optionally provisions `tscircuit`.
 - `fusible init [--name <NAME>]`: Generates a clean `fusible.yml` project manifest.

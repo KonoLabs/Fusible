@@ -33,6 +33,14 @@ pub enum ConfigError {
         #[label("parse error here")]
         span: SourceSpan,
     },
+
+    /// The manifest parsed, but its sections contradict each other.
+    #[error("invalid configuration: {0}")]
+    #[diagnostic(
+        code(fusible::config::invalid),
+        help("check the `boards`, `firmware`, and `bodies` sections of fusible.yml")
+    )]
+    Invalid(String),
 }
 
 impl ConfigError {

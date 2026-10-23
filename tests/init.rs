@@ -49,7 +49,7 @@ fn subcommand_init_with_path_and_mcu() {
 
     let manifest = std::fs::read_to_string(target.join("fusible.yml")).unwrap();
     assert!(manifest.contains("name: sensor-node"));
-    assert!(manifest.contains("chip: stm32g431"));
+    assert!(manifest.contains("mcu: stm32g431"));
 }
 
 #[test]

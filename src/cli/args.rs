@@ -28,16 +28,16 @@ pub struct ExportArgs {
 }
 
 #[derive(Debug, Args, PartialEq)]
-pub struct MechanicalArgs {
-    /// Path to Circuit JSON, TSX, or KiCad entry file
-    #[arg(value_name = "FILE")]
-    pub file: Option<PathBuf>,
+pub struct BodyArgs {
+    /// Body name, board name, or circuit file [default: every body of the manifest]
+    #[arg(value_name = "TARGET")]
+    pub target: Option<PathBuf>,
 
     /// Output format: step, stl, glb, brep, or all [default: step]
     #[arg(short = 'f', long)]
     pub format: Option<String>,
 
-    /// Output directory [default: dist/mechanical]
+    /// Output directory [default: dist/bodies]
     #[arg(short = 'o', long)]
     pub output: Option<PathBuf>,
 

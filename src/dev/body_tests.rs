@@ -1,12 +1,12 @@
 use std::cell::Cell;
 use std::sync::Arc;
 
-use super::mechanical::{meta_json, MechanicalCache};
+use super::body::{meta_json, BodyCache};
 use super::pipeline::revision;
-use crate::commands::mechanical::MechanicalPreview;
+use crate::commands::body::BodyPreview;
 
-fn sample() -> MechanicalPreview {
-    MechanicalPreview {
+fn sample() -> BodyPreview {
+    BodyPreview {
         glb: vec![0x67, 0x6c, 0x54, 0x46],
         board_z: 5.0,
         board_thickness: 1.4,
@@ -27,7 +27,7 @@ fn revision_is_stable_hex_and_tracks_the_source() {
 
 #[test]
 fn cache_generates_once_per_revision_including_errors() {
-    let cache = MechanicalCache::default();
+    let cache = BodyCache::default();
     let calls = Cell::new(0);
     let fail = |_: &str| {
         calls.set(calls.get() + 1);
@@ -52,7 +52,7 @@ fn cache_generates_once_per_revision_including_errors() {
 
 #[test]
 fn responses_carry_status_type_and_no_store() {
-    let cache = MechanicalCache::default();
+    let cache = BodyCache::default();
     let status = |glb: bool, ok: bool| {
         let response = cache.response(glb, |_| {
             if ok {

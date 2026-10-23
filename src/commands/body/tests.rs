@@ -5,7 +5,7 @@ use super::spec::{build_spec, preview_from};
 use super::*;
 
 pub(super) fn settings(ventilation: Ventilation) -> Settings {
-    resolve_settings(MechanicalConfig::default(), MechanicalConfig::default())
+    resolve_settings(EnclosureConfig::default(), EnclosureConfig::default())
         .map(|s| Settings { ventilation, ..s })
         .unwrap()
 }
@@ -13,12 +13,12 @@ pub(super) fn settings(ventilation: Ventilation) -> Settings {
 #[test]
 fn cli_overrides_beat_manifest_and_defaults_fill_the_rest() {
     let s = resolve_settings(
-        MechanicalConfig {
+        EnclosureConfig {
             format: Some("all".into()),
             cutouts: Some(false),
             ..Default::default()
         },
-        MechanicalConfig {
+        EnclosureConfig {
             format: Some("stl".into()),
             wall_thickness: Some(3.0),
             ..Default::default()
@@ -29,28 +29,28 @@ fn cli_overrides_beat_manifest_and_defaults_fill_the_rest() {
     assert_eq!(s.wall, 3.0);
     assert!(!s.cutouts);
     assert!(s.mounting);
-    assert_eq!(s.out_dir, PathBuf::from("dist/mechanical"));
+    assert_eq!(s.out_dir, PathBuf::from("dist/bodies"));
 }
 
 #[test]
 fn rejects_iges_and_unknown_vents() {
     let bad = |format: &str, vent: &str| {
         resolve_settings(
-            MechanicalConfig {
+            EnclosureConfig {
                 format: Some(format.into()),
                 ventilation: Some(vent.into()),
                 ..Default::default()
             },
-            MechanicalConfig::default(),
+            EnclosureConfig::default(),
         )
     };
     assert!(matches!(
         bad("iges", "none"),
-        Err(MechanicalError::UnknownFormat { .. })
+        Err(BodyError::UnknownFormat { .. })
     ));
     assert!(matches!(
         bad("step", "honeycomb"),
-        Err(MechanicalError::UnknownVentilation { .. })
+        Err(BodyError::UnknownVentilation { .. })
     ));
 }
 
@@ -77,17 +77,17 @@ fn height_must_clear_the_board_stack() {
     };
     assert!(matches!(
         build_spec(&model, &s, Vec::new()),
-        Err(MechanicalError::InvalidDimension { .. })
+        Err(BodyError::InvalidDimension { .. })
     ));
     assert!(matches!(
         build_spec(&PcbModel::parse("[]"), &s, Vec::new()),
-        Err(MechanicalError::NoBoard)
+        Err(BodyError::NoBoard)
     ));
 }
 
 #[test]
 fn preview_forces_glb_and_reports_the_outer_box() {
-    let manifest = MechanicalConfig {
+    let manifest = EnclosureConfig {
         format: Some("step".into()),
         out_dir: Some(PathBuf::from("elsewhere")),
         wall_thickness: Some(3.0),

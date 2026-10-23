@@ -1,8 +1,8 @@
-//! Lazy, revision-cached mechanical preview served to the dev studio.
+//! Lazy, revision-cached body preview served to the dev studio.
 //!
 //! `GET /api/mechanical` returns the model frame as JSON and `GET /api/mechanical.glb`
 //! the GLB bytes for the current revision. See
-//! [`MechanicalPreview`](crate::commands::mechanical::MechanicalPreview) for the frame.
+//! [`BodyPreview`](crate::commands::body::BodyPreview) for the frame.
 
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread;
@@ -11,13 +11,13 @@ use miette::Diagnostic;
 use tiny_http::{Header, Request};
 
 use super::assets::{http_response, HttpResponse};
-use crate::commands::mechanical::{load_manifest, preview, MechanicalPreview};
+use crate::commands::body::{preview, preview_config, BodyPreview};
 
 const JSON: &str = "application/json";
 const TEXT: &str = "text/plain; charset=utf-8";
 const GLB: &str = "model/gltf-binary";
 
-type Generated = Result<Arc<MechanicalPreview>, String>;
+type Generated = Result<Arc<BodyPreview>, String>;
 
 #[derive(Default)]
 struct Current {
@@ -27,12 +27,12 @@ struct Current {
 
 /// Shared circuit source plus a one-entry cache of the generated preview, keyed by revision.
 #[derive(Clone, Default)]
-pub struct MechanicalCache {
+pub struct BodyCache {
     current: Arc<Mutex<Current>>,
     slot: Arc<Mutex<Option<(String, Generated)>>>,
 }
 
-impl MechanicalCache {
+impl BodyCache {
     /// Records the Circuit JSON source and revision of the latest rebuild.
     pub fn update(&self, json: Option<String>, revision: String) {
         *lock(&self.current) = Current {
@@ -93,8 +93,7 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 }
 
 fn generate(json: &str) -> Generated {
-    let manifest = load_manifest().and_then(|cfg| cfg.mechanical);
-    preview(json, manifest)
+    preview(json, preview_config())
         .map(Arc::new)
         .map_err(|e| match e.help() {
             Some(help) => format!("{e}: {help}"),
@@ -103,7 +102,7 @@ fn generate(json: &str) -> Generated {
 }
 
 /// Serializes the preview frame returned by `GET /api/mechanical`.
-pub(super) fn meta_json(revision: &str, p: &MechanicalPreview) -> String {
+pub(super) fn meta_json(revision: &str, p: &BodyPreview) -> String {
     serde_json::json!({
         "revision": revision,
         "board_z": p.board_z,

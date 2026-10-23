@@ -10,7 +10,7 @@ use miette::Diagnostic;
 use thiserror::Error;
 
 use crate::commands::check::{self, CheckError};
-use crate::commands::target::resolve_entry;
+use crate::commands::target::{resolve_board, BoardTarget, TargetError};
 use crate::tscircuit::{Runner, RunnerError};
 
 /// Unified error enum for the export pipeline.
@@ -41,6 +41,7 @@ struct ExportJob {
     runner: Option<Runner>,
     entry: PathBuf,
     board_title: String,
+    out_dir: PathBuf,
     output: Option<PathBuf>,
     source: Option<String>,
 }
@@ -51,11 +52,11 @@ impl ExportJob {
         self.runner.as_ref().ok_or(RunnerError::NotFound)
     }
 
-    /// Returns the custom output path, or `default` when none was given.
+    /// Returns the custom output path, or `default` inside the board's output directory.
     fn output_or(&self, default: &str) -> PathBuf {
         self.output
             .clone()
-            .unwrap_or_else(|| PathBuf::from(default))
+            .unwrap_or_else(|| self.out_dir.join(default))
     }
 
     /// Returns the Circuit JSON loaded by the fuse gate, loading it when the gate was skipped.
@@ -82,12 +83,21 @@ pub fn run(
         presets::validate_preset(preset_name)?;
     }
 
-    let (entry, source) = fuse_gate(file, skip_lint)?;
+    let board = match resolve_board(file) {
+        Err(TargetError::Missing) if skip_lint => BoardTarget {
+            entry: PathBuf::from("index.tsx"),
+            out_dir: PathBuf::from("dist"),
+            ..Default::default()
+        },
+        other => other.map_err(CheckError::from)?,
+    };
+    let source = fuse_gate(&board, skip_lint)?;
 
     let job = ExportJob {
         runner: Runner::detect().ok(),
-        entry,
-        board_title: check::resolve_board_name(),
+        entry: board.entry,
+        board_title: board.title,
+        out_dir: board.out_dir,
         output,
         source,
     };
@@ -100,21 +110,16 @@ pub fn run(
 
 /// Runs the electrical check unless the user asked to skip it.
 ///
-/// Returns the entry file and, when the check ran, the Circuit JSON it validated.
-fn fuse_gate(
-    file: Option<PathBuf>,
-    skip_lint: bool,
-) -> Result<(PathBuf, Option<String>), ExportError> {
+/// Returns the Circuit JSON the check validated, or `None` when it was skipped.
+fn fuse_gate(board: &BoardTarget, skip_lint: bool) -> Result<Option<String>, ExportError> {
     if skip_lint {
         println!("⚠️  Skipping electrical rule verification (--skip-lint requested).\n");
-        let entry = resolve_entry(file).unwrap_or_else(|_| PathBuf::from("index.tsx"));
-        return Ok((entry, None));
+        return Ok(None);
     }
     println!("🔍 Verifying electrical rules before export (fuse check)...");
-    let entry = resolve_entry(file).map_err(CheckError::from)?;
-    let (_, source) = check::lint_source(&entry, None)?;
+    let (_, source) = check::lint_source(&board.entry, board.mcu.clone())?;
     println!("⚡ Fuse intact — proceeding with artifact export.\n");
-    Ok((entry, Some(source)))
+    Ok(Some(source))
 }
 
 /// Extracts every entry of `zip_path` into `target_dir`.

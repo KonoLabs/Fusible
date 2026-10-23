@@ -60,7 +60,7 @@ fn init_creates_manifest_in_temp_dir() {
 
     let content = std::fs::read_to_string(fixture.path.join("fusible.yml")).unwrap();
     assert!(content.contains("name: custom-device"));
-    assert!(content.contains("chip: esp32-s3"));
+    assert!(content.contains("mcu: esp32-s3"));
 
     let res2 = init::run(Some(fixture.path.clone()), None, None, true);
     assert!(res2.is_err());

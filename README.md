@@ -24,7 +24,8 @@ wrapping development servers, dark-theme web previewers, artifact exports, and f
 | 2.2 | Pure-Rust vector documentation exporter (PCB & schematic SVGs) | shipped |
 | 2.3 | Native Fusible Studio dev server with dark theme and live SSE reload | shipped |
 | 2.4 | Deterministic autorouter and bidirectional KiCad syncer | shipped |
-| 2.5 | Fuse-gated 3D enclosure generator (`mechanical`) on OpenCascade | shipped |
+| 2.5 | Fuse-gated 3D enclosure generator on OpenCascade | shipped |
+| 2.6 | Multi-board projects: named boards, firmware, and bodies | shipped |
 
 ## Prerequisites
 
@@ -61,20 +62,48 @@ This creates a minimal `fusible.yml`:
 ```yaml
 name: sensor-node
 
-hardware:
-  entry: hardware/index.tsx
-  out_dir: dist
-  port: 3020
-
-mcu:
-  chip: stm32g431
+boards:
+  main:
+    entry: hardware/index.tsx
+    out_dir: dist
+    port: 3020
+    mcu: stm32g431
 
 firmware:
-  path: firmware
-  framework: embassy
-  pins_rs: firmware/src/pins.rs
-  build_cmd: cargo build
+  app:
+    board: main
+    path: firmware
+    framework: embassy
+    pins_rs: firmware/src/pins.rs
+    build_cmd: cargo build
 ```
+
+### One project, three worlds
+
+A Fusible project links circuit boards, firmware, and physical bodies. Each section holds named entries, and names are unique across the three, so any command takes one as its target:
+
+```yaml
+name: rover
+
+boards:
+  main:   { entry: boards/main/index.tsx, mcu: esp32-s3 }
+  sensor: { entry: boards/sensor/index.tsx, mcu: rp2040 }
+
+firmware:
+  main-fw:   { board: main, path: firmware/main, pins_rs: firmware/main/src/pins.rs }
+  sensor-fw: { board: sensor, path: firmware/sensor, pins_rs: firmware/sensor/src/pins.rs }
+
+bodies:
+  case:  { source: bodies/case.step }                        # drawn in FreeCAD, Fusion, Onshape...
+  knob:  { source: bodies/knob.step, build: python bodies/knob.py }   # code-CAD
+  lid:   { generate: enclosure, around: sensor }             # Fusible owns and regenerates it
+```
+
+- `fusible check` checks every board and reports all violations together. `fusible check sensor` checks one.
+- `fusible build sensor-fw` checks the `sensor` board, writes its pin bindings, then builds that firmware.
+- `fusible export main --preset fab` writes into `dist/main/fab/`. With several boards, `export` and `dev` need a board name.
+- A firmware or generated body must name its board when the project has more than one.
+- The single-board form (`hardware:`, `mcu: { chip }`, one `firmware:`, `mechanical:`) still loads. It becomes a board named `main`, a firmware named `firmware`, and a generated body named after the project, which keeps writing `dist/mechanical/<project>.<format>`.
 
 ## Commands
 
@@ -119,7 +148,7 @@ Features:
 - Vitrine brutalist dark UI palette (`#000000`, `#131313`, `#353535`, `#86A881`, `#A8B365`) and embedded `Undefined` monospace typography.
 - Interactive pan and zoom vector canvas for multi-layer PCB layout (`01 // PCB LAYOUT`) and schematic diagrams (`02 // SCHEMATIC`).
 - Interactive Three.js 3D board viewer (`03 // 3D VIEW`) rendering substrate, ENIG gold pads, copper vias, traces, and components with OrbitControls and view presets.
-- `MECHANICAL` tab showing the generated base and lid, with lid and explode toggles. The 3D view has a `MECHANICAL` toggle that draws the shell translucent around the board. The studio builds the model on demand from the `mechanical:` section of `fusible.yml` and rebuilds it when the circuit changes. Needs `bun`.
+- `BODIES` tab showing the generated base and lid, with lid and explode toggles. The 3D view has an `ENCLOSURE` toggle that draws the shell translucent around the board. The studio builds the model on demand from the first generated body in `fusible.yml` and rebuilds it when the circuit changes. Needs `bun`.
 - Real-time fuse status badge (glowing green when intact, pulsing red on blown fuse).
 - Diagnostics inspector showing rule violations, severity, and remediation advice.
 - PCB layer visibility toggles (top copper, bottom copper, ENIG pads, silkscreen).
@@ -154,10 +183,11 @@ fusible sync path/to/board.kicad_pcb --dry-run
 
 ### 5. Build (`build`)
 
-Evaluates the board, lints electrical rules, generates typed firmware pin bindings (`pins.rs`), and compiles firmware only if the fuse is intact:
+Evaluates the boards, lints electrical rules, generates typed firmware pin bindings (`pins.rs`), and compiles firmware only if every board keeps the fuse intact:
 
 ```sh
-fusible build
+fusible build             # every board, then every firmware
+fusible build main-fw     # one firmware and the board it runs on
 ```
 
 ### 6. Fuse-gated deliverables (`export`)
@@ -182,24 +212,33 @@ fusible export -f kicad_zip
 fusible export --preset fab --skip-lint
 ```
 
-### 7. 3D enclosure (`mechanical` / `case`)
+### 7. Physical bodies (`body`)
 
-Generates a two-part enclosure (base + lid) around the board outline in Circuit JSON. The command is fuse-gated like `export`.
+Builds the bodies of the project. A body is either authored or generated:
+
+- **Authored** (`source:`): a file you made in any CAD tool. Fusible checks that it exists and never overwrites it. With `build:`, Fusible first runs that command from the manifest directory, for code-CAD tools such as build123d, CadQuery, or OpenSCAD.
+- **Generated** (`generate: enclosure`): a two-part enclosure (base + lid) around the board outline in Circuit JSON. Fusible owns the file and regenerates it on every run. Generation is fuse-gated like `export`.
 
 ```sh
-fusible mechanical                       # STEP into dist/mechanical/
-fusible mechanical -f all                # step, stl, glb, and brep
-fusible mechanical --ventilation grid    # vent holes in the lid (grid | slots)
-fusible mechanical --wall-thickness 2.5 --height 25
-fusible mechanical --no-cutouts --no-mounting
+fusible body                             # every body of the manifest
+fusible body case                        # one body
+fusible body sensor                      # the generated bodies around one board
+fusible body -f all                      # step, stl, glb, and brep into dist/bodies/
+fusible body --ventilation grid          # vent holes in the lid (grid | slots)
+fusible body --wall-thickness 2.5 --height 25
+fusible body --no-cutouts --no-mounting
 ```
+
+A board without any body gets a default enclosure, so `fusible body` works without a `bodies:` section. `mechanical`, `case`, and `housing` remain aliases of `body`.
+
+Enclosure details:
 
 - The outline comes from `pcb_board` (`outline` points, or `width` x `height`).
 - Each `pcb_hole` gets a screw boss with a pilot hole, and the board sits on the bosses.
 - Components that reach the board edge get a wall notch from the board surface up.
-- CLI flags override the `mechanical:` section of `fusible.yml`, which overrides defaults.
+- CLI flags override the body settings in `fusible.yml`, which override defaults.
 - Requires `bun`. The first run installs `occt-wasm` into `~/.cache/fusible/`. IGES is not supported.
-- `fusible dev` previews the same model in its `MECHANICAL` tab and as a 3D overlay, without the fuse gate.
+- `fusible dev` previews the first generated body in its `BODIES` tab and as a 3D overlay, without the fuse gate.
 
 ### 8. Hardware package management (`add`, `install`, `search`)
 

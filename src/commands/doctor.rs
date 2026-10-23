@@ -68,24 +68,42 @@ fn report_manifest() {
     println!("\nMonorepo configuration:");
     match FusibleConfig::find_and_load(Path::new(".")) {
         Ok(Some((path, cfg))) => {
-            let mcu = cfg
-                .mcu
-                .and_then(|m| m.chip)
-                .unwrap_or_else(|| "none".into());
-            let entry = cfg
-                .hardware
-                .and_then(|h| h.entry)
-                .map(|e| e.display().to_string())
-                .unwrap_or_else(|| "default".into());
             println!("  ✅ Found manifest at \"{}\"", path.display());
-            println!("     • entry: {entry}");
-            println!("     • silicon target: {mcu}");
+            report_sections(&cfg, path.parent().unwrap_or(Path::new("")));
         }
         Ok(None) => {
             println!("  ℹ️  No fusible.yml found in current directory (run `fusible init` to create one)");
         }
         Err(e) => {
             println!("  ⚠️  Manifest error: {e}");
+        }
+    }
+}
+
+fn report_sections(cfg: &FusibleConfig, root: &Path) {
+    let shown = |path: &Path| {
+        path.strip_prefix(root)
+            .unwrap_or(path)
+            .display()
+            .to_string()
+    };
+    for (name, board) in &cfg.boards {
+        let entry = board
+            .entry
+            .as_deref()
+            .map_or_else(|| "default".into(), shown);
+        let mcu = board.mcu.as_deref().unwrap_or("none");
+        println!("     • board {name}: {entry} (silicon target: {mcu})");
+    }
+    for (name, fw) in &cfg.firmware {
+        let board = fw.board.as_deref().unwrap_or("the only board");
+        println!("     • firmware {name} -> {board}");
+    }
+    for (name, body) in &cfg.bodies {
+        match (&body.source, &body.generate) {
+            (Some(source), _) => println!("     • body {name}: authored, {}", shown(source)),
+            (None, Some(generator)) => println!("     • body {name}: generated {generator}"),
+            (None, None) => println!("     • body {name}: no source"),
         }
     }
 }

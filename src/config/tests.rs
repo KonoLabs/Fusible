@@ -45,57 +45,57 @@ fn default_manifest_and_empty_inputs_parse_cleanly() {
 
     assert_eq!(config.name.as_deref(), Some("sensor-node"));
 
-    let hw = config.hardware.expect("hardware config present");
-    assert_eq!(hw.entry, Some(PathBuf::from("hardware/index.tsx")));
-    assert_eq!(hw.out_dir, Some(PathBuf::from("dist")));
-    assert_eq!(hw.port, Some(3020));
-    assert_eq!(hw.circuit_json, None);
+    let board = &config.boards["main"];
+    assert_eq!(board.entry, Some(PathBuf::from("hardware/index.tsx")));
+    assert_eq!(board.out_dir, Some(PathBuf::from("dist")));
+    assert_eq!(board.port, Some(3020));
+    assert_eq!(board.circuit_json, None);
+    assert_eq!(board.mcu.as_deref(), Some("stm32g431"));
 
-    let mcu = config.mcu.expect("mcu config present");
-    assert_eq!(mcu.chip.as_deref(), Some("stm32g431"));
-
-    let fw = config.firmware.expect("firmware config present");
+    let fw = &config.firmware["app"];
+    assert_eq!(fw.board.as_deref(), Some("main"));
     assert_eq!(fw.path, Some(PathBuf::from("firmware")));
     assert_eq!(fw.framework.as_deref(), Some("embassy"));
     assert_eq!(fw.pins_rs, Some(PathBuf::from("firmware/src/pins.rs")));
     assert_eq!(fw.build_cmd.as_deref(), Some("cargo build"));
+    assert!(config.bodies.is_empty());
 
-    // Empty and comment inputs
-    assert_eq!(
-        FusibleConfig::from_str("").expect("empty input"),
-        FusibleConfig::default()
-    );
-    assert_eq!(
-        FusibleConfig::from_str("  \n\t ").expect("whitespace"),
-        FusibleConfig::default()
-    );
-    assert_eq!(
-        FusibleConfig::from_str("# comment\n").expect("comment"),
-        FusibleConfig::default()
-    );
+    for empty in ["", "  \n\t ", "# comment\n"] {
+        assert_eq!(
+            FusibleConfig::from_str(empty).expect("empty input"),
+            FusibleConfig::default()
+        );
+    }
 }
 
 #[test]
-fn parses_kebab_case_aliases() {
+fn legacy_single_board_sections_become_named_ones() {
     let yaml = r#"
 name: aliased-node
 hardware:
   out-dir: build/dist
   circuit-json: build/circuit.json
+mcu:
+  chip: rp2040
 firmware:
   pins-rs: generated/pins.rs
   build-cmd: make firmware
 "#;
-    let config = FusibleConfig::from_str(yaml).expect("aliased fields should parse");
+    let config = FusibleConfig::from_str(yaml).expect("legacy manifest should parse");
     assert_eq!(config.name.as_deref(), Some("aliased-node"));
 
-    let hw = config.hardware.expect("hardware present");
-    assert_eq!(hw.out_dir, Some(PathBuf::from("build/dist")));
-    assert_eq!(hw.circuit_json, Some(PathBuf::from("build/circuit.json")));
+    let board = &config.boards[LEGACY_BOARD];
+    assert_eq!(board.out_dir, Some(PathBuf::from("build/dist")));
+    assert_eq!(
+        board.circuit_json,
+        Some(PathBuf::from("build/circuit.json"))
+    );
+    assert_eq!(board.mcu.as_deref(), Some("rp2040"));
 
-    let fw = config.firmware.expect("firmware present");
+    let fw = &config.firmware["firmware"];
     assert_eq!(fw.pins_rs, Some(PathBuf::from("generated/pins.rs")));
     assert_eq!(fw.build_cmd.as_deref(), Some("make firmware"));
+    assert!(config.bodies.is_empty());
 }
 
 #[test]
@@ -107,13 +107,13 @@ fn handles_syntax_and_io_errors() {
             assert!(!message.is_empty());
             assert!(span.offset() <= invalid_yaml.len());
         }
-        ConfigError::Io { .. } => panic!("expected ConfigError::Parse"),
+        other => panic!("expected ConfigError::Parse, got {other:?}"),
     }
 
     let missing = Path::new("this/path/does/not/exist/fusible.yml");
     match FusibleConfig::from_file(missing).expect_err("missing file") {
         ConfigError::Io { path, .. } => assert_eq!(path, missing),
-        ConfigError::Parse { .. } => panic!("expected ConfigError::Io"),
+        other => panic!("expected ConfigError::Io, got {other:?}"),
     }
 }
 

@@ -1,4 +1,4 @@
-//! Integration tests for fuse-gated `export` and `mechanical`.
+//! Integration tests for fuse-gated `export` and `body`.
 
 mod common;
 
@@ -65,11 +65,11 @@ fn subcommand_export_rejects_unknown_preset() {
 }
 
 #[test]
-fn subcommand_mechanical_fuse_blown_writes_nothing() {
-    let dir = TestDir::new("mechanical_blown");
+fn subcommand_body_fuse_blown_writes_nothing() {
+    let dir = TestDir::new("body_blown");
     let out_dir = dir.path.join("mech");
     let out = fusible()
-        .args(["mechanical", "examples/circuit-floating.json", "-o"])
+        .args(["body", "examples/circuit-floating.json", "-o"])
         .arg(&out_dir)
         .output()
         .expect("binary should run");
@@ -79,12 +79,12 @@ fn subcommand_mechanical_fuse_blown_writes_nothing() {
 }
 
 #[test]
-fn subcommand_mechanical_rejects_bad_input_as_tool_error() {
+fn subcommand_body_rejects_bad_input_as_tool_error() {
     for args in [
-        vec!["mechanical", "examples/circuit.json", "-f", "iges"],
-        vec!["mechanical", "examples/circuit.json", "--skip-lint", "-o"],
+        vec!["body", "examples/circuit.json", "-f", "iges"],
+        vec!["body", "examples/circuit.json", "--skip-lint", "-o"],
     ] {
-        let dir = TestDir::new("mechanical_bad");
+        let dir = TestDir::new("body_bad");
         let out = fusible()
             .args(&args)
             .args(args.ends_with(&["-o"]).then(|| dir.path.join("mech")))

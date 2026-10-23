@@ -5,13 +5,12 @@ use std::path::{Path, PathBuf};
 use miette::Diagnostic;
 use thiserror::Error;
 
-use crate::commands::manifest::resolve_pins_rs;
-pub use crate::commands::manifest::{resolve_board_name, resolve_mcu};
-use crate::commands::target::{is_kicad_target, is_tsx_target, resolve_entry, MissingTargetError};
+pub use crate::commands::source::{find_fallback_circuit_json, load_circuit_source};
+use crate::commands::target::{resolve_boards, BoardTarget, TargetError};
 use crate::linter::{FuseBlown, LintContext, Linter, Severity};
 use crate::netlist::Netlist;
 use crate::parser;
-use crate::tscircuit::{Runner, RunnerError};
+use crate::tscircuit::RunnerError;
 
 /// The input file could not be read.
 #[derive(Debug, Error, Diagnostic)]
@@ -28,7 +27,7 @@ pub struct ReadError {
 pub enum CheckError {
     #[error(transparent)]
     #[diagnostic(transparent)]
-    MissingTarget(#[from] MissingTargetError),
+    Target(#[from] TargetError),
 
     #[error(transparent)]
     #[diagnostic(transparent)]
@@ -47,88 +46,13 @@ pub enum CheckError {
     FuseBlown(#[from] FuseBlown),
 }
 
-/// Finds pre-built Circuit JSON for `entry` that is at least as new as the source file.
-pub fn find_fallback_circuit_json(entry: &Path) -> Option<PathBuf> {
-    let stem = entry
-        .file_stem()
-        .map(|s| s.to_string_lossy())
-        .unwrap_or_default();
-    let parent = entry.parent().unwrap_or_else(|| Path::new(""));
-    let source_time = std::fs::metadata(entry).and_then(|m| m.modified()).ok();
-    let candidates = [
-        parent.join("dist").join("circuit.json"),
-        parent.join("dist").join(stem.as_ref()).join("circuit.json"),
-        PathBuf::from("dist").join("circuit.json"),
-        PathBuf::from("dist")
-            .join(stem.as_ref())
-            .join("circuit.json"),
-        entry.with_extension("circuit.json"),
-        entry.with_file_name("circuit.json"),
-    ];
-    candidates.into_iter().find(|p| {
-        let built = std::fs::metadata(p).and_then(|m| m.modified()).ok();
-        p.is_file() && built >= source_time
-    })
-}
-
-fn read_json(path: PathBuf) -> Result<(PathBuf, String), CheckError> {
-    let content = std::fs::read_to_string(&path).map_err(|source| ReadError {
-        path: path.display().to_string(),
-        source,
-    })?;
-    Ok((path, content))
-}
-
-fn compile_tsx(entry: &Path) -> Result<(PathBuf, String), CheckError> {
-    let runner = match Runner::detect() {
-        Ok(runner) => runner,
-        Err(runner_err) => {
-            let fallback = find_fallback_circuit_json(entry).ok_or(runner_err)?;
-            println!(
-                "⚠️  tscircuit runner not found; using \"{}\", which is newer than the source.",
-                fallback.display()
-            );
-            return read_json(fallback);
-        }
-    };
-    println!("⚙️  Compiling \"{}\" via tscircuit...", entry.display());
-    let start = std::time::Instant::now();
-    let built_json = runner.build(entry, None)?;
-    println!(
-        "✓ Circuit compiled in {:.1}s — preview ready",
-        start.elapsed().as_secs_f32()
-    );
-    read_json(built_json)
-}
-
-fn convert_kicad(entry: &Path) -> Result<(PathBuf, String), CheckError> {
-    crate::tscircuit::convert_kicad(entry).map_err(|err_msg| {
-        CheckError::Read(ReadError {
-            path: entry.display().to_string(),
-            source: std::io::Error::new(std::io::ErrorKind::NotFound, err_msg),
-        })
-    })
-}
-
-pub fn load_circuit_source(entry: &Path) -> Result<(PathBuf, String), CheckError> {
-    if is_kicad_target(entry) {
-        convert_kicad(entry)
-    } else if is_tsx_target(entry) {
-        compile_tsx(entry)
-    } else {
-        let content = std::fs::read_to_string(entry).map_err(|source| ReadError {
-            path: entry.display().to_string(),
-            source,
-        })?;
-        Ok((entry.to_path_buf(), content))
-    }
-}
-
 /// Loads, parses and lints the circuit at `entry` without writing any file.
 ///
 /// Returns the path and text of the Circuit JSON that passed the fuse check.
-pub fn lint_source(entry: &Path, mcu: Option<String>) -> Result<(PathBuf, String), CheckError> {
-    let target_mcu = resolve_mcu(mcu);
+pub fn lint_source(
+    entry: &Path,
+    target_mcu: Option<String>,
+) -> Result<(PathBuf, String), CheckError> {
     let (json_path, source) = load_circuit_source(entry)?;
     let circuit = parser::parse(&source, &json_path)?;
     let netlist = Netlist::from_circuit(&circuit);
@@ -152,33 +76,69 @@ pub fn lint_source(entry: &Path, mcu: Option<String>) -> Result<(PathBuf, String
     Ok((json_path, source))
 }
 
-/// Runs the electrical linter on a target file or project manifest.
+/// Runs the electrical linter on the target board, or on every board of the manifest.
 pub fn run(
     file: Option<PathBuf>,
     mcu: Option<String>,
     pins_rs: Option<PathBuf>,
 ) -> Result<(), CheckError> {
-    let entry = resolve_entry(file)?;
-    let target_mcu = resolve_mcu(mcu);
-    let (json_path, source) = lint_source(&entry, target_mcu.clone())?;
+    run_boards(&resolve_boards(file)?, mcu, pins_rs)
+}
 
-    match resolve_pins_rs(pins_rs) {
-        Some(pins_path) => {
-            let circuit = parser::parse(&source, &json_path)?;
-            let netlist = Netlist::from_circuit(&circuit);
-            let ctx = LintContext::new(&circuit, &netlist).with_mcu(target_mcu.as_deref());
-            write_pins_rs(&ctx, &pins_path)
+/// Checks every board, then returns the merged violations or the first tool error.
+///
+/// CLI `mcu` and `pins_rs` override the manifest values of each board.
+pub fn run_boards(
+    boards: &[BoardTarget],
+    mcu: Option<String>,
+    pins_rs: Option<PathBuf>,
+) -> Result<(), CheckError> {
+    let mut failure = None;
+    for board in boards {
+        if let (true, Some(name)) = (boards.len() > 1, &board.name) {
+            println!("\n▸ board {name}");
         }
-        None => Ok(()),
+        let result = check_board(board, mcu.clone(), pins_rs.clone());
+        failure = merge_failures(failure, result.err());
+    }
+    failure.map_or(Ok(()), Err)
+}
+
+fn check_board(
+    board: &BoardTarget,
+    mcu: Option<String>,
+    pins_rs: Option<PathBuf>,
+) -> Result<(), CheckError> {
+    let target_mcu = mcu.or_else(|| board.mcu.clone());
+    let (json_path, source) = lint_source(&board.entry, target_mcu.clone())?;
+    let pins = pins_rs.map_or_else(|| board.pins_rs.clone(), |path| vec![path]);
+    if pins.is_empty() {
+        return Ok(());
+    }
+    let circuit = parser::parse(&source, &json_path)?;
+    let netlist = Netlist::from_circuit(&circuit);
+    let ctx = LintContext::new(&circuit, &netlist).with_mcu(target_mcu.as_deref());
+    pins.iter()
+        .try_for_each(|path| write_pins_rs(&ctx, path, &board.title))
+}
+
+fn merge_failures(first: Option<CheckError>, next: Option<CheckError>) -> Option<CheckError> {
+    match (first, next) {
+        (Some(CheckError::FuseBlown(mut a)), Some(CheckError::FuseBlown(b))) => {
+            a.violations.extend(b.violations);
+            Some(CheckError::FuseBlown(a))
+        }
+        (Some(CheckError::FuseBlown(_)), Some(tool_error)) => Some(tool_error),
+        (first, next) => first.or(next),
     }
 }
 
 /// Generates firmware pin bindings for the circuit's MCU into `pins_path`.
-fn write_pins_rs(ctx: &LintContext, pins_path: &Path) -> Result<(), CheckError> {
+fn write_pins_rs(ctx: &LintContext, pins_path: &Path, title: &str) -> Result<(), CheckError> {
     let Some(mcu_info) = crate::codegen::extract_mcu_pins(ctx.circuit, ctx.netlist, ctx.mcu) else {
         return Ok(());
     };
-    let code = crate::codegen::generate_pins_rs(&mcu_info, &resolve_board_name());
+    let code = crate::codegen::generate_pins_rs(&mcu_info, title);
     if let Some(parent) = pins_path.parent() {
         std::fs::create_dir_all(parent).ok();
     }

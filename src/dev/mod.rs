@@ -1,12 +1,12 @@
 mod assets;
+mod body;
 pub mod hub;
-mod mechanical;
 pub mod pipeline;
 pub mod server;
 pub mod watcher;
 
 #[cfg(test)]
-mod mechanical_tests;
+mod body_tests;
 #[cfg(test)]
 mod studio_tests;
 #[cfg(test)]

@@ -7,7 +7,7 @@ use serde::Serialize;
 use super::layout::{notches, vents};
 use super::settings::Settings;
 use super::{
-    MechanicalError, MechanicalPreview, BOSS_WALL, CLEARANCE, DEFAULT_BOARD_THICKNESS, HEADROOM,
+    BodyError, BodyPreview, BOSS_WALL, CLEARANCE, DEFAULT_BOARD_THICKNESS, HEADROOM,
     PILOT_UNDERSIZE, STANDOFF,
 };
 use crate::gerber::layers::{PcbHoleElm, PcbPoint};
@@ -68,11 +68,11 @@ pub(super) fn build_spec(
     model: &PcbModel,
     settings: &Settings,
     outputs: Vec<Output>,
-) -> Result<Spec, MechanicalError> {
-    let board = model.boards.first().ok_or(MechanicalError::NoBoard)?;
+) -> Result<Spec, BodyError> {
+    let board = model.boards.first().ok_or(BodyError::NoBoard)?;
     let outline = open_ring(board.outline_points());
     if outline.len() < 3 {
-        return Err(MechanicalError::NoBoard);
+        return Err(BodyError::NoBoard);
     }
     let board_thickness = board.thickness.unwrap_or(DEFAULT_BOARD_THICKNESS);
     let bosses = if settings.mounting {
@@ -101,7 +101,7 @@ pub(super) fn build_spec(
 }
 
 /// Derives the studio preview metadata (frame and outer size) from a spec.
-pub(super) fn preview_from(spec: &Spec, glb: Vec<u8>) -> MechanicalPreview {
+pub(super) fn preview_from(spec: &Spec, glb: Vec<u8>) -> BodyPreview {
     let points: Vec<PcbPoint> = spec
         .outline
         .iter()
@@ -109,7 +109,7 @@ pub(super) fn preview_from(spec: &Spec, glb: Vec<u8>) -> MechanicalPreview {
         .collect();
     let b = bounds_of(&points);
     let margin = 2.0 * (spec.clearance + spec.wall);
-    MechanicalPreview {
+    BodyPreview {
         glb,
         board_z: spec.board_z,
         board_thickness: spec.board_thickness,
@@ -123,12 +123,12 @@ pub(super) fn preview_from(spec: &Spec, glb: Vec<u8>) -> MechanicalPreview {
     }
 }
 
-fn stack_height(requested: Option<f64>, minimum: f64) -> Result<f64, MechanicalError> {
+fn stack_height(requested: Option<f64>, minimum: f64) -> Result<f64, BodyError> {
     let height = requested.unwrap_or(minimum + HEADROOM);
     if height.is_finite() && height > minimum {
         return Ok(height);
     }
-    Err(MechanicalError::InvalidDimension {
+    Err(BodyError::InvalidDimension {
         name: "height",
         value: height,
         help: format!("the board stack needs more than {minimum:.2} mm"),

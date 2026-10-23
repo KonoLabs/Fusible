@@ -4,7 +4,7 @@ use miette::Diagnostic;
 use thiserror::Error;
 
 use crate::commands::check::{load_circuit_source, CheckError};
-use crate::commands::target::{resolve_entry, MissingTargetError};
+use crate::commands::target::{resolve_entry, TargetError};
 use crate::kicad::diff::parse_circuit_elements;
 use crate::kicad::{
     compare_kicad_with_circuit, extract_footprints, format_diff_report, parse_sexpr,
@@ -14,7 +14,7 @@ use crate::kicad::{
 pub enum DiffCommandError {
     #[error(transparent)]
     #[diagnostic(transparent)]
-    MissingTarget(#[from] MissingTargetError),
+    Target(#[from] TargetError),
 
     #[error(transparent)]
     #[diagnostic(transparent)]

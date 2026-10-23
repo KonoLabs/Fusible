@@ -41,7 +41,7 @@ fn export_all(job: &ExportJob, circuit_json: &str) -> Result<(), ExportError> {
 
 /// Writes gerbers and Circuit JSON into the fab output directory.
 fn export_fab(job: &ExportJob, circuit_json: &str) -> Result<(), ExportError> {
-    let base = job.output_or("dist/fab");
+    let base = job.output_or("fab");
     std::fs::create_dir_all(&base)?;
     println!("📦 Running fabrication export preset (fab)...");
     println!("  • Exporting RS-274X gerbers & drill files via native Rust engine...");
@@ -56,7 +56,7 @@ fn export_fab(job: &ExportJob, circuit_json: &str) -> Result<(), ExportError> {
 /// Exports the KiCad project and STEP model through the tscircuit runner.
 fn export_cad(job: &ExportJob) -> Result<(), ExportError> {
     let runner = job.runner()?;
-    let base = job.output_or("dist/cad");
+    let base = job.output_or("cad");
     std::fs::create_dir_all(&base)?;
     println!("📦 Running CAD export preset (cad)...");
     let kicad = base.join("kicad.zip");
@@ -80,7 +80,7 @@ fn export_cad(job: &ExportJob) -> Result<(), ExportError> {
 
 /// Renders schematic and PCB SVGs into the docs output directory.
 fn export_docs(job: &ExportJob, circuit_json: &str) -> Result<(), ExportError> {
-    let base = job.output_or("dist/docs");
+    let base = job.output_or("docs");
     std::fs::create_dir_all(&base)?;
     println!("📦 Running documentation export preset (docs)...");
     println!("  • Exporting schematic SVG & PCB layout SVG via native Rust engine...");

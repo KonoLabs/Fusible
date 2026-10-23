@@ -25,7 +25,7 @@ fn create_parent(dest: &Path) -> Result<(), ExportError> {
 /// Writes a zip of native RS-274X gerbers.
 fn export_gerbers(job: &ExportJob) -> Result<(), ExportError> {
     let circuit_json = job.circuit_json()?;
-    let dest = job.output_or("dist/gerbers.zip");
+    let dest = job.output_or("gerbers.zip");
     create_parent(&dest)?;
     println!(
         "📦 Generating native RS-274X gerbers to {}...",
@@ -42,7 +42,7 @@ fn export_gerbers(job: &ExportJob) -> Result<(), ExportError> {
 /// Writes the native PCB layout SVG.
 fn export_pcb_svg(job: &ExportJob) -> Result<(), ExportError> {
     let circuit_json = job.circuit_json()?;
-    let dest = job.output_or("dist/pcb.svg");
+    let dest = job.output_or("pcb.svg");
     create_parent(&dest)?;
     println!(
         "📦 Generating native PCB layout SVG to {}...",
@@ -60,7 +60,7 @@ fn export_pcb_svg(job: &ExportJob) -> Result<(), ExportError> {
 /// Exports a KiCad project through the runner and unpacks it.
 fn export_kicad_project(job: &ExportJob) -> Result<(), ExportError> {
     let runner = job.runner()?;
-    let dest = job.output_or("dist/cad/kicad");
+    let dest = job.output_or("cad/kicad");
     std::fs::create_dir_all(&dest)?;
     let tmp_zip = dest.join(".kicad_export.zip");
     println!("📦 Exporting KiCad project to {}...", dest.display());

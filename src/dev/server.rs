@@ -7,8 +7,8 @@ use std::thread;
 use tiny_http::{Request, Response, Server};
 
 use super::assets::{http_response, load_studio_bundle, static_response};
+use super::body::BodyCache;
 use super::hub::{stream_events, ClientHub};
-use super::mechanical::MechanicalCache;
 use super::pipeline::execute_pipeline;
 use super::watcher::start_file_watcher;
 
@@ -17,7 +17,7 @@ struct State {
     hub: ClientHub,
     payload: Arc<Mutex<String>>,
     bundle: Arc<Mutex<Option<String>>>,
-    mechanical: MechanicalCache,
+    body: BodyCache,
 }
 
 /// Accepts only loopback Host headers bound to the dev server port, blocking DNS rebinding.
@@ -38,7 +38,7 @@ pub(super) fn route_path(url: &str) -> &str {
 fn refresh(entry: &Path, state: &State) {
     let start = std::time::Instant::now();
     let (payload, source) = execute_pipeline(entry);
-    state.mechanical.update(source, payload.revision.clone());
+    state.body.update(source, payload.revision.clone());
     if let Ok(json_str) = serde_json::to_string(&payload) {
         if let Ok(mut lock) = state.payload.lock() {
             *lock = json_str.clone();
@@ -93,8 +93,8 @@ fn handle(request: Request, state: &State, port: u16) {
     }
     let path = route_path(request.url()).to_string();
     match path.as_str() {
-        "/api/mechanical" => state.mechanical.serve(request, false),
-        "/api/mechanical.glb" => state.mechanical.serve(request, true),
+        "/api/mechanical" => state.body.serve(request, false),
+        "/api/mechanical.glb" => state.body.serve(request, true),
         "/api/circuit" => {
             let body = state
                 .payload

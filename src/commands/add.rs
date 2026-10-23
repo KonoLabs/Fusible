@@ -35,10 +35,13 @@ pub fn find_hardware_dir() -> PathBuf {
 
 /// Returns the existing parent directory of the manifest's hardware entry, if any.
 fn manifest_hardware_dir() -> Option<PathBuf> {
-    let (manifest_path, config) = FusibleConfig::find_and_load(Path::new(".")).ok()??;
-    let entry = config.hardware?.entry?;
-    let manifest_dir = manifest_path.parent().unwrap_or(Path::new("."));
-    let parent = manifest_dir.join(&entry).parent()?.to_path_buf();
+    let (_, config) = FusibleConfig::nearest()?;
+    let (_, board) = config
+        .boards
+        .iter()
+        .next()
+        .filter(|_| config.boards.len() == 1)?;
+    let parent = board.entry.as_ref()?.parent()?.to_path_buf();
     parent.exists().then_some(parent)
 }
 

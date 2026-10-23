@@ -5,10 +5,10 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 use super::spec::Spec;
-use super::MechanicalError;
+use super::BodyError;
 use crate::tscircuit::detect::find_binary_in_path;
 
-const GENERATOR_TS: &str = include_str!("../../assets/mechanical.ts");
+const GENERATOR_TS: &str = include_str!("../../assets/enclosure.ts");
 const OCCT_WASM_VERSION: &str = "5.7.1";
 
 /// Returns the per-version cache directory that holds the generator and its dependencies.
@@ -19,17 +19,17 @@ pub(super) fn generator_dir() -> PathBuf {
         .or_else(|| std::env::var_os("LOCALAPPDATA").map(PathBuf::from))
         .unwrap_or_else(std::env::temp_dir)
         .join("fusible")
-        .join(format!("mechanical-{}", env!("CARGO_PKG_VERSION")))
+        .join(format!("body-{}", env!("CARGO_PKG_VERSION")))
 }
 
 /// Pipes `spec` to the generator, which writes every file listed in `spec.outputs`.
-pub(super) fn run_generator(spec: &Spec) -> Result<(), MechanicalError> {
+pub(super) fn run_generator(spec: &Spec) -> Result<(), BodyError> {
     let bun = std::env::var_os("PATH")
         .and_then(|p| find_binary_in_path("bun", &p))
-        .ok_or(MechanicalError::BunMissing)?;
+        .ok_or(BodyError::BunMissing)?;
     let dir = generator_dir();
     prepare_generator(&bun, &dir)?;
-    println!("🧊 Building mechanical model with OpenCascade...");
+    println!("🧊 Building body model with OpenCascade...");
     let mut child = Command::new(&bun)
         .arg("generator.ts")
         .current_dir(&dir)
@@ -47,7 +47,7 @@ pub(super) fn run_generator(spec: &Spec) -> Result<(), MechanicalError> {
     if out.status.success() {
         return Ok(());
     }
-    Err(MechanicalError::GeneratorFailed {
+    Err(BodyError::GeneratorFailed {
         command: format!("bun {}", dir.join("generator.ts").display()),
         code: out.status.code(),
         stderr: String::from_utf8_lossy(&out.stderr).trim().to_string(),
@@ -56,12 +56,12 @@ pub(super) fn run_generator(spec: &Spec) -> Result<(), MechanicalError> {
 
 fn package_json() -> String {
     format!(
-        "{{\"name\":\"fusible-mechanical\",\"private\":true,\"type\":\"module\",\
+        "{{\"name\":\"fusible-body\",\"private\":true,\"type\":\"module\",\
 \"dependencies\":{{\"occt-wasm\":\"{OCCT_WASM_VERSION}\"}}}}\n"
     )
 }
 
-fn prepare_generator(bun: &Path, dir: &Path) -> Result<(), MechanicalError> {
+fn prepare_generator(bun: &Path, dir: &Path) -> Result<(), BodyError> {
     std::fs::create_dir_all(dir)?;
     std::fs::write(dir.join("generator.ts"), GENERATOR_TS)?;
     std::fs::write(dir.join("package.json"), package_json())?;
@@ -77,7 +77,7 @@ fn prepare_generator(bun: &Path, dir: &Path) -> Result<(), MechanicalError> {
     if status.success() {
         return Ok(());
     }
-    Err(MechanicalError::GeneratorFailed {
+    Err(BodyError::GeneratorFailed {
         command: "bun install".into(),
         code: status.code(),
         stderr: format!("could not install occt-wasm into {}", dir.display()),

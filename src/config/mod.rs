@@ -5,92 +5,38 @@
 
 mod discovery;
 pub mod error;
+mod query;
+mod raw;
+#[cfg(test)]
+mod sections_tests;
 mod template;
 #[cfg(test)]
 mod tests;
+mod types;
+mod validate;
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-
-use serde::{Deserialize, Serialize};
 
 use discovery::{check_file_target, find_in_dir};
 pub use error::ConfigError;
+use raw::RawConfig;
+pub use raw::LEGACY_BOARD;
+pub use types::{BoardConfig, BodyConfig, EnclosureConfig, FirmwareConfig};
+pub use validate::GENERATORS;
 
 /// Recognized filenames for the Fusible manifest, in order of precedence.
 pub const CONFIG_FILENAMES: &[&str] = &["fusible.yml", "fusible.yaml"];
 
-/// Root configuration schema for a Fusible project.
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]
+/// Root configuration: named boards, firmware, and bodies of one project.
+///
+/// Names are unique across the three sections, so any command can take one as its target.
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct FusibleConfig {
-    #[serde(default)]
     pub name: Option<String>,
-    #[serde(default)]
-    pub hardware: Option<HardwareConfig>,
-    #[serde(default)]
-    pub mcu: Option<McuConfig>,
-    #[serde(default)]
-    pub firmware: Option<FirmwareConfig>,
-    #[serde(default)]
-    pub mechanical: Option<MechanicalConfig>,
-}
-
-/// Hardware-specific settings including entry points and artifact output directory.
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
-pub struct HardwareConfig {
-    #[serde(default)]
-    pub entry: Option<PathBuf>,
-    #[serde(default, alias = "out-dir")]
-    pub out_dir: Option<PathBuf>,
-    #[serde(default, alias = "circuit-json")]
-    pub circuit_json: Option<PathBuf>,
-    #[serde(default)]
-    pub port: Option<u16>,
-}
-
-/// Target microcontroller configuration.
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
-pub struct McuConfig {
-    #[serde(default)]
-    pub chip: Option<String>,
-}
-
-/// Firmware settings, framework selection, and generated code destinations.
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
-pub struct FirmwareConfig {
-    #[serde(default)]
-    pub path: Option<PathBuf>,
-    #[serde(default)]
-    pub framework: Option<String>,
-    #[serde(default, alias = "pins-rs")]
-    pub pins_rs: Option<PathBuf>,
-    #[serde(default, alias = "build-cmd")]
-    pub build_cmd: Option<String>,
-}
-
-/// Mechanical enclosure generation settings for `fusible mechanical`.
-#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]
-pub struct MechanicalConfig {
-    /// Export format: `step`, `stl`, `glb`, `brep`, or `all`.
-    #[serde(default)]
-    pub format: Option<String>,
-    /// Directory receiving the generated models.
-    #[serde(default, alias = "out-dir")]
-    pub out_dir: Option<PathBuf>,
-    /// Wall, floor, and lid thickness in millimetres.
-    #[serde(default, alias = "wall-thickness")]
-    pub wall_thickness: Option<f64>,
-    /// Total external height of the base in millimetres.
-    #[serde(default)]
-    pub height: Option<f64>,
-    /// Cut wall notches for components that reach the board edge.
-    #[serde(default)]
-    pub cutouts: Option<bool>,
-    /// Lid ventilation pattern: `none`, `grid`, or `slots`.
-    #[serde(default)]
-    pub ventilation: Option<String>,
-    /// Add screw bosses under every `pcb_hole` of the board.
-    #[serde(default)]
-    pub mounting: Option<bool>,
+    pub boards: BTreeMap<String, BoardConfig>,
+    pub firmware: BTreeMap<String, FirmwareConfig>,
+    pub bodies: BTreeMap<String, BodyConfig>,
 }
 
 impl FusibleConfig {
@@ -126,17 +72,18 @@ impl FusibleConfig {
                 *path = dir.join(&*path);
             }
         };
-        if let Some(hw) = self.hardware.as_mut() {
-            rebase(&mut hw.entry);
-            rebase(&mut hw.out_dir);
-            rebase(&mut hw.circuit_json);
+        for board in self.boards.values_mut() {
+            rebase(&mut board.entry);
+            rebase(&mut board.out_dir);
+            rebase(&mut board.circuit_json);
         }
-        if let Some(fw) = self.firmware.as_mut() {
+        for fw in self.firmware.values_mut() {
             rebase(&mut fw.path);
             rebase(&mut fw.pins_rs);
         }
-        if let Some(mech) = self.mechanical.as_mut() {
-            rebase(&mut mech.out_dir);
+        for body in self.bodies.values_mut() {
+            rebase(&mut body.source);
+            rebase(&mut body.enclosure.out_dir);
         }
         self
     }
@@ -159,9 +106,14 @@ impl FusibleConfig {
         if content.trim().is_empty() {
             return Ok(Self::default());
         }
-        let config: Option<Self> = serde_yaml::from_str(content)
+        let raw: Option<RawConfig> = serde_yaml::from_str(content)
             .map_err(|err| ConfigError::from_yaml(err, content, file_name))?;
-        Ok(config.unwrap_or_default())
+        let config = raw
+            .unwrap_or_default()
+            .normalize()
+            .map_err(ConfigError::Invalid)?;
+        validate::validate(&config).map_err(ConfigError::Invalid)?;
+        Ok(config)
     }
 }
 

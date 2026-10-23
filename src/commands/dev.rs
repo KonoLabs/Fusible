@@ -1,12 +1,11 @@
 //! Subcommand: `fusible dev` / `view` / `webview` — live previewer.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use miette::Diagnostic;
 use thiserror::Error;
 
-use crate::commands::target::resolve_entry;
-use crate::config::FusibleConfig;
+use crate::commands::target::{resolve_board, BoardTarget, TargetError};
 use crate::tscircuit::{Runner, RunnerError};
 
 #[derive(Debug, Error, Diagnostic)]
@@ -18,18 +17,23 @@ pub enum DevError {
     #[error(transparent)]
     #[diagnostic(transparent)]
     Runner(#[from] RunnerError),
+
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Target(#[from] TargetError),
 }
 
 /// Starts the Fusible development server and interactive dark-theme web viewer.
 pub fn run(file: Option<PathBuf>, port: Option<u16>, legacy: bool) -> Result<i32, DevError> {
-    let entry = resolve_entry(file).unwrap_or_else(|_| PathBuf::from("index.tsx"));
-
-    let resolved_port = port.or_else(|| {
-        FusibleConfig::find_and_load(Path::new("."))
-            .ok()
-            .flatten()
-            .and_then(|(_, cfg)| cfg.hardware.and_then(|hw| hw.port))
-    });
+    let board = match resolve_board(file) {
+        Err(TargetError::Missing) => BoardTarget {
+            entry: PathBuf::from("index.tsx"),
+            ..Default::default()
+        },
+        other => other?,
+    };
+    let entry = board.entry;
+    let resolved_port = port.or(board.port);
 
     let port_num = resolved_port.unwrap_or(3020);
 

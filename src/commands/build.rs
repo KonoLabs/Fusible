@@ -6,7 +6,8 @@ use miette::Diagnostic;
 use thiserror::Error;
 
 use crate::commands::check::{self, CheckError};
-use crate::config::FusibleConfig;
+use crate::commands::target::{resolve_board, resolve_boards, BoardTarget};
+use crate::config::{FirmwareConfig, FusibleConfig};
 
 /// Error raised during full build orchestration.
 #[derive(Debug, Error, Diagnostic)]
@@ -24,47 +25,58 @@ pub enum BuildError {
     ExecutionFailed(String),
 }
 
-/// Orchestrates full circuit validation and firmware build.
-pub fn run(file: Option<PathBuf>) -> Result<(), BuildError> {
-    let loaded = FusibleConfig::find_and_load(Path::new(".")).ok().flatten();
-    let cfg = loaded.as_ref().map(|(_, c)| c);
-
-    let pins_rs = cfg
-        .and_then(|c| c.firmware.as_ref())
-        .and_then(|f| f.pins_rs.clone());
-
-    // 1. Hardware validation & pin bindings: the fuse blows here if electrical rules fail!
-    check::run(file, None, pins_rs)?;
-
-    // 2. Firmware compilation: only if fuse is intact.
-    build_firmware_if_configured(cfg)?;
-
+/// Checks the target boards, then builds the firmware bound to them.
+///
+/// `target` names a firmware, a board, or a circuit file; without it every board and
+/// firmware of the manifest is built. No firmware builds unless every board keeps the
+/// fuse intact.
+pub fn run(target: Option<PathBuf>) -> Result<(), BuildError> {
+    let cfg = FusibleConfig::nearest().map(|(_, c)| c).unwrap_or_default();
+    let (boards, firmware) = select(&cfg, target)?;
+    check::run_boards(&boards, None, None)?;
+    for (name, fw) in firmware {
+        build_firmware(name, fw)?;
+    }
     println!("✅ Full build succeeded (fuse intact)");
     Ok(())
 }
 
-fn build_firmware_if_configured(cfg: Option<&FusibleConfig>) -> Result<(), BuildError> {
-    let Some(cfg) = cfg else {
-        return Ok(());
-    };
-    let Some(fw) = &cfg.firmware else {
-        return Ok(());
-    };
+type Selection<'a> = (Vec<BoardTarget>, Vec<(&'a String, &'a FirmwareConfig)>);
+
+fn select(cfg: &FusibleConfig, target: Option<PathBuf>) -> Result<Selection<'_>, CheckError> {
+    let by_name = target
+        .as_ref()
+        .filter(|t| !t.exists())
+        .and_then(|t| t.to_str())
+        .and_then(|n| cfg.firmware.get_key_value(n));
+    if let Some((name, fw)) = by_name {
+        let board = resolve_board(fw.board.clone().map(PathBuf::from))?;
+        return Ok((vec![board], vec![(name, fw)]));
+    }
+    let boards = resolve_boards(target)?;
+    let firmware = cfg
+        .firmware
+        .iter()
+        .filter(|(name, _)| boards.iter().any(|b| b.firmware.contains(name)))
+        .collect();
+    Ok((boards, firmware))
+}
+
+fn build_firmware(name: &str, fw: &FirmwareConfig) -> Result<(), BuildError> {
     let Some(cmd) = &fw.build_cmd else {
         return Ok(());
     };
-
-    println!("🦀 Building firmware: \"{}\"...", cmd);
+    println!("🦀 Building firmware {name}: \"{cmd}\"...");
     let status = execute_shell(cmd, fw.path.as_deref())
         .map_err(|e| BuildError::ExecutionFailed(e.to_string()))?;
-
     if !status.success() {
         return Err(BuildError::FirmwareFailed(cmd.clone()));
     }
     Ok(())
 }
 
-fn execute_shell(
+/// Runs `cmd` through the platform shell, inside `work_dir` when given.
+pub(crate) fn execute_shell(
     cmd: &str,
     work_dir: Option<&Path>,
 ) -> Result<std::process::ExitStatus, std::io::Error> {
