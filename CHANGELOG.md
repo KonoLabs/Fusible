@@ -5,6 +5,29 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [0.11.0] - 2026-10-23
+
+### Added
+
+- A `shorted_nets` rule blows the fuse when a trace, a port or a pad ties two differently named declared nets together. The message names the element that joined them.
+- The Gerber export draws rounded-rect pads (`rect_border_radius`), polygon pads, and `pcb_silkscreen_text` with a built-in stroke font (A to Z, 0 to 9, `. - _ / +`). Text with any other character is an error.
+- `fusible export --preset docs` prints `schematic.pdf` with a local Chromium (Playwright cache, `chromium` or `google-chrome`). Without one, or after 60 s, it warns and writes SVG only.
+- The STM32G431 pin table covers every GPIO, from DS12589 Rev 6, and each package (`k`, `c`, `r`, `m`, `v`) accepts only the pins it bonds out.
+- CI exports the example boards and renders every Gerber layer in gerbv. The PNGs are uploaded as the `gerber-renders` artifact.
+
+### Changed
+
+- Nets are built with a union-find: a trace joining ports on two nets now merges them, instead of keeping two nets. Boards that hid a short this way now blow the fuse.
+- The MCU for pin-mux and `pins.rs` is picked among `chip` and `simple_chip` components only: the one matching `mcu.chip`, else the only chip naming a silicon database part, else the only chip. A passive named `C_MCU` can no longer be picked. With several candidates, none is picked and a hint names them.
+- `fusible export` compiles and lints the circuit once, and never writes `pins.rs`.
+- `stm32g431gb` no longer resolves: the G431 has no `g` package letter. Bare `stm32g431` means the pins every package has.
+
+### Fixed
+
+- `fusible diff` and `fusible sync` exit 2 on invalid Circuit JSON instead of comparing against an empty circuit.
+- `trace_clearance` checks polygon pads, and `pcb.svg` draws them. A non-polygon pad without a finite `x` and `y` is malformed.
+- The STM32G431 table had wrong entries: USART2 TX and RX on PA0 and PA1, USB on PA11 and PA12, and I2C1_SCL on PB6.
+
 ## [0.10.0] - 2026-10-22
 
 ### Added

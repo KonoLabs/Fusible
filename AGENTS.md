@@ -8,7 +8,7 @@
 
 1. **The Fuse Contract (Exit Codes)**:
    - `0` — **Fuse intact**: circuit is electrically sound, rules pass, command succeeded.
-   - `1` — **Fuse blown**: one or more electrical violations detected (`unconnected_net`, `ghost_net`, `malformed_element`, future DRC/pin-mux). Artifact exports and codegen are blocked.
+   - `1` — **Fuse blown**: one or more electrical violations detected (`unconnected_net`, `ghost_net`, `shorted_nets`, `malformed_element`, `trace_clearance`, `pin_mux`). Artifact exports and codegen are blocked.
    - `2` — **Tool error**: IO failure, unreadable/malformed JSON, runner missing, or CLI syntax error.
 2. **Fail-Closed Rule Design**: If a net or component cannot be definitively proven connected, report it. Never assume floating traces or unlinked ports are valid without explicit net aliases.
 3. **Rust Core / External Toolchain Separation**:
@@ -89,7 +89,7 @@ Commit messages MUST adhere to [Conventional Commits](https://www.conventionalco
   - **Fuse-gated**: Validates rules before creating any files.
   - `--preset fab`: Exports `gerbers.zip` and `circuit.json` into `dist/fab/`.
   - `--preset cad`: Exports `kicad.zip` and `board.step` into `dist/cad/`.
-  - `--preset docs`: Exports `schematic.svg`, `pcb.svg`, and `schematic.pdf` into `dist/docs/`.
+  - `--preset docs`: Exports `schematic.svg`, `pcb.svg`, and `schematic.pdf` into `dist/docs/`. The PDF needs a local Chromium; without one it warns and writes SVG only.
   - `--preset all`: Runs all three presets.
   - `-f <FORMAT>`: Direct export (`gerbers`, `pcb-svg`, `step`, `glb`, `kicad_zip`, etc.).
   - `--skip-lint`: Bypasses electrical rule checking (for drafts only).
