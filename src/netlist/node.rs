@@ -22,9 +22,4 @@ impl NetNode {
     pub fn is_floating(&self) -> bool {
         self.endpoints.len() < 2
     }
-
-    /// True if referenced but not declared in `source_net` (ghost net).
-    pub fn is_ghost(&self) -> bool {
-        !self.is_defined
-    }
 }
