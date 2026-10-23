@@ -7,6 +7,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-24
+
 ### Added
 
 - `fusible body eject <name>` generates a body once into `bodies/<name>.<format>` (the first configured format, `step` by default, or the file and format of `-o`), then rewrites its entry in `fusible.yml` from `generate:` to `source:`. The model is staged and moved into place only when generation succeeds, it never replaces an existing file, and the manifest is replaced in one step, so a crash leaves nothing half written. The edit keeps the comments and layout of the manifest, including a comment after `generate:`, and checks that only that body changed. A manifest edit it cannot do safely leaves `fusible.yml` alone and exits 2 with the lines to change by hand; the model is still written. A legacy `mechanical:` block moves into a new `bodies:` section.
