@@ -83,7 +83,12 @@ fn legacy_mechanical_section_keeps_its_output_names() {
 
 #[test]
 fn bodies_name_their_board_with_board_or_the_around_alias() {
-    let yaml = "boards: {a: {}, b: {}}\nbodies:\n  x: {source: x.step, board: b}\n  y: {generate: enclosure, around: a}\n";
+    let yaml = concat!(
+        "boards: {a: {}, b: {}}\n",
+        "bodies:\n",
+        "  x: {source: x.step, board: b}\n",
+        "  y: {generate: enclosure, around: a}\n",
+    );
     let cfg = FusibleConfig::from_str(yaml).expect("board and around both parse");
     assert_eq!(cfg.bodies["x"].board.as_deref(), Some("b"));
     assert_eq!(cfg.bodies["y"].board.as_deref(), Some("a"));
