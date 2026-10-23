@@ -19,30 +19,6 @@ Everything verified against the tree at `84ecc91` on 2026-10-23. Paths and line 
   ```
 - FieldCam is the acceptance board. `fusible check` there must exit 0 and leave `apps/firmware/src/pins.rs` unchanged.
 
-## Phase 0: cleanup
-
-No decisions. Do this first so the tree is quiet.
-
-All seven agent worktrees hold branches already merged into `main`, confirmed with `git branch --merged main`:
-
-| Worktree | Branch |
-|---|---|
-| `agent-a029a4fb6f6e37f2e` | `fix/export-single-compile` |
-| `agent-a037b9373b28234ef` | `feat/stm32g431-pin-table` |
-| `agent-a1c4dad6e87426ba2` | `fix/mcu-selection` |
-| `agent-a3ecca60c49163323` | `fix/netlist-union-find` |
-| `agent-a40725b45ad7a9b6e` | `fix/kicad-invalid-json` |
-| `agent-ab8f7d89def47f5af` | `feat/gerber-shapes-and-viewer` |
-| `agent-ad2cd0fec3a9b926f` | `fix/stm32-package-gating` |
-
-Steps:
-
-1. `git worktree remove` each of the seven paths under `.claude/worktrees/`.
-2. Delete the seven merged feature branches, the seven `worktree-agent-*` branches, and `integration/0.11.0`.
-3. Decide what happens to this `PLAN.md`: commit it, or keep it untracked as a scratch document. It has been untracked through two releases.
-
-The superseded 0.11.0 plan is saved at `/tmp/claude-1000/-home-yann-Code-Kono-Fusible/cc87bc85-0e66-416d-b3d1-a0d294b104b8/scratchpad/PLAN-0.11.0-superseded.md` in case you want anything out of it.
-
 ## Phase 1: two decisions
 
 ### D1. Does `schematic_scale` become a warning?
