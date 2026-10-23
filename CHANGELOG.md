@@ -7,6 +7,12 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.11.2] - 2026-10-23
+
+### Changed
+
+- The router lifts a nearby routed connection to free a blocked one, then reroutes the lifted one, and keeps the swap only when both route. FieldCam routes 95 of 102 connections, up from 92.
+
 ## [0.11.1] - 2026-10-23
 
 ### Added

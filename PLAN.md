@@ -104,7 +104,11 @@ Tests: a WLCSP49 target accepts one of the extra pins; `stm32g431c` still reject
 
 Three independent pieces. Plan each one properly when it starts rather than now, because each needs measurement first. Ordered by how much they block real boards.
 
-### W1. Router expansion cap
+### W1. Router expansion cap (premise falsified, 0.11.2)
+
+Measured on FieldCam: no search hit `MAX_EXPANSIONS`; the largest successful route used 132k of 400k. All 10 failures end by exhausting reachable nodes after 3 to 6 expansions, and all route fine on an empty board. The cause is congestion from earlier routes, not the cap. 0.11.2 adds rip-up and reroute (`src/router/engine/ripup.rs`): 92 to 95 of 102. The remaining 7 need more than one neighbour moved, so the next step is negotiated congestion or multi-victim rip-up, not a bigger cap. Initial ordering (shortest or longest first) did not help.
+
+Original notes:
 
 `MAX_EXPANSIONS = 400_000` at `src/router/astar/search.rs:10`, enforced against `self.closed.len()` at `search.rs:114`. Routes beyond roughly 27 mm exhaust it and fail.
 
