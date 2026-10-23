@@ -1,33 +1,19 @@
 import React, { useState, useEffect, useRef } from "react";
 import { rootSlot, renderIntoSlot } from "./roots";
 import * as THREE from "three";
-import { OrbitControls } from "three-stdlib";
-import {
-  convertCircuitJsonToSchematicSvg,
-  convertCircuitJsonToPcbSvg,
-  colorMap,
-} from "circuit-to-svg";
 import { CadViewer as BaseCadViewer } from "@tscircuit/3d-viewer";
-import { PCBViewer } from "@tscircuit/pcb-viewer";
-import { SchematicViewer } from "@tscircuit/schematic-viewer";
 import "iconify-icon";
 import { addCollection } from "iconify-icon";
 import pixelarticons from "@iconify-json/pixelarticons/icons.json";
 import { Mechanical } from "./mechanical";
-import { animateCameraPreset } from "./orbit";
 import { animateCadCameraPreset, type CadCameraController } from "./cadCamera";
 import { installRenderCapture, mainCapturedCanvas } from "./capture";
 import { useContextMenuIntercept } from "./contextMenu";
 import { renderPcbViewer } from "./pcbViewer";
 import { renderSchematicViewer } from "./schematicViewer";
 import { determineRefdesFrom3dObject, resolveComponentRefdes } from "./refdes";
-import { FUSIBLE_SCHEMATIC_PALETTE, normalizeCircuitJsonForSchematic, renderFusibleSchematicSvg } from "./schematic";
 
 addCollection(pixelarticons as any);
-
-if (typeof window !== "undefined") {
-  (window as any).THREE = Object.assign({}, THREE, { OrbitControls });
-}
 
 if (typeof window !== "undefined") installRenderCapture();
 
@@ -147,28 +133,10 @@ export function render3dViewer(
   renderIntoSlot(cadSlot, container, React.createElement(CadViewer, props));
 }
 
-export {
-  FUSIBLE_SCHEMATIC_PALETTE,
-  normalizeCircuitJsonForSchematic,
-  renderFusibleSchematicSvg,
-  convertCircuitJsonToSchematicSvg,
-  convertCircuitJsonToPcbSvg,
-  colorMap,
-  PCBViewer,
-  SchematicViewer,
-};
-
 export const Tscircuit = {
-  convertCircuitJsonToSchematicSvg: renderFusibleSchematicSvg,
-  convertCircuitJsonToPcbSvg,
-  colorMap,
-  CadViewer,
-  PCBViewer,
-  SchematicViewer,
   render3dViewer,
   renderPcbViewer,
   renderSchematicViewer,
-  animateCameraPreset,
   animateCadCameraPreset,
   ...Mechanical,
 };

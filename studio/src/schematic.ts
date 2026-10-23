@@ -1,38 +1,36 @@
-import { convertCircuitJsonToSchematicSvg } from "circuit-to-svg";
-
 export const FUSIBLE_SCHEMATIC_PALETTE = {
   background: "#000000",
-  component_body: "#1F1F1F",
-  component_outline: "#86A881",
-  wire: "#38bdf8",
-  wire_crossing: "#7dd3fc",
-  junction: "#38bdf8",
-  pin: "#86A881",
+  component_body: "#111111",
+  component_outline: "#E6E6E6",
+  wire: "#86A881",
+  wire_crossing: "#A8B365",
+  junction: "#A8B365",
+  pin: "#E6E6E6",
   pin_name: "#FFFFFF",
   pin_number: "#A8B365",
-  reference: "#86A881",
-  value: "#FFFFFF",
+  reference: "#FFFFFF",
+  value: "#BDBDBD",
   label_local: "#FFFFFF",
-  label_global: "#f59e0b",
+  label_global: "#A8B365",
   label_hier: "#A8B365",
-  label_background: "#1F1F1F",
-  net_name: "#38bdf8",
-  bus: "#818cf8",
-  bus_junction: "#818cf8",
-  grid: "#1F1F1F",
-  grid_axes: "#353535",
-  fields: "#cbd5e1",
-  note: "#93c5fd",
-  sheet: "#353535",
+  label_background: "#111111",
+  net_name: "#86A881",
+  bus: "#A8B365",
+  bus_junction: "#A8B365",
+  grid: "#111111",
+  grid_axes: "#2E2E2E",
+  fields: "#BDBDBD",
+  note: "#BDBDBD",
+  sheet: "#2E2E2E",
   sheet_background: "#000000",
-  sheet_fields: "#94a3b8",
+  sheet_fields: "#BDBDBD",
   sheet_filename: "#FFFFFF",
   sheet_label: "#FFFFFF",
   sheet_name: "#FFFFFF",
   cursor: "#86A881",
-  aux_items: "#64748b",
+  aux_items: "#8A8A8A",
   erc_error: "#C55454",
-  erc_warning: "#f59e0b",
+  erc_warning: "#A8B365",
 };
 
 export function normalizeCircuitJsonForSchematic(circuitJson: any) {
@@ -48,15 +46,4 @@ export function normalizeCircuitJsonForSchematic(circuitJson: any) {
   }
 
   return circuitJson;
-}
-
-export function renderFusibleSchematicSvg(circuitJson: any, options: any = {}) {
-  const normalized = normalizeCircuitJsonForSchematic(circuitJson);
-  return convertCircuitJsonToSchematicSvg(normalized, {
-    ...options,
-    colorOverrides: {
-      schematic: FUSIBLE_SCHEMATIC_PALETTE,
-      ...(options?.colorOverrides || {}),
-    },
-  });
 }

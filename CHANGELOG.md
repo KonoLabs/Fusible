@@ -7,6 +7,24 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+### Changed
+
+- Studio renders every view with the tscircuit viewers, so it picks up their fixes on each bundle update. When WebGL is unavailable, the 3D and mechanical views say so instead of failing.
+- The Studio view switcher floats at the top right, so it no longer covers the PCB viewer's toolbar. The show-panel button sits at its end when the panel is collapsed.
+- Studio controls, the PCB toolbar and menus, the schematic search box and the 3D context menu share one flat theme: no borders, no gradients, no bold text, and sage checkboxes.
+- The schematic palette uses Vitrine colors with stronger contrast: light outlines, sage wires, white labels.
+- The dev server stops rendering PCB and schematic SVGs on every reload. `fusible export` still renders them.
+
+### Fixed
+
+- Opening the 3D view no longer creates a new WebGL context each time. Once the browser ran out of contexts, the camera controls stopped working.
+- Selecting a net in Studio no longer also highlights nets whose names contain it, such as `AGND` for `GND`.
+- A blown fuse with no diagnostics clears the previous checks list.
+
+### Removed
+
+- The native three.js 3D engine and its CAD/NATIVE toggle, the PCB SVG mode, the SVG fallback, and the Layers tab, which only ever affected the SVG fallback.
+
 ## [0.11.4] - 2026-10-23
 
 ### Changed

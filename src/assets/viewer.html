@@ -10,32 +10,17 @@
     .tscircuit-schematic {
       background-color: var(--bg) !important;
     }
-    .tscircuit-schematic .boundary {
-      fill: var(--bg) !important;
-    }
     .tscircuit-schematic text {
-      fill: #f1f5f9 !important;
       font-family: 'Undefined', monospace !important;
     }
-    .tscircuit-schematic .component-name,
-    .tscircuit-schematic .port-label,
-    .tscircuit-schematic .reference {
-      fill: #86A881 !important;
-      font-weight: bold !important;
+    #schematic-container [data-circuit-json-type="schematic_component"] text.sch-text {
+      fill: var(--text) !important;
     }
-    .tscircuit-schematic .net-label,
-    .tscircuit-schematic .sch-net-label {
-      fill: var(--surface) !important;
-      stroke: #f59e0b !important;
+    #schematic-container text.sch-text[fill="rgb(132, 0, 0)"] {
+      fill: var(--green) !important;
     }
-    .tscircuit-schematic .sch-net-label-text,
-    .tscircuit-schematic text.net-label {
-      fill: #f59e0b !important;
-    }
-    #pcb-container,
     #pcb-container > div,
     #pcb-container canvas,
-    #schematic-container,
     #schematic-container > div {
       width: 100% !important;
       height: 100% !important;
@@ -51,6 +36,7 @@
       box-sizing: border-box;
       margin: 0;
       padding: 0;
+      font-weight: normal !important;
     }
     :root {
       --bg: #000000;
@@ -60,14 +46,11 @@
       --border: #2e2e2e;
       --border-subtle: #1a1a1a;
       --green: #86A881;
-      --green-dark: #229147;
       --olive: #A8B365;
       --text: #FFFFFF;
       --text-body: #FFFFFF;
       --text-subtle: rgba(255, 255, 255, 0.55);
       --alert: #C55454;
-      --copper: #c87d32;
-      --gold: #d4af37;
       --blue: #38bdf8;
       --gutter: 12px;
       --sidebar-width: 340px;
@@ -101,7 +84,6 @@
       gap: 2px;
       padding: 4px;
       background: var(--glass);
-      border: 1px solid var(--border-subtle);
       box-shadow: var(--shadow);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
@@ -109,8 +91,7 @@
     }
     .floating-views {
       top: var(--gutter);
-      left: 50%;
-      transform: translateX(-50%);
+      right: var(--gutter);
     }
     .floating-dock {
       bottom: var(--gutter);
@@ -125,18 +106,11 @@
       font-size: 11px;
       letter-spacing: 0.05em;
     }
-    .floating-panel-toggle {
-      top: var(--gutter);
-      right: var(--gutter);
-      opacity: 0;
-      pointer-events: none;
-      transform: translateX(8px);
-      transition: opacity 0.2s ease, transform 0.2s ease;
+    .panel-open {
+      display: none !important;
     }
-    body.sidebar-collapsed .floating-panel-toggle {
-      opacity: 1;
-      pointer-events: auto;
-      transform: none;
+    body.sidebar-collapsed .panel-open {
+      display: inline-flex !important;
     }
     .dock-divider {
       width: 1px;
@@ -249,12 +223,7 @@
       }
     }
     #mechanical-container {
-      position: absolute;
-      inset: 0;
-      z-index: 2;
-      display: none;
       background: var(--bg);
-      cursor: default;
     }
     #mechanical-container .mechanical-status {
       position: absolute;
@@ -284,10 +253,26 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      cursor: grab;
     }
-    #viewport-container:active {
-      cursor: grabbing;
+    .view-host {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      display: none;
+    }
+    .studio-status {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 5;
+      max-width: min(560px, calc(100% - 32px));
+      padding: 24px;
+      background: var(--surface);
+      color: var(--text-subtle);
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      text-align: center;
     }
     #viewport-grid {
       position: absolute;
@@ -297,24 +282,6 @@
         linear-gradient(to bottom, rgba(134, 168, 129, 0.07) 1px, transparent 1px);
       background-size: 32px 32px;
       pointer-events: none;
-    }
-    #canvas-content {
-      transform-origin: 0 0;
-      display: inline-block;
-      transition: transform 0.05s linear;
-      will-change: transform;
-      z-index: 2;
-    }
-    #canvas-content svg {
-      display: block;
-      filter: drop-shadow(0 10px 25px rgba(0,0,0,0.8));
-    }
-    #three-container {
-      position: absolute;
-      inset: 0;
-      z-index: 3;
-      display: none;
-      cursor: default;
     }
     #sidebar {
       width: calc(var(--sidebar-width) + var(--gutter));
@@ -328,7 +295,6 @@
       width: var(--sidebar-width);
       height: 100%;
       background: var(--surface);
-      border: 1px solid var(--border-subtle);
       box-shadow: var(--shadow);
       display: flex;
       flex-direction: column;
@@ -357,7 +323,6 @@
       align-items: center;
       gap: 2px;
       padding: 4px;
-      border-bottom: 1px solid var(--border-subtle);
     }
     .sidebar-tab-btn {
       flex: 1;
@@ -393,39 +358,6 @@
     .sidebar-pane.active {
       display: flex;
     }
-    .sidebar-section {
-      padding: 12px 16px;
-      border-bottom: none;
-    }
-    .section-title {
-      font-size: 11px;
-      letter-spacing: 0.1em;
-      color: var(--olive);
-      margin-bottom: 8px;
-    }
-    .layer-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 5px 0;
-      font-size: 11px;
-      letter-spacing: 0.05em;
-      color: var(--text-body);
-    }
-    .layer-label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .layer-color-dot {
-      width: 8px;
-      height: 8px;
-      border: none;
-    }
-    .toggle-checkbox {
-      accent-color: var(--green);
-      cursor: pointer;
-    }
     .inspector-card {
       padding: 14px 16px;
     }
@@ -435,11 +367,9 @@
       align-items: baseline;
       margin-bottom: 12px;
       padding-bottom: 8px;
-      border-bottom: none;
     }
     .inspector-name {
       font-size: 14px;
-      font-weight: bold;
       color: var(--green);
       letter-spacing: 0.05em;
     }
@@ -453,7 +383,6 @@
       justify-content: space-between;
       padding: 4px 0;
       font-size: 11px;
-      border-bottom: none;
     }
     .prop-key {
       color: var(--text-subtle);
@@ -477,7 +406,6 @@
       padding: 3px 6px;
       font-size: 10px;
       background: var(--surface-hover);
-      border: none;
       margin-bottom: 3px;
       cursor: pointer;
     }
@@ -492,7 +420,6 @@
       justify-content: space-between;
       align-items: center;
       padding: 8px 16px;
-      border-bottom: none;
       font-size: 11px;
       cursor: pointer;
       transition: background 0.1s;
@@ -503,7 +430,6 @@
     }
     .comp-item.selected {
       background: rgba(134, 168, 129, 0.12);
-      border-left: none;
     }
     .comp-sub {
       color: var(--text-subtle);
@@ -514,7 +440,6 @@
       justify-content: space-between;
       align-items: center;
       padding: 8px 16px;
-      border-bottom: none;
       font-size: 11px;
       cursor: pointer;
       color: var(--text-body);
@@ -525,11 +450,9 @@
     }
     .net-item.selected {
       background: rgba(56, 189, 248, 0.12);
-      border-left: none;
     }
     .diag-card {
       background: rgba(244, 63, 94, 0.06);
-      border: none;
       padding: 10px;
       margin: 12px 16px;
       font-size: 11px;
@@ -540,7 +463,6 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      font-weight: bold;
     }
     .diag-body {
       color: var(--text-body);
@@ -568,7 +490,6 @@
       z-index: 1000;
       pointer-events: none;
       background: var(--glass);
-      border: none;
       padding: 8px 12px;
       font-size: 11px;
       line-height: 1.4;
@@ -579,7 +500,6 @@
       display: none;
     }
     .tooltip-title {
-      font-weight: bold;
       color: var(--green);
       margin-bottom: 2px;
       letter-spacing: 0.05em;
@@ -608,60 +528,148 @@
       vertical-align: middle;
       font-size: 13px;
     }
+    #viewport-container :is(button, input, select, kbd, textarea, label) {
+      font-family: 'Undefined', monospace !important;
+    }
+    #viewport-container :is(input[type="checkbox"], input[type="radio"]) {
+      accent-color: var(--green);
+    }
     [role="menu"],
-    [role="menuitem"],
-    div[role="menu"],
-    div[aria-label*="context menu"],
-    div[aria-label*="Visibility"],
-    .sv-sheet-item,
-    [data-radix-popper-content-wrapper] > div {
+    [data-radix-menu-content],
+    [data-toolbar-overlay] div[style*="position: absolute"] {
       background: var(--glass) !important;
+      background-image: none !important;
       color: var(--text) !important;
       border: none !important;
-      border-radius: 2px !important;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8) !important;
+      border-radius: 0 !important;
+      box-shadow: var(--shadow) !important;
+      backdrop-filter: blur(12px) !important;
+      -webkit-backdrop-filter: blur(12px) !important;
+      padding: 4px !important;
       font-family: 'Undefined', monospace !important;
       font-size: 11px !important;
-      backdrop-filter: blur(8px) !important;
+      letter-spacing: 0.05em;
+    }
+    [role="menu"] *,
+    [data-toolbar-overlay] div[style*="position: absolute"] * {
+      font-family: 'Undefined', monospace !important;
+      background-image: none !important;
+    }
+    [role="menu"] div:not([role]),
+    [role="menu"] span,
+    [role="menu"] kbd {
+      background-color: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+    [role="menu"] kbd,
+    [role="menu"] span[style*="border"] {
+      color: var(--text-subtle) !important;
     }
     [role="menuitem"],
-    button[role="menuitem"],
-    div[role="menu"] button {
+    [role="menuitemcheckbox"],
+    [role="menuitemradio"],
+    [data-toolbar-overlay] div[style*="position: absolute"] div[style*="cursor: pointer"] {
       background: transparent !important;
       color: var(--text-body) !important;
-      font-family: 'Undefined', monospace !important;
-      font-size: 11px !important;
-      padding: 6px 10px !important;
       border: none !important;
       border-radius: 0 !important;
-      transition: background 0.1s, color 0.1s !important;
+      box-shadow: none !important;
+      backdrop-filter: none !important;
+      font-size: 11px !important;
+      padding: 6px 10px !important;
+      height: auto !important;
     }
-    [role="menuitem"]:hover,
-    [role="menuitem"]:focus,
-    [role="menuitem"]:focus-visible,
-    button[role="menuitem"]:hover,
-    div[role="menu"] button:hover,
-    .sv-sheet-item:hover,
-    .sv-sheet-item[data-highlighted] {
+    [role="menuitem"]:is(:hover, :focus-visible, [data-highlighted]),
+    [role="menuitemcheckbox"]:is(:hover, :focus-visible, [data-highlighted]),
+    [role="menuitemradio"]:is(:hover, :focus-visible, [data-highlighted]),
+    [data-toolbar-overlay] div[style*="position: absolute"] div[style*="cursor: pointer"]:hover {
       background: var(--surface-hover) !important;
       color: var(--green) !important;
     }
-    #schematic-container div[style*="pointer-events: none"],
-    #schematic-container div[style*="pointerEvents: none"] {
+    [role="separator"] {
+      height: 1px !important;
+      margin: 4px 0 !important;
+      background: var(--border-subtle) !important;
+      border: none !important;
+    }
+    [data-toolbar-overlay] {
+      font-family: 'Undefined', monospace !important;
+      gap: 4px !important;
+      align-items: flex-start !important;
+    }
+    [data-toolbar-overlay] div[style*="cursor: pointer"],
+    #schematic-container button,
+    [data-schematic-warnings] {
+      background: var(--glass) !important;
+      color: var(--text-subtle) !important;
+      border: none !important;
+      border-radius: 0 !important;
+      box-shadow: var(--shadow) !important;
+      backdrop-filter: blur(12px) !important;
+      -webkit-backdrop-filter: blur(12px) !important;
+      font-size: 11px !important;
+      letter-spacing: 0.05em !important;
+      outline: none;
+      transition: background 0.15s ease, color 0.15s ease !important;
+    }
+    [data-toolbar-overlay] div[style*="cursor: pointer"] {
+      padding: 7px 10px !important;
+    }
+    [data-toolbar-overlay] div[style*="cursor: pointer"]:hover,
+    #schematic-container button:hover {
+      background: var(--surface-hover) !important;
+      color: var(--text) !important;
+    }
+    #schematic-container [data-schematic-warnings] {
+      color: var(--alert) !important;
+    }
+    #schematic-container [data-schematic-warnings]:hover,
+    #schematic-container [data-schematic-warnings][aria-pressed="true"] {
+      background: rgba(197, 84, 84, 0.18) !important;
+    }
+    [data-schematic-search] > div {
+      background: var(--glass) !important;
+      border: none !important;
+      border-radius: 0 !important;
+      box-shadow: var(--shadow) !important;
+      backdrop-filter: blur(12px) !important;
+      -webkit-backdrop-filter: blur(12px) !important;
+      color: var(--text) !important;
+    }
+    [data-schematic-search] * {
+      border-color: transparent !important;
+      font-family: 'Undefined', monospace !important;
+    }
+    [data-schematic-search] input {
       background: transparent !important;
-      background-color: transparent !important;
+      color: var(--text) !important;
+      font-size: 11px !important;
+    }
+    [data-schematic-search] input::placeholder,
+    [data-schematic-search] svg {
+      color: var(--text-subtle) !important;
+    }
+    [data-schematic-search] kbd {
+      background: var(--surface-hover) !important;
+      color: var(--text-subtle) !important;
+      border-radius: 0 !important;
+    }
+    #schematic-container [data-schematic-search] button[aria-label="Clear search"] {
+      background: transparent !important;
       box-shadow: none !important;
     }
-    #schematic-container div[style*="rgba(255, 255, 255"],
-    #schematic-container div[style*="background-color: rgba(255, 255, 255"],
-    #schematic-container div[style*="backgroundColor: rgba(255, 255, 255"] {
+    #schematic-container div[style*="pointer-events: none"] {
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+    #schematic-container div[style*="rgba(255, 255, 255"] {
       background-color: var(--glass) !important;
       color: var(--text) !important;
       border: none !important;
-      border-radius: 2px !important;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8) !important;
+      border-radius: 0 !important;
+      box-shadow: var(--shadow) !important;
       font-family: 'Undefined', monospace !important;
-      backdrop-filter: blur(8px) !important;
     }
     #schematic-container dl,
     #schematic-container dl * {
@@ -675,73 +683,6 @@
     #schematic-container dd {
       color: var(--green) !important;
       font-size: 11px !important;
-      font-weight: bold !important;
-    }
-    #schematic-container button,
-    #schematic-container input,
-    .schematic-viewer-toolbar button {
-      font-family: 'Undefined', monospace !important;
-      border-radius: 2px !important;
-      background: var(--surface) !important;
-      border: 1px solid var(--border) !important;
-      color: var(--text) !important;
-      box-shadow: none !important;
-      outline: none !important;
-    }
-    #schematic-container button:hover,
-    .schematic-viewer-toolbar button:hover {
-      background: var(--surface-hover) !important;
-      color: var(--green) !important;
-      border-color: var(--green) !important;
-    }
-    [data-schematic-search] {
-      font-family: 'Undefined', monospace !important;
-    }
-    [data-schematic-search] > div {
-      background: var(--surface) !important;
-      border: 1px solid var(--border) !important;
-      border-radius: 2px !important;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8) !important;
-      color: var(--text) !important;
-    }
-    [data-schematic-search] input {
-      background: var(--bg) !important;
-      color: var(--text) !important;
-      border: 1px solid var(--border) !important;
-      border-radius: 2px !important;
-      font-family: 'Undefined', monospace !important;
-    }
-    [data-schematic-search] button,
-    [data-schematic-search] [role="button"] {
-      border: none !important;
-      border-radius: 2px !important;
-      background: transparent !important;
-      color: var(--text) !important;
-    }
-    [data-schematic-search] button:hover,
-    [data-schematic-search] [role="button"]:hover {
-      background: var(--surface-hover) !important;
-      color: var(--green) !important;
-    }
-    [data-schematic-search] span {
-      font-family: 'Undefined', monospace !important;
-    }
-    [data-schematic-warnings] {
-      font-family: 'Undefined', monospace !important;
-      background: var(--surface) !important;
-      color: var(--alert) !important;
-      border: 1px solid var(--border) !important;
-      border-radius: 2px !important;
-      box-shadow: none !important;
-    }
-    [data-schematic-warnings]:hover {
-      background: var(--surface-hover) !important;
-      border-color: var(--alert) !important;
-      color: var(--alert) !important;
-    }
-    [data-schematic-warnings][aria-pressed="true"] {
-      background: rgba(197, 84, 84, 0.2) !important;
-      border-color: var(--alert) !important;
     }
     .schematic-warning,
     .schematic-warning * {
@@ -750,82 +691,21 @@
     .schematic-warning [data-warning-reference="callout"] {
       background: var(--surface) !important;
       color: var(--text) !important;
-      border: 1px solid var(--alert) !important;
-      border-radius: 2px !important;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.8) !important;
-    }
-    /* Fusible theme for PCB Viewer Toolbar (Top-Left Options) */
-    #pcb-container [data-toolbar-overlay],
-    [data-toolbar-overlay] {
-      font-family: 'Undefined', monospace !important;
-      gap: 6px !important;
-    }
-    #pcb-container [data-toolbar-overlay] > div,
-    [data-toolbar-overlay] > div,
-    [data-toolbar-overlay] button,
-    #pcb-container button,
-    #pcb-container select,
-    #pcb-container input,
-    #pcb-container [data-toolbar-overlay] div[style*="cursor: pointer"] {
-      font-family: 'Undefined', monospace !important;
-      font-size: 11px !important;
-      letter-spacing: 0.05em !important;
-      background: var(--surface) !important;
-      background-color: var(--surface) !important;
-      border: 1px solid var(--border) !important;
-      border-radius: 2px !important;
-      color: var(--text) !important;
-      box-shadow: none !important;
-      outline: none !important;
-      transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease !important;
-    }
-    #pcb-container [data-toolbar-overlay] > div:hover,
-    [data-toolbar-overlay] > div:hover,
-    [data-toolbar-overlay] button:hover,
-    #pcb-container button:hover,
-    #pcb-container [data-toolbar-overlay] div[style*="cursor: pointer"]:hover {
-      background: var(--surface-hover) !important;
-      background-color: var(--surface-hover) !important;
-      color: var(--green) !important;
-      border-color: var(--green) !important;
-    }
-    [data-toolbar-overlay] div[style*="minWidth: 120"],
-    [data-toolbar-overlay] div[style*="min-width: 120"],
-    [data-toolbar-overlay] div[style*="position: absolute"] {
-      background: var(--glass) !important;
-      background-color: var(--glass) !important;
-      border: 1px solid var(--border) !important;
-      border-radius: 2px !important;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8) !important;
-      backdrop-filter: blur(8px) !important;
-    }
-    [data-toolbar-overlay] div[style*="minWidth: 120"] > div,
-    [data-toolbar-overlay] div[style*="min-width: 120"] > div {
-      font-family: 'Undefined', monospace !important;
-      font-size: 11px !important;
-      padding: 6px 10px !important;
-      color: var(--text) !important;
       border: none !important;
+      border-left: 2px solid var(--alert) !important;
+      border-radius: 0 !important;
+      box-shadow: var(--shadow) !important;
     }
-    [data-toolbar-overlay] div[style*="minWidth: 120"] > div:hover,
-    [data-toolbar-overlay] div[style*="min-width: 120"] > div:hover {
-      background: var(--surface-hover) !important;
-      color: var(--green) !important;
-    }
-
     #three-cad div[style*="background-color: white"],
-    #three-cad div[style*="background-color: rgb(255, 255, 255)"],
-    #three-cad div[style*="background: white"],
-    #three-cad div[style*="background:white"] {
+    #three-cad div[style*="background-color: rgb(255, 255, 255)"] {
       background-color: var(--glass) !important;
       color: var(--text) !important;
       border: none !important;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7) !important;
+      border-radius: 0 !important;
+      box-shadow: var(--shadow) !important;
       font-family: 'Undefined', monospace !important;
       font-size: 11px !important;
       padding: 6px 10px !important;
-      border-radius: 2px !important;
-      backdrop-filter: blur(4px) !important;
     }
     #three-cad div[style*="background-color: white"] *,
     #three-cad div[style*="background-color: rgb(255, 255, 255)"] * {
@@ -837,28 +717,26 @@
   <main>
     <div id="viewport-container">
       <div id="viewport-grid"></div>
-      <div id="pcb-container" style="position:absolute;inset:0;width:100%;height:100%;z-index:2;display:none;"></div>
-      <div id="schematic-container" style="position:absolute;inset:0;width:100%;height:100%;z-index:2;display:none;"></div>
-      <div id="canvas-content" style="display:none;"></div>
-      <div id="three-container">
-        <div id="three-native" style="width:100%;height:100%;position:absolute;inset:0;"></div>
-        <div id="three-cad" style="width:100%;height:100%;position:absolute;inset:0;display:none;"></div>
-      </div>
-      <div id="mechanical-container"></div>
+      <div id="schematic-container" class="view-host"></div>
+      <div id="pcb-container" class="view-host"></div>
+      <div id="three-cad" class="view-host"></div>
+      <div id="mechanical-container" class="view-host"></div>
+      <div id="studio-status" class="studio-status" hidden></div>
 
       <nav class="floating floating-views" aria-label="Views">
         <button class="tab-btn active" data-view="schematic" onclick="switchView('schematic')" title="Schematic (1)"><iconify-icon icon="pixelarticons:git-commit"></iconify-icon><span>SCHEMATIC</span></button>
         <button class="tab-btn" data-view="pcb" onclick="switchView('pcb')" title="PCB layout (2)"><iconify-icon icon="pixelarticons:grid"></iconify-icon><span>PCB</span></button>
         <button class="tab-btn" data-view="3d" onclick="switchView('3d')" title="3D view (3)"><iconify-icon icon="pixelarticons:globe"></iconify-icon><span>3D</span></button>
         <button class="tab-btn" data-view="mechanical" onclick="switchView('mechanical')" title="Mechanical (4)"><iconify-icon icon="pixelarticons:box"></iconify-icon><span>MECHANICAL</span></button>
+        <span class="dock-divider panel-open"></span>
+        <button class="btn icon-only panel-open" onclick="toggleSidebar(true)" title="Show panel (\)" aria-label="Show panel"><iconify-icon icon="pixelarticons:layout-sidebar-right"></iconify-icon></button>
       </nav>
 
       <div class="floating floating-dock" role="toolbar" aria-label="View controls">
         <div class="controls" id="controls-2d">
-          <button class="btn" id="btn-pcb-mode" style="display: none;" onclick="togglePcbMode()" title="Switch PCB renderer"><iconify-icon icon="pixelarticons:switch"></iconify-icon> <span class="btn-label" id="pcb-mode-label">VIEW: INSPECTOR</span></button>
-          <button class="btn icon-only" onclick="zoomOut()" title="Zoom out" aria-label="Zoom out"><iconify-icon icon="pixelarticons:zoom-out"></iconify-icon></button>
-          <button class="btn icon-only" onclick="zoomIn()" title="Zoom in" aria-label="Zoom in"><iconify-icon icon="pixelarticons:zoom-in"></iconify-icon></button>
-          <button class="btn icon-only" onclick="resetZoom()" title="Reset view" aria-label="Reset view"><iconify-icon icon="pixelarticons:undo"></iconify-icon></button>
+          <button class="btn icon-only" onclick="zoomBy(120)" title="Zoom out" aria-label="Zoom out"><iconify-icon icon="pixelarticons:zoom-out"></iconify-icon></button>
+          <button class="btn icon-only" onclick="zoomBy(-120)" title="Zoom in" aria-label="Zoom in"><iconify-icon icon="pixelarticons:zoom-in"></iconify-icon></button>
+          <button class="btn icon-only" onclick="renderView()" title="Reset view" aria-label="Reset view"><iconify-icon icon="pixelarticons:undo"></iconify-icon></button>
         </div>
 
         <div class="controls" id="controls-3d" style="display: none;">
@@ -867,7 +745,6 @@
           <button class="btn icon-only" onclick="setCameraPreset('FRONT')" title="Front view" aria-label="Front view"><iconify-icon icon="pixelarticons:arrow-down"></iconify-icon></button>
           <button class="btn icon-only" onclick="setCameraPreset('RESET')" title="Reset camera" aria-label="Reset camera"><iconify-icon icon="pixelarticons:reload"></iconify-icon></button>
           <span class="dock-divider"></span>
-          <button class="btn" id="btn-engine-toggle" onclick="toggle3dEngine()" title="Switch 3D engine"><iconify-icon icon="pixelarticons:switch"></iconify-icon> <span class="btn-label" id="engine-label">ENGINE: CAD</span></button>
           <button class="btn" id="btn-mechanical-overlay" onclick="toggleMechanical('overlay')" title="Show enclosure"><iconify-icon icon="pixelarticons:box"></iconify-icon> <span class="btn-label">ENCLOSURE</span></button>
         </div>
 
@@ -892,10 +769,6 @@
         </button>
       </div>
 
-      <div class="floating floating-panel-toggle">
-        <button class="btn icon-only" onclick="toggleSidebar(true)" title="Show panel (\)" aria-label="Show panel"><iconify-icon icon="pixelarticons:layout-sidebar-right"></iconify-icon></button>
-      </div>
-
       <div id="hover-tooltip" class="hover-tooltip"></div>
     </div>
 
@@ -905,11 +778,10 @@
           <button class="sidebar-tab-btn active" onclick="switchSidebarTab('inspector')">INSPECT</button>
           <button class="sidebar-tab-btn" onclick="switchSidebarTab('components')">PARTS</button>
           <button class="sidebar-tab-btn" onclick="switchSidebarTab('nets')">NETS</button>
-          <button class="sidebar-tab-btn" onclick="switchSidebarTab('layers')">LAYERS</button>
           <button class="sidebar-tab-btn" onclick="switchSidebarTab('checks')">CHECKS</button>
           <button class="btn icon-only" onclick="toggleSidebar(false)" title="Hide panel (\)" aria-label="Hide panel"><iconify-icon icon="pixelarticons:chevron-right"></iconify-icon></button>
         </div>
-  
+
         <div class="sidebar-pane active" id="pane-inspector">
           <div id="inspector-content" class="inspector-card">
             <div class="empty-state">
@@ -917,60 +789,19 @@
             </div>
           </div>
         </div>
-  
+
         <div class="sidebar-pane" id="pane-components">
           <div id="components-list">
             <div class="empty-state"><span>NO COMPONENTS PARSED</span></div>
           </div>
         </div>
-  
+
         <div class="sidebar-pane" id="pane-nets">
           <div id="nets-list">
             <div class="empty-state"><span>NO NETS DETECTED</span></div>
           </div>
         </div>
-  
-        <div class="sidebar-pane" id="pane-layers">
-          <div class="sidebar-section">
-            <div class="section-title">PCB COPPER & MASKS</div>
-            <div class="layer-item">
-              <div class="layer-label">
-                <span class="layer-color-dot" style="background: var(--copper);"></span>
-                <span>TOP COPPER</span>
-              </div>
-              <input type="checkbox" class="toggle-checkbox" checked onchange="toggleLayer('top_copper', this.checked)">
-            </div>
-            <div class="layer-item">
-              <div class="layer-label">
-                <span class="layer-color-dot" style="background: var(--blue);"></span>
-                <span>BOTTOM COPPER</span>
-              </div>
-              <input type="checkbox" class="toggle-checkbox" checked onchange="toggleLayer('bottom_copper', this.checked)">
-            </div>
-            <div class="layer-item">
-              <div class="layer-label">
-                <span class="layer-color-dot" style="background: var(--gold);"></span>
-                <span>PADS (ENIG GOLD)</span>
-              </div>
-              <input type="checkbox" class="toggle-checkbox" checked onchange="toggleLayer('pads', this.checked)">
-            </div>
-            <div class="layer-item">
-              <div class="layer-label">
-                <span class="layer-color-dot" style="background: #ffffff;"></span>
-                <span>SILKSCREEN</span>
-              </div>
-              <input type="checkbox" class="toggle-checkbox" checked onchange="toggleLayer('silkscreen', this.checked)">
-            </div>
-            <div class="layer-item">
-              <div class="layer-label">
-                <span class="layer-color-dot" style="background: var(--border);"></span>
-                <span>HOLES & VIAS</span>
-              </div>
-              <input type="checkbox" class="toggle-checkbox" checked onchange="toggleLayer('holes_and_vias', this.checked)">
-            </div>
-          </div>
-        </div>
-  
+
         <div class="sidebar-pane" id="pane-checks">
           <div id="diagnostics-panel">
             <div class="empty-state">
@@ -984,134 +815,36 @@
 
   <script>
     let currentView = 'schematic';
-    let pcbMode = 'inspector';
-    let pcbSvg = '';
-    let schematicSvg = '';
     let lastCircuitJson = null;
     let lastRevision = null;
-    let tscircuitFallback = false;
 
-    let zoomLevel = 1.0;
-    let panX = 0;
-    let panY = 0;
-    let isDragging = false;
-    let startX = 0;
-    let startY = 0;
-
-    const viewport = document.getElementById('viewport-container');
-    const canvas = document.getElementById('canvas-content');
     const tooltip = document.getElementById('hover-tooltip');
-
-    let scene = null;
-    let camera = null;
-    let renderer = null;
-    let controls = null;
-    let boardGroup = null;
-    let threeInitialized = false;
-
-    let boardWidth = 60;
-    let boardHeight = 40;
-    let boardCenterX = 0;
-    let boardCenterZ = 0;
+    const hosts = {
+      schematic: document.getElementById('schematic-container'),
+      pcb: document.getElementById('pcb-container'),
+      '3d': document.getElementById('three-cad'),
+      mechanical: document.getElementById('mechanical-container'),
+    };
+    const renderers = {
+      schematic: 'renderSchematicViewer',
+      pcb: 'renderPcbViewer',
+      '3d': 'render3dViewer',
+    };
 
     let componentsMap = {};
     let netsMap = {};
     let selectedComponent = null;
 
-    function applyTransform() {
-      canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomLevel})`;
-    }
-
-    function isInteractive2dActive() {
-      if (currentView === 'pcb') {
-        return pcbMode === 'inspector' && !!window.Tscircuit;
-      }
-      return currentView === 'schematic' && !!window.Tscircuit;
-    }
-
-    function zoomIn() {
-      if (isInteractive2dActive()) {
-        const container = currentView === 'pcb' ? document.getElementById('pcb-container') : document.getElementById('schematic-container');
-        if (container) {
-          const rect = container.getBoundingClientRect();
-          const target = container.querySelector('canvas') || container.querySelector('svg') || container;
-          target.dispatchEvent(new WheelEvent('wheel', {
-            deltaY: -120,
-            clientX: rect.left + rect.width / 2,
-            clientY: rect.top + rect.height / 2,
-            bubbles: true,
-          }));
-          return;
-        }
-      }
-      zoomLevel *= 1.25;
-      applyTransform();
-    }
-
-    function zoomOut() {
-      if (isInteractive2dActive()) {
-        const container = currentView === 'pcb' ? document.getElementById('pcb-container') : document.getElementById('schematic-container');
-        if (container) {
-          const rect = container.getBoundingClientRect();
-          const target = container.querySelector('canvas') || container.querySelector('svg') || container;
-          target.dispatchEvent(new WheelEvent('wheel', {
-            deltaY: 120,
-            clientX: rect.left + rect.width / 2,
-            clientY: rect.top + rect.height / 2,
-            bubbles: true,
-          }));
-          return;
-        }
-      }
-      zoomLevel /= 1.25;
-      applyTransform();
-    }
-
-    function resetZoom() {
-      zoomLevel = 1.0;
-      panX = 0;
-      panY = 0;
-      applyTransform();
-      if (isInteractive2dActive()) {
-        renderCurrentView();
-      }
-    }
-
-    viewport.addEventListener('wheel', (e) => {
-      if (currentView === '3d' || currentView === 'mechanical' || isInteractive2dActive()) return;
-      e.preventDefault();
-      const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
-      zoomLevel *= zoomFactor;
-      applyTransform();
-    }, { passive: false });
-
-    viewport.addEventListener('mousedown', (e) => {
-      if (currentView === '3d' || currentView === 'mechanical' || isInteractive2dActive()) return;
-      if (e.button === 0) {
-        isDragging = true;
-        startX = e.clientX - panX;
-        startY = e.clientY - panY;
-      }
-    });
-
-    window.addEventListener('mousemove', (e) => {
-      if (currentView === '3d' || currentView === 'mechanical' || isInteractive2dActive()) return;
-      if (isDragging) {
-        panX = e.clientX - startX;
-        panY = e.clientY - startY;
-        applyTransform();
-      }
-    });
-
-    window.addEventListener('mouseup', () => {
-      isDragging = false;
-    });
-
-    let engine3d = 'cad';
-
-    function toggle3dEngine() {
-      engine3d = engine3d === 'cad' ? 'native' : 'cad';
-      updateEngineUI();
+    function zoomBy(deltaY) {
+      const host = hosts[currentView];
+      const rect = host.getBoundingClientRect();
+      const target = host.querySelector('canvas') || host.querySelector('svg') || host;
+      target.dispatchEvent(new WheelEvent('wheel', {
+        deltaY,
+        clientX: rect.left + rect.width / 2,
+        clientY: rect.top + rect.height / 2,
+        bubbles: true,
+      }));
     }
 
     let mechanicalOptions = { lid: true, explode: false, overlay: false };
@@ -1127,13 +860,12 @@
     }
 
     function syncMechanicalOverlay() {
-      if (!window.Tscircuit || !window.Tscircuit.setMechanicalOverlay) return;
-      const visible = currentView === '3d';
-      window.Tscircuit.setMechanicalOverlay(mechanicalOptions.overlay, visible, document.getElementById('three-cad'));
+      if (!window.Tscircuit) return;
+      window.Tscircuit.setMechanicalOverlay(mechanicalOptions.overlay, currentView === '3d', hosts['3d']);
     }
 
     function toggleMechanical(option) {
-      if (!window.Tscircuit || !window.Tscircuit.toggleMechanicalOption) return;
+      if (!window.Tscircuit) return;
       if (option === 'overlay') {
         mechanicalOptions.overlay = !mechanicalOptions.overlay;
         syncMechanicalOverlay();
@@ -1144,95 +876,71 @@
     }
 
     function initMechanical() {
-      if (!window.Tscircuit || !window.Tscircuit.getMechanicalOptions) return;
       mechanicalOptions = window.Tscircuit.getMechanicalOptions();
-      if (scene) window.Tscircuit.setMechanicalNativeScene(scene);
       syncMechanicalButtons();
       syncMechanicalOverlay();
     }
 
-    function updateEngineUI() {
-      const label = document.getElementById('engine-label');
-      if (label) label.textContent = engine3d === 'cad' ? 'ENGINE: CAD' : 'ENGINE: NATIVE';
-      const nativeEl = document.getElementById('three-native');
-      const cadEl = document.getElementById('three-cad');
-      if (engine3d === 'cad' && window.Tscircuit && window.Tscircuit.render3dViewer && lastCircuitJson) {
-        if (cadEl) cadEl.style.display = 'block';
-        if (nativeEl) nativeEl.style.display = 'none';
-        try {
-          window.Tscircuit.render3dViewer(cadEl, lastCircuitJson, (ref) => selectComponent(ref));
-        } catch (err) {
-          if (cadEl) cadEl.style.display = 'none';
-          if (nativeEl) nativeEl.style.display = 'block';
-          initThree();
-          build3DScene();
-          setTimeout(onThreeResize, 10);
-        }
-      } else {
-        if (cadEl) cadEl.style.display = 'none';
-        if (nativeEl) nativeEl.style.display = 'block';
-        initThree();
-        build3DScene();
-        setTimeout(onThreeResize, 10);
+    let webglAvailable = null;
+
+    function hasWebgl() {
+      if (webglAvailable === null) {
+        const gl = document.createElement('canvas').getContext('webgl2') || document.createElement('canvas').getContext('webgl');
+        webglAvailable = !!gl;
+        gl?.getExtension('WEBGL_lose_context')?.loseContext();
+      }
+      return webglAvailable;
+    }
+
+    function showStatus(message) {
+      const status = document.getElementById('studio-status');
+      status.textContent = message;
+      status.hidden = !message;
+    }
+
+    function renderView() {
+      const ts = window.Tscircuit;
+      if (!ts) return;
+      const blocked = (currentView === '3d' || currentView === 'mechanical') && !hasWebgl();
+      showStatus(blocked ? 'WEBGL IS UNAVAILABLE. TURN ON HARDWARE ACCELERATION IN YOUR BROWSER TO USE THE 3D VIEWS.' : '');
+      if (blocked) return;
+      if (currentView === 'mechanical') {
+        ts.renderMechanicalViewer(hosts.mechanical);
+      } else if (lastCircuitJson) {
+        ts[renderers[currentView]](hosts[currentView], lastCircuitJson, (ref) => selectComponent(ref));
       }
     }
 
     function switchView(view) {
       currentView = view;
       document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.getAttribute('data-view') === view);
+        btn.classList.toggle('active', btn.dataset.view === view);
+      });
+      document.getElementById('controls-2d').style.display = view === 'schematic' || view === 'pcb' ? 'flex' : 'none';
+      document.getElementById('controls-3d').style.display = view === '3d' ? 'flex' : 'none';
+      document.getElementById('controls-mechanical').style.display = view === 'mechanical' ? 'flex' : 'none';
+      Object.entries(hosts).forEach(([name, host]) => {
+        host.style.display = name === view ? 'block' : 'none';
       });
 
-      const is3d = view === '3d';
-      const isMechanical = view === 'mechanical';
-      const pcbEl = document.getElementById('pcb-container');
-      const schEl = document.getElementById('schematic-container');
-      const threeEl = document.getElementById('three-container');
-      const canvasEl = document.getElementById('canvas-content');
-      const mechEl = document.getElementById('mechanical-container');
-
-      document.getElementById('controls-2d').style.display = is3d || isMechanical ? 'none' : 'flex';
-      document.getElementById('controls-3d').style.display = is3d ? 'flex' : 'none';
-      document.getElementById('controls-mechanical').style.display = isMechanical ? 'flex' : 'none';
-      const btnPcbMode = document.getElementById('btn-pcb-mode');
-      if (btnPcbMode) btnPcbMode.style.display = view === 'pcb' ? 'inline-flex' : 'none';
-
       hideTooltip();
-      if (mechEl) mechEl.style.display = isMechanical ? 'block' : 'none';
       syncMechanicalOverlay();
-
-      if (isMechanical) {
-        if (pcbEl) pcbEl.style.display = 'none';
-        if (schEl) schEl.style.display = 'none';
-        if (canvasEl) canvasEl.style.display = 'none';
-        if (threeEl) threeEl.style.display = 'none';
-        if (window.Tscircuit && window.Tscircuit.renderMechanicalViewer) {
-          window.Tscircuit.renderMechanicalViewer(mechEl);
-        } else if (mechEl) {
-          mechEl.innerHTML = '<div class="empty-state mechanical-status">STUDIO BUNDLE NOT LOADED</div>';
-        }
-        return;
+      if (view !== 'mechanical' && window.Tscircuit) window.Tscircuit.hideMechanicalViewer();
+      renderView();
+      if (view === '3d') setCameraPreset('ISO');
+      if (view === 'schematic') {
+        window.dispatchEvent(new Event('resize'));
+        setTimeout(() => window.dispatchEvent(new Event('resize')), 10);
       }
-      if (window.Tscircuit && window.Tscircuit.hideMechanicalViewer) window.Tscircuit.hideMechanicalViewer();
+    }
 
-      if (is3d) {
-        if (pcbEl) pcbEl.style.display = 'none';
-        if (schEl) schEl.style.display = 'none';
-        if (canvasEl) canvasEl.style.display = 'none';
-        if (threeEl) threeEl.style.display = 'block';
-
-        initThree();
-        build3DScene();
-        updateEngineUI();
-        setTimeout(onThreeResize, 10);
-        setCameraPreset('ISO');
-      } else {
-        if (threeEl) threeEl.style.display = 'none';
-        renderCurrentView();
-        if (view === 'schematic') {
-          window.dispatchEvent(new Event('resize'));
-          setTimeout(() => window.dispatchEvent(new Event('resize')), 10);
-        }
+    function setCameraPreset(preset) {
+      const ts = window.Tscircuit;
+      if (!ts) return;
+      if (currentView === 'mechanical') {
+        ts.mechanicalCameraPreset(preset);
+      } else if (window.cadCameraController) {
+        ts.animateCadCameraPreset(hosts['3d'], window.cadCameraController, preset);
       }
     }
 
@@ -1279,89 +987,6 @@
       }
     });
 
-    function togglePcbMode() {
-      pcbMode = pcbMode === 'inspector' ? '3d' : 'inspector';
-      const label = document.getElementById('pcb-mode-label');
-      if (label) {
-        label.textContent = pcbMode === 'inspector' ? 'VIEW: INSPECTOR' : 'VIEW: 3D';
-      }
-      renderCurrentView();
-    }
-
-    function renderCurrentView() {
-      const pcbEl = document.getElementById('pcb-container');
-      const schEl = document.getElementById('schematic-container');
-      const canvasEl = document.getElementById('canvas-content');
-
-      if (currentView === 'pcb') {
-        if (schEl) schEl.style.display = 'none';
-        if (pcbMode === '3d') {
-          if (pcbEl) pcbEl.style.display = 'none';
-          if (canvasEl) {
-            canvasEl.style.display = 'inline-block';
-            canvasEl.innerHTML = pcbSvg || '<div class="empty-state">NO PCB LAYOUT AVAILABLE</div>';
-            setup2DInteractivity();
-          }
-        } else {
-          if (window.Tscircuit && window.Tscircuit.renderPcbViewer && lastCircuitJson) {
-            if (canvasEl) canvasEl.style.display = 'none';
-            if (pcbEl) {
-              pcbEl.style.display = 'block';
-              window.Tscircuit.renderPcbViewer(pcbEl, lastCircuitJson, (ref) => selectComponent(ref));
-            }
-          } else if (tscircuitFallback) {
-            if (pcbEl) pcbEl.style.display = 'none';
-            if (canvasEl) {
-              canvasEl.style.display = 'inline-block';
-              canvasEl.innerHTML = pcbSvg || '<div class="empty-state">NO PCB LAYOUT AVAILABLE</div>';
-              setup2DInteractivity();
-            }
-          } else {
-            if (pcbEl) pcbEl.style.display = 'none';
-            if (canvasEl) canvasEl.style.display = 'none';
-          }
-        }
-      } else if (currentView === 'schematic') {
-        if (pcbEl) pcbEl.style.display = 'none';
-        if (window.Tscircuit && window.Tscircuit.renderSchematicViewer && lastCircuitJson) {
-          if (canvasEl) canvasEl.style.display = 'none';
-          if (schEl) {
-            schEl.style.display = 'block';
-            window.Tscircuit.renderSchematicViewer(schEl, lastCircuitJson, (ref) => selectComponent(ref));
-          }
-        } else if (tscircuitFallback) {
-          if (schEl) schEl.style.display = 'none';
-          if (canvasEl) {
-            canvasEl.style.display = 'inline-block';
-            canvasEl.innerHTML = schematicSvg || '<div class="empty-state">NO SCHEMATIC AVAILABLE</div>';
-            setup2DInteractivity();
-          }
-        } else {
-          if (schEl) schEl.style.display = 'none';
-          if (canvasEl) canvasEl.style.display = 'none';
-        }
-      }
-    }
-
-    function toggleLayer(layerName, visible) {
-      let selector = `g[id="${layerName}"]`;
-      if (layerName === 'top_copper') {
-        selector += `, .pcb-trace[data-pcb-layer*="top"], [data-pcb-layer*="top"] .pcb-trace, [data-type*="trace"][data-pcb-layer*="top"], [data-pcb-layer*="top"] [data-type*="trace"], [data-type*="copper_pour"][data-pcb-layer*="top"], [data-pcb-layer*="top"] [data-type*="copper_pour"], g.pcb-trace[data-pcb-layer*="top"]`;
-      } else if (layerName === 'bottom_copper') {
-        selector += `, .pcb-trace[data-pcb-layer*="bottom"], [data-pcb-layer*="bottom"] .pcb-trace, [data-type*="trace"][data-pcb-layer*="bottom"], [data-pcb-layer*="bottom"] [data-type*="trace"], [data-type*="copper_pour"][data-pcb-layer*="bottom"], [data-pcb-layer*="bottom"] [data-type*="copper_pour"], g.pcb-trace[data-pcb-layer*="bottom"]`;
-      } else if (layerName === 'pads') {
-        selector += `, .pcb-pad, .pcb-smtpad, [class*="pcb-pad"], [data-type*="pad"]`;
-      } else if (layerName === 'silkscreen') {
-        selector += `, [class*="pcb-silkscreen"], [data-type*="silkscreen"], [data-pcb-layer*="silk"], [data-pcb-layer*="silkscreen"]`;
-      } else if (layerName === 'holes_and_vias') {
-        selector += `, .pcb-via, .pcb-hole, [class*="pcb-hole"], [class*="pcb-via"], [data-type*="hole"], [data-type*="via"], [data-pcb-layer="drill"], [data-pcb-layer="through"]`;
-      }
-      const elements = canvas.querySelectorAll(selector);
-      elements.forEach(el => {
-        el.style.display = visible ? '' : 'none';
-      });
-    }
-
     function showTooltip(x, y, data) {
       if (!data) return;
       let html = `<div class="tooltip-title">${escapeHtml(data.name || data.ref || 'ELEMENT')}</div>`;
@@ -1381,100 +1006,6 @@
 
     function hideTooltip() {
       tooltip.style.display = 'none';
-    }
-
-    function setup2DInteractivity() {
-      const svg = canvas.querySelector('svg');
-      if (!svg) return;
-
-      svg.addEventListener('mousemove', (e) => {
-        if (isDragging) {
-          hideTooltip();
-          return;
-        }
-
-        const rect = svg.getBoundingClientRect();
-        const pt = svg.createSVGPoint();
-        pt.x = e.clientX;
-        pt.y = e.clientY;
-        const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
-        const circX = svgP.x;
-        const circY = -svgP.y;
-
-        const comp = findClosestComponent(circX, circY);
-        if (comp) {
-          showTooltip(e.clientX, e.clientY, {
-            name: comp.name,
-            type: comp.ftype || 'component',
-            part: comp.mpn,
-            pos: `(${comp.x.toFixed(2)}, ${comp.y.toFixed(2)}) mm`,
-            layer: comp.layer || 'top',
-            extra: `${comp.pins.length} pins`
-          });
-          return;
-        }
-
-        const pad = findClosestPad(circX, circY);
-        if (pad) {
-          showTooltip(e.clientX, e.clientY, {
-            name: `PAD ${pad.id}`,
-            type: 'smtpad',
-            net: pad.net,
-            pos: `(${pad.x.toFixed(2)}, ${pad.y.toFixed(2)}) mm`,
-            layer: pad.layer
-          });
-          return;
-        }
-
-        hideTooltip();
-      });
-
-      svg.addEventListener('mouseleave', hideTooltip);
-
-      svg.addEventListener('click', (e) => {
-        const pt = svg.createSVGPoint();
-        pt.x = e.clientX;
-        pt.y = e.clientY;
-        const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
-        const comp = findClosestComponent(svgP.x, -svgP.y);
-        if (comp) {
-          selectComponent(comp.name);
-        }
-      });
-    }
-
-    function findClosestComponent(x, y) {
-      for (const name in componentsMap) {
-        const c = componentsMap[name];
-        const halfW = (c.w || 4) / 2;
-        const halfH = (c.h || 4) / 2;
-        if (x >= c.x - halfW && x <= c.x + halfW && y >= c.y - halfH && y <= c.y + halfH) {
-          return c;
-        }
-      }
-      return null;
-    }
-
-    function findClosestPad(x, y) {
-      const elements = getElementsArray();
-      for (const e of elements) {
-        if (e.type === 'pcb_smtpad') {
-          const px = e.x ?? e.center?.x ?? 0;
-          const py = e.y ?? e.center?.y ?? 0;
-          const pw = e.width || 1.0;
-          const ph = e.height || 1.0;
-          if (Math.abs(x - px) <= pw / 2 && Math.abs(y - py) <= ph / 2) {
-            return {
-              id: e.pcb_smtpad_id || e.port_hints?.[0] || '1',
-              x: px,
-              y: py,
-              layer: e.layer || 'top',
-              net: e.net || e.subcircuit_id || 'SIGNAL'
-            };
-          }
-        }
-      }
-      return null;
     }
 
     function getElementsArray() {
@@ -1600,7 +1131,7 @@
         return `
           <div class="comp-item ${selectedComponent === name ? 'selected' : ''}" data-name="${escapeHtml(name)}">
             <div>
-              <div style="font-weight:bold">${escapeHtml(name)}</div>
+              <div>${escapeHtml(name)}</div>
               <div class="comp-sub">${escapeHtml(c.mpn || c.ftype || '')}</div>
             </div>
             <div class="comp-sub">(${c.x.toFixed(1)}, ${c.y.toFixed(1)})</div>
@@ -1618,7 +1149,7 @@
       }
       container.innerHTML = names.map(name => `
         <div class="net-item" data-name="${escapeHtml(name)}">
-          <span style="font-weight:bold">${escapeHtml(name)}</span>
+          <span>${escapeHtml(name)}</span>
           <span style="color:var(--text-subtle);font-size:10px">${netsMap[name].count} segments</span>
         </div>
       `).join('');
@@ -1697,26 +1228,6 @@
         <div class="prop-row"><span class="prop-key">LAYER</span><span class="prop-val">${escapeHtml((comp.layer || 'top').toUpperCase())}</span></div>
         ${pinsHtml}
       `;
-
-      if (isPinned && currentView === '3d' && boardGroup) {
-        boardGroup.children.forEach(obj => {
-          if (obj.userData && obj.userData.name === comp.name) {
-            obj.traverse(child => {
-              if (child.isMesh && child.material && child.material.emissive) {
-                child.material.emissive = new THREE.Color(0x86A881);
-                child.material.emissiveIntensity = 0.8;
-              }
-            });
-          } else {
-            obj.traverse(child => {
-              if (child.isMesh && child.material && child.material.emissive) {
-                child.material.emissive.setHex(child.userData.__origEmissive !== undefined ? child.userData.__origEmissive : 0x000000);
-                child.material.emissiveIntensity = child.userData.__origEmissiveIntensity !== undefined ? child.userData.__origEmissiveIntensity : 0.0;
-              }
-            });
-          }
-        });
-      }
     }
 
     function selectComponent(idOrName) {
@@ -1728,7 +1239,7 @@
 
     function selectNet(netName) {
       document.querySelectorAll('.net-item').forEach(el => {
-        el.classList.toggle('selected', el.textContent.includes(netName));
+        el.classList.toggle('selected', el.dataset.name === netName);
       });
       showTooltip(window.innerWidth / 2, 72, {
         name: `NET: ${netName}`,
@@ -1749,15 +1260,13 @@
         textEl.textContent = `FUSE BLOWN · ${diagnostics.length}`;
         if (iconEl) iconEl.innerHTML = '<iconify-icon icon="pixelarticons:alert"></iconify-icon>';
 
-        if (diagnostics.length > 0) {
-          diagPanel.innerHTML = diagnostics.map(d => `
-            <div class="diag-card">
-              <div class="diag-title">[!] ${escapeHtml((d.rule || 'VIOLATION').toUpperCase())}</div>
-              <div class="diag-body">${escapeHtml(d.message || '')}</div>
-              ${d.help ? `<div class="diag-help">> ${escapeHtml(d.help)}</div>` : ''}
-            </div>
-          `).join('');
-        }
+        diagPanel.innerHTML = diagnostics.map(d => `
+          <div class="diag-card">
+            <div class="diag-title">[!] ${escapeHtml((d.rule || 'VIOLATION').toUpperCase())}</div>
+            <div class="diag-body">${escapeHtml(d.message || '')}</div>
+            ${d.help ? `<div class="diag-help">> ${escapeHtml(d.help)}</div>` : ''}
+          </div>
+        `).join('');
       } else {
         statusEl.className = 'fuse-badge fuse-intact';
         textEl.textContent = 'FUSE INTACT';
@@ -1782,803 +1291,31 @@
       });
     }
 
-    function disposeObject3D(root) {
-      root.traverse((node) => {
-        if (node.geometry) node.geometry.dispose();
-        const materials = Array.isArray(node.material) ? node.material : node.material ? [node.material] : [];
-        for (const material of materials) {
-          if (material.map) material.map.dispose();
-          material.dispose();
-        }
-      });
-    }
-
-    function onThreeResize() {
-      if (!renderer || !camera) return;
-      const container = document.getElementById('three-native');
-      const w = container.clientWidth || window.innerWidth;
-      const h = container.clientHeight || window.innerHeight;
-      if (w === 0 || h === 0) return;
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
-    }
-
-    let raycaster = null;
-    let mouseVector = null;
-    let hoveredObject = null;
-    let originalColor = null;
-
-    function initThree() {
-      if (threeInitialized) return;
-      const container = document.getElementById('three-native');
-      const width = container.clientWidth || window.innerWidth;
-      const height = container.clientHeight || window.innerHeight;
-
-      scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x000000);
-
-      camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 2000);
-      camera.position.set(0, 80, 100);
-
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-      renderer.setSize(width, height);
-      renderer.setPixelRatio(window.devicePixelRatio || 1);
-      renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.05;
-      container.appendChild(renderer.domElement);
-
-      controls = new THREE.OrbitControls(camera, renderer.domElement);
-      controls.enableDamping = true;
-      controls.dampingFactor = 0.05;
-
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.25);
-      scene.add(ambientLight);
-
-      const hemiLight = new THREE.HemisphereLight(0xffffff, 0x18181b, 0.6);
-      scene.add(hemiLight);
-
-      const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.25);
-      dirLight1.position.set(70, 130, 80);
-      scene.add(dirLight1);
-
-      const dirLight2 = new THREE.DirectionalLight(0x90cdf4, 0.5);
-      dirLight2.position.set(-80, 50, -70);
-      scene.add(dirLight2);
-
-      const bottomLight = new THREE.DirectionalLight(0xffffff, 0.85);
-      bottomLight.position.set(40, -110, 50);
-      scene.add(bottomLight);
-
-      const headlight = new THREE.DirectionalLight(0xffffff, 0.7);
-      camera.add(headlight);
-      scene.add(camera);
-
-      const grid = new THREE.GridHelper(200, 40, 0x2e2e2e, 0x1a1a1a);
-      grid.position.y = -1.0;
-      scene.add(grid);
-
-      boardGroup = new THREE.Group();
-      scene.add(boardGroup);
-      if (window.Tscircuit && window.Tscircuit.setMechanicalNativeScene) window.Tscircuit.setMechanicalNativeScene(scene);
-
-      raycaster = new THREE.Raycaster();
-      mouseVector = new THREE.Vector2();
-
-      container.addEventListener('mousemove', onThreeMouseMove);
-      container.addEventListener('click', onThreeClick);
-
-      function animate() {
-        requestAnimationFrame(animate);
-        controls.update();
-        renderer.render(scene, camera);
-      }
-      animate();
-
-      window.addEventListener('resize', onThreeResize);
-      threeInitialized = true;
-    }
-
-    function onThreeMouseMove(e) {
-      if (currentView !== '3d' || !renderer || !camera || !boardGroup) return;
-      const container = document.getElementById('three-native');
-      const rect = container.getBoundingClientRect();
-      mouseVector.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      mouseVector.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-
-      raycaster.setFromCamera(mouseVector, camera);
-      const intersects = raycaster.intersectObjects(boardGroup.children, true);
-      let target = null;
-      for (const hit of intersects) {
-        let cur = hit.object;
-        while (cur && cur !== boardGroup && cur !== scene) {
-          if (cur.userData && (cur.userData.name || cur.userData.type)) {
-            target = cur;
-            break;
-          }
-          cur = cur.parent;
-        }
-        if (target) break;
-      }
-
-      if (target) {
-        if (hoveredObject !== target) {
-          clearThreeHighlight();
-          hoveredObject = target;
-          hoveredObject.traverse(child => {
-            if (child.isMesh && child.material && child.material.emissive) {
-              if (child.userData.__origEmissive === undefined) {
-                child.userData.__origEmissive = child.material.emissive.getHex();
-                child.userData.__origEmissiveIntensity = child.material.emissiveIntensity;
-              }
-              child.material.emissive.setHex(0x38bdf8);
-              child.material.emissiveIntensity = 0.8;
-            }
-          });
-        }
-        showTooltip(e.clientX, e.clientY, target.userData);
-        if (!pinnedComponent) {
-          const comp = findComponent(target.userData.name);
-          if (comp) {
-            inspectComponent(comp, false);
-          } else if (target.userData.type) {
-            inspectComponent({
-              name: target.userData.name || target.userData.type.toUpperCase(),
-              mpn: target.userData.part || '',
-              ftype: target.userData.type.toUpperCase(),
-              x: parseFloat(target.userData.pos?.match(/[\d.-]+/g)?.[0] || 0),
-              y: parseFloat(target.userData.pos?.match(/[\d.-]+/g)?.[1] || 0),
-              w: 0,
-              h: 0,
-              layer: target.userData.layer || 'top',
-              pins: target.userData.net ? [{ pin: target.userData.name || '1', net: target.userData.net }] : []
-            }, false);
-          }
-        }
-        container.style.cursor = 'pointer';
-      } else {
-        clearThreeHighlight();
-        hideTooltip();
-        container.style.cursor = 'default';
-        if (!pinnedComponent) {
-          resetInspector();
-        }
-      }
-    }
-
-    function onThreeClick(e) {
-      if (currentView !== '3d' || !renderer || !camera || !boardGroup) return;
-      const container = document.getElementById('three-native');
-      if (e) {
-        const rect = container.getBoundingClientRect();
-        mouseVector.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-        mouseVector.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-        raycaster.setFromCamera(mouseVector, camera);
-      }
-      const intersects = raycaster.intersectObjects(boardGroup.children, true);
-      let target = null;
-      for (const hit of intersects) {
-        let cur = hit.object;
-        while (cur && cur !== boardGroup && cur !== scene) {
-          if (cur.userData && (cur.userData.name || cur.userData.type)) {
-            target = cur;
-            break;
-          }
-          cur = cur.parent;
-        }
-        if (target) break;
-      }
-      if (!target && hoveredObject) {
-        target = hoveredObject;
-      }
-      if (target && target.userData) {
-        switchSidebarTab('inspector');
-        const comp = findComponent(target.userData.name);
-        if (comp) {
-          inspectComponent(comp, true);
-        } else {
-          inspectComponent({
-            name: target.userData.name || target.userData.type.toUpperCase(),
-            mpn: target.userData.part || '',
-            ftype: target.userData.type.toUpperCase(),
-            x: parseFloat(target.userData.pos?.match(/[\d.-]+/g)?.[0] || 0),
-            y: parseFloat(target.userData.pos?.match(/[\d.-]+/g)?.[1] || 0),
-            w: 0,
-            h: 0,
-            layer: target.userData.layer || 'top',
-            pins: target.userData.net ? [{ pin: target.userData.name || '1', net: target.userData.net }] : []
-          }, true);
-        }
-      }
-    }
-
-    function clearThreeHighlight() {
-      if (hoveredObject) {
-        hoveredObject.traverse(child => {
-          if (child.isMesh && child.material && child.material.emissive) {
-            if (pinnedComponent && (hoveredObject.userData?.name === pinnedComponent || child.userData?.name === pinnedComponent)) {
-              child.material.emissive.setHex(0x86A881);
-              child.material.emissiveIntensity = 0.8;
-            } else {
-              child.material.emissive.setHex(child.userData.__origEmissive !== undefined ? child.userData.__origEmissive : 0x000000);
-              child.material.emissiveIntensity = child.userData.__origEmissiveIntensity !== undefined ? child.userData.__origEmissiveIntensity : 0.0;
-            }
-          }
-        });
-      }
-      hoveredObject = null;
-    }
-
-    const NATIVE_PRESETS = { TOP: [0, 1, 0], FRONT: [0, 0.1, 1], ISO: [0.7, 0.8, 0.7], RESET: [0.7, 0.8, 0.7] };
-
-    function setCameraPreset(preset) {
-      if (currentView === 'mechanical') {
-        if (window.Tscircuit && window.Tscircuit.mechanicalCameraPreset) window.Tscircuit.mechanicalCameraPreset(preset);
-        return;
-      }
-      if (!window.Tscircuit || !window.Tscircuit.animateCameraPreset) return;
-      if (engine3d === 'cad' && window.cadCameraController) {
-        const cadEl = document.getElementById('three-cad');
-        window.Tscircuit.animateCadCameraPreset(cadEl, window.cadCameraController, preset);
-        return;
-      }
-      if (!controls || !camera || !NATIVE_PRESETS[preset]) return;
-      const direction = NATIVE_PRESETS[preset];
-      const dist = Math.max(boardWidth, boardHeight) * 1.8 * Math.hypot(...direction);
-      const target = [boardCenterX, 0, boardCenterZ];
-      window.Tscircuit.animateCameraPreset({ camera, controls }, direction, target, dist);
-    }
-
-    function makeTextSprite(message) {
-      const c = document.createElement('canvas');
-      c.width = 256;
-      c.height = 64;
-      const ctx = c.getContext('2d');
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 32px monospace';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(message, 128, 32);
-
-      const tex = new THREE.CanvasTexture(c);
-      tex.minFilter = THREE.LinearFilter;
-      const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
-      const sprite = new THREE.Sprite(mat);
-      const aspect = c.width / c.height;
-      sprite.scale.set(1.5 * aspect, 1.5, 1);
-      return sprite;
-    }
-
-    function build3DScene() {
-      if (!boardGroup) return;
-
-      while (boardGroup.children.length > 0) {
-        const obj = boardGroup.children[0];
-        boardGroup.remove(obj);
-        disposeObject3D(obj);
-      }
-
-      const elements = getElementsArray();
-
-      const boards = elements.filter(e => e.type === 'pcb_board');
-      boardWidth = 60;
-      boardHeight = 40;
-      boardCenterX = 0;
-      boardCenterZ = 0;
-
-      if (boards.length > 0) {
-        const b = boards[0];
-        boardWidth = b.width || 60;
-        boardHeight = b.height || 40;
-        boardCenterX = b.center?.x || 0;
-        boardCenterZ = b.center?.y || 0;
-      } else {
-        let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
-        elements.forEach(e => {
-          const x = e.x ?? e.center?.x;
-          const z = e.y ?? e.center?.y;
-          if (x !== undefined && z !== undefined) {
-            if (x < minX) minX = x;
-            if (x > maxX) maxX = x;
-            if (z < minZ) minZ = z;
-            if (z > maxZ) maxZ = z;
-          }
-        });
-        if (minX !== Infinity) {
-          boardWidth = Math.max(20, (maxX - minX) + 20);
-          boardHeight = Math.max(20, (maxZ - minZ) + 20);
-          boardCenterX = (minX + maxX) / 2;
-          boardCenterZ = (minZ + maxZ) / 2;
-        }
-      }
-
-      const substrateThickness = 1.6;
-      const boardMat = new THREE.MeshStandardMaterial({
-        color: 0x112417,
-        roughness: 0.5,
-        metalness: 0.1
-      });
-      const boardGeo = new THREE.BoxGeometry(boardWidth, substrateThickness, boardHeight);
-      const boardMesh = new THREE.Mesh(boardGeo, boardMat);
-      boardMesh.position.set(boardCenterX, 0, boardCenterZ);
-      boardGroup.add(boardMesh);
-
-      const padMat = new THREE.MeshStandardMaterial({
-        color: 0xd4af37,
-        metalness: 0.85,
-        roughness: 0.25
-      });
-
-      elements.filter(e => e.type === 'pcb_smtpad').forEach(pad => {
-        const px = pad.x ?? pad.center?.x ?? 0;
-        const pz = pad.y ?? pad.center?.y ?? 0;
-        const isBottom = pad.layer === 'bottom';
-        const py = isBottom ? -(substrateThickness / 2 + 0.02) : (substrateThickness / 2 + 0.02);
-        const shape = pad.shape || (pad.radius ? 'circle' : 'rect');
-        let padMesh;
-        if (shape === 'circle') {
-          const r = pad.radius || ((pad.width || 1.0) / 2);
-          const geo = new THREE.CylinderGeometry(r, r, 0.04, 24);
-          padMesh = new THREE.Mesh(geo, padMat.clone());
-        } else {
-          const pw = pad.width || 1.2;
-          const ph = pad.height || 1.2;
-          const geo = new THREE.BoxGeometry(pw, 0.04, ph);
-          padMesh = new THREE.Mesh(geo, padMat.clone());
-        }
-        padMesh.position.set(px, py, pz);
-
-        const parentComp = Object.values(componentsMap).find(c => c.id === pad.pcb_component_id || c.pcbComponentId === pad.pcb_component_id);
-        const pinHint = pad.port_hints?.[0] || '';
-        const pinInfo = parentComp?.pins?.find(p => p.pin === String(pinHint) || (pad.port_hints && pad.port_hints.includes(p.pin)));
-        const padNet = pad.net || pinInfo?.net || pad.subcircuit_id || '';
-        const padName = parentComp ? `${parentComp.name}.${pinHint || 'PAD'}` : (pinHint ? `PAD ${pinHint}` : 'PAD');
-
-        padMesh.userData = {
-          type: 'smtpad',
-          name: padName,
-          part: parentComp?.mpn || parentComp?.ftype || 'PAD',
-          mpn: parentComp?.mpn || '',
-          pos: `(${px.toFixed(2)}, ${pz.toFixed(2)}) mm`,
-          layer: pad.layer || 'top',
-          pins: parentComp?.pins?.length || 1,
-          extra: padNet ? `NET: ${padNet}` : (parentComp ? `${parentComp.name}` : ''),
-          net: padNet
-        };
-        boardGroup.add(padMesh);
-      });
-
-      const viaMat = new THREE.MeshStandardMaterial({
-        color: 0xc87d32,
-        metalness: 0.8,
-        roughness: 0.3
-      });
-      const holeMat = new THREE.MeshBasicMaterial({ color: 0x050505 });
-
-      elements.filter(e => e.type === 'pcb_via' || e.type === 'pcb_plated_hole').forEach(via => {
-        const vx = via.x ?? via.center?.x ?? 0;
-        const vz = via.y ?? via.center?.y ?? 0;
-        const outerR = ((via.outer_diameter || 0.6) / 2);
-        const holeR = ((via.hole_diameter || 0.3) / 2);
-
-        const connectedTrace = elements.find(e => e.type === 'pcb_trace' && (e.route || []).some(pt => Math.hypot(pt.x - vx, pt.y - vz) < 0.2));
-        const viaNet = via.connection_name || via.net || connectedTrace?.connection_name || '';
-
-        const viaUserData = {
-          type: via.type === 'pcb_via' ? 'via' : 'plated_hole',
-          name: via.name || (via.type === 'pcb_via' ? (viaNet ? `VIA [${viaNet}]` : 'VIA') : (viaNet ? `HOLE [${viaNet}]` : 'PLATED HOLE')),
-          part: via.type === 'pcb_via' ? `VIA dia=${via.outer_diameter || 0.6}mm` : `HOLE dia=${via.hole_diameter || 0.3}mm`,
-          mpn: '',
-          pos: `(${vx.toFixed(2)}, ${vz.toFixed(2)}) mm`,
-          layer: via.layers?.join('/') || 'through',
-          pins: 1,
-          extra: viaNet ? `NET: ${viaNet}` : 'THROUGH-HOLE',
-          net: viaNet
-        };
-
-        const viaGeo = new THREE.CylinderGeometry(outerR, outerR, substrateThickness + 0.06, 24);
-        const viaMesh = new THREE.Mesh(viaGeo, viaMat.clone());
-        viaMesh.position.set(vx, 0, vz);
-        viaMesh.userData = viaUserData;
-        boardGroup.add(viaMesh);
-
-        const holeGeo = new THREE.CylinderGeometry(holeR, holeR, substrateThickness + 0.08, 16);
-        const holeMesh = new THREE.Mesh(holeGeo, holeMat);
-        holeMesh.position.set(vx, 0, vz);
-        holeMesh.userData = viaUserData;
-        boardGroup.add(holeMesh);
-      });
-
-      elements.filter(e => e.type === 'pcb_trace').forEach(trace => {
-        const route = trace.route || [];
-        if (route.length < 2) return;
-        const isBottom = route[0].layer === 'bottom' || trace.layer === 'bottom';
-        const color = isBottom ? 0x38bdf8 : 0xc87d32;
-        const py = isBottom ? -(substrateThickness / 2 + 0.03) : (substrateThickness / 2 + 0.03);
-        const traceMat = new THREE.MeshStandardMaterial({
-          color: color,
-          metalness: 0.8,
-          roughness: 0.35,
-          side: THREE.DoubleSide
-        });
-
-        for (let i = 0; i < route.length - 1; i++) {
-          const p1 = route[i];
-          const p2 = route[i + 1];
-          const w = p1.width || trace.width || 0.3;
-          const dx = p2.x - p1.x;
-          const dz = p2.y - p1.y;
-          const len = Math.sqrt(dx * dx + dz * dz);
-          if (len < 0.001) continue;
-
-          const angle = Math.atan2(dz, dx);
-          const geo = new THREE.PlaneGeometry(len, w);
-          geo.rotateX(-Math.PI / 2);
-          geo.rotateY(-angle);
-
-          const midX = (p1.x + p2.x) / 2;
-          const midZ = (p1.y + p2.y) / 2;
-          const traceLayer = isBottom ? 'bottom' : 'top';
-          const traceNet = trace.connection_name || 'SIGNAL';
-
-          const mesh = new THREE.Mesh(geo, traceMat);
-          mesh.position.set(midX, py, midZ);
-          mesh.userData = {
-            type: 'trace',
-            name: `TRACE [${traceNet}]`,
-            part: `WIDTH ${w.toFixed(2)}mm`,
-            mpn: '',
-            pos: `(${midX.toFixed(2)}, ${midZ.toFixed(2)}) mm`,
-            layer: traceLayer,
-            pins: 0,
-            extra: `LEN ${len.toFixed(2)}mm`,
-            net: traceNet
-          };
-          boardGroup.add(mesh);
-        }
-      });
-
-      const silverMat = new THREE.MeshStandardMaterial({
-        color: 0xdce4ec,
-        roughness: 0.2,
-        metalness: 0.95
-      });
-      const goldMat = new THREE.MeshStandardMaterial({
-        color: 0xf59e0b,
-        roughness: 0.25,
-        metalness: 0.9
-      });
-      const darkEpoxyMat = new THREE.MeshStandardMaterial({
-        color: 0x18181b,
-        roughness: 0.6,
-        metalness: 0.15
-      });
-      const ceramicCapMat = new THREE.MeshStandardMaterial({
-        color: 0x9b7653,
-        roughness: 0.45,
-        metalness: 0.05
-      });
-      const ceramicResMat = new THREE.MeshStandardMaterial({
-        color: 0x222225,
-        roughness: 0.65,
-        metalness: 0.1
-      });
-
-      elements.filter(e => e.type === 'pcb_component').forEach(comp => {
-        const cx = comp.center?.x ?? comp.x ?? 0;
-        const cz = comp.center?.y ?? comp.y ?? 0;
-        const cw = Math.max(comp.width || 4, 0.8);
-        const ch = Math.max(comp.height || 4, 0.8);
-        const isBottom = comp.layer === 'bottom';
-
-        const compName = Object.keys(componentsMap).find(k => componentsMap[k].id === comp.pcb_component_id) || comp.pcb_component_id || 'U';
-        const compData = componentsMap[compName] || {};
-        const ftype = (compData.ftype || '').toLowerCase();
-        const nameUpper = compName.toUpperCase();
-        const pinsCount = compData.pins?.length || 0;
-
-        const compGroup = new THREE.Group();
-        const userData = {
-          type: 'component',
-          name: compName,
-          part: compData.mpn || compData.ftype || 'IC',
-          mpn: compData.mpn || '',
-          pos: `(${cx.toFixed(2)}, ${cz.toFixed(2)}) mm`,
-          layer: comp.layer || 'top',
-          pins: pinsCount,
-          extra: `${pinsCount} pins`,
-          net: compData.pins?.[0]?.net || ''
-        };
-        compGroup.userData = userData;
-
-        if (ftype.includes('resistor') || nameUpper.startsWith('R')) {
-          const thick = 0.55;
-          const cy = isBottom ? -(substrateThickness / 2 + thick / 2 + 0.03) : (substrateThickness / 2 + thick / 2 + 0.03);
-          const isVert = ch > cw;
-          const len = isVert ? ch : cw;
-          const wid = isVert ? cw : ch;
-          const capLen = Math.max(len * 0.22, 0.2);
-          const bodyLen = Math.max(len - capLen * 2, 0.2);
-
-          const bodyGeo = isVert ? new THREE.BoxGeometry(wid, thick, bodyLen) : new THREE.BoxGeometry(bodyLen, thick, wid);
-          const bodyMesh = new THREE.Mesh(bodyGeo, ceramicResMat.clone());
-          bodyMesh.userData = userData;
-          compGroup.add(bodyMesh);
-
-          const capGeo = isVert ? new THREE.BoxGeometry(wid * 1.02, thick * 1.02, capLen) : new THREE.BoxGeometry(capLen, thick * 1.02, wid * 1.02);
-          const capOffset = (bodyLen + capLen) / 2;
-          const cap1 = new THREE.Mesh(capGeo, silverMat);
-          const cap2 = new THREE.Mesh(capGeo, silverMat);
-          if (isVert) {
-            cap1.position.set(0, 0, -capOffset);
-            cap2.position.set(0, 0, capOffset);
-          } else {
-            cap1.position.set(-capOffset, 0, 0);
-            cap2.position.set(capOffset, 0, 0);
-          }
-          cap1.userData = userData;
-          cap2.userData = userData;
-          compGroup.add(cap1);
-          compGroup.add(cap2);
-          compGroup.position.set(cx, cy, cz);
-        } else if (ftype.includes('capacitor') || nameUpper.startsWith('C')) {
-          const thick = 0.65;
-          const cy = isBottom ? -(substrateThickness / 2 + thick / 2 + 0.03) : (substrateThickness / 2 + thick / 2 + 0.03);
-          const isVert = ch > cw;
-          const len = isVert ? ch : cw;
-          const wid = isVert ? cw : ch;
-          const capLen = Math.max(len * 0.22, 0.2);
-          const bodyLen = Math.max(len - capLen * 2, 0.2);
-
-          const bodyGeo = isVert ? new THREE.BoxGeometry(wid, thick, bodyLen) : new THREE.BoxGeometry(bodyLen, thick, wid);
-          const bodyMesh = new THREE.Mesh(bodyGeo, ceramicCapMat.clone());
-          bodyMesh.userData = userData;
-          compGroup.add(bodyMesh);
-
-          const capGeo = isVert ? new THREE.BoxGeometry(wid * 1.02, thick * 1.02, capLen) : new THREE.BoxGeometry(capLen, thick * 1.02, wid * 1.02);
-          const capOffset = (bodyLen + capLen) / 2;
-          const cap1 = new THREE.Mesh(capGeo, silverMat);
-          const cap2 = new THREE.Mesh(capGeo, silverMat);
-          if (isVert) {
-            cap1.position.set(0, 0, -capOffset);
-            cap2.position.set(0, 0, capOffset);
-          } else {
-            cap1.position.set(-capOffset, 0, 0);
-            cap2.position.set(capOffset, 0, 0);
-          }
-          cap1.userData = userData;
-          cap2.userData = userData;
-          compGroup.add(cap1);
-          compGroup.add(cap2);
-          compGroup.position.set(cx, cy, cz);
-        } else if (ftype.includes('led') || nameUpper.startsWith('LED')) {
-          const thick = 0.85;
-          const cy = isBottom ? -(substrateThickness / 2 + thick / 2 + 0.03) : (substrateThickness / 2 + thick / 2 + 0.03);
-          const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(cw, 0.3, ch), silverMat);
-          baseMesh.position.y = -thick / 2 + 0.15;
-          baseMesh.userData = userData;
-          compGroup.add(baseMesh);
-
-          const ledColor = nameUpper.includes('RED') ? 0xc55454 : nameUpper.includes('BLUE') ? 0x38bdf8 : 0x86A881;
-          const ledMat = new THREE.MeshStandardMaterial({
-            color: ledColor,
-            emissive: ledColor,
-            emissiveIntensity: 0.6,
-            roughness: 0.2,
-            metalness: 0.1,
-            transparent: true,
-            opacity: 0.85
-          });
-          const domeMesh = new THREE.Mesh(new THREE.BoxGeometry(cw * 0.8, thick - 0.3, ch * 0.8), ledMat);
-          domeMesh.position.y = 0.15;
-          domeMesh.userData = userData;
-          compGroup.add(domeMesh);
-          compGroup.position.set(cx, cy, cz);
-        } else if (ftype.includes('header') || ftype.includes('connector') || nameUpper.startsWith('J') || nameUpper.startsWith('HDR') || nameUpper.startsWith('CON') || nameUpper.startsWith('P')) {
-          const thick = 2.5;
-          const cy = isBottom ? -(substrateThickness / 2 + thick / 2 + 0.03) : (substrateThickness / 2 + thick / 2 + 0.03);
-          const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(cw, thick, ch), darkEpoxyMat.clone());
-          baseMesh.userData = userData;
-          compGroup.add(baseMesh);
-
-          const pinH = 6.0;
-          const pinW = 0.64;
-          const pinGeo = new THREE.BoxGeometry(pinW, pinH, pinW);
-          const nPins = Math.max(pinsCount || 2, Math.round(Math.max(cw, ch) / 2.54) || 2);
-          const isVert = ch > cw;
-          for (let p = 0; p < nPins; p++) {
-            const pinMesh = new THREE.Mesh(pinGeo, goldMat);
-            const offset = (p - (nPins - 1) / 2) * (Math.max(cw, ch) / nPins);
-            const px = isVert ? 0 : offset;
-            const pz = isVert ? offset : 0;
-            const py = isBottom ? -pinH / 2 : pinH / 2;
-            pinMesh.position.set(px, py, pz);
-            pinMesh.userData = userData;
-            compGroup.add(pinMesh);
-          }
-          compGroup.position.set(cx, cy, cz);
-        } else if (ftype.includes('switch') || ftype.includes('button') || nameUpper.startsWith('SW') || nameUpper.startsWith('BTN')) {
-          const thick = 1.6;
-          const cy = isBottom ? -(substrateThickness / 2 + thick / 2 + 0.03) : (substrateThickness / 2 + thick / 2 + 0.03);
-          const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(cw, thick, ch), silverMat);
-          baseMesh.userData = userData;
-          compGroup.add(baseMesh);
-
-          const btnMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
-          const btnRadius = Math.min(cw, ch) * 0.3;
-          const btnMesh = new THREE.Mesh(new THREE.CylinderGeometry(btnRadius, btnRadius, 0.8, 16), btnMat);
-          btnMesh.position.y = thick / 2 + 0.4;
-          btnMesh.userData = userData;
-          compGroup.add(btnMesh);
-          compGroup.position.set(cx, cy, cz);
-        } else if (ftype.includes('test') || nameUpper.startsWith('TP')) {
-          const cy = isBottom ? -(substrateThickness / 2 + 0.4) : (substrateThickness / 2 + 0.4);
-          const ringMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.1, 16), goldMat);
-          ringMesh.userData = userData;
-          compGroup.add(ringMesh);
-          const beadMesh = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 12), goldMat);
-          beadMesh.position.y = 0.3;
-          beadMesh.userData = userData;
-          compGroup.add(beadMesh);
-          compGroup.position.set(cx, cy, cz);
-        } else {
-          const thick = 1.4;
-          const cy = isBottom ? -(substrateThickness / 2 + thick / 2 + 0.05) : (substrateThickness / 2 + thick / 2 + 0.05);
-          const chipMesh = new THREE.Mesh(new THREE.BoxGeometry(cw, thick, ch), darkEpoxyMat.clone());
-          chipMesh.userData = userData;
-          compGroup.add(chipMesh);
-
-          const dotMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
-          const dotMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.05, 12), dotMat);
-          dotMesh.position.set(-cw / 2 + 0.6, thick / 2 + 0.03, -ch / 2 + 0.6);
-          dotMesh.userData = userData;
-          compGroup.add(dotMesh);
-
-          const totalPins = pinsCount || (cw > 8 ? 16 : 8);
-          const sidePins = Math.max(2, Math.floor(totalPins / 2));
-          const pinW = 0.4;
-          const pinLen = 0.8;
-          const pinH = 0.2;
-          const pinY = isBottom ? thick / 2 - 0.1 : -thick / 2 + 0.1;
-
-          for (let p = 0; p < sidePins; p++) {
-            const offset = (p - (sidePins - 1) / 2) * (ch / sidePins);
-            const leftPin = new THREE.Mesh(new THREE.BoxGeometry(pinLen, pinH, pinW), silverMat);
-            leftPin.position.set(-cw / 2 - pinLen / 2 + 0.1, pinY, offset);
-            leftPin.userData = userData;
-            compGroup.add(leftPin);
-
-            const rightPin = new THREE.Mesh(new THREE.BoxGeometry(pinLen, pinH, pinW), silverMat);
-            rightPin.position.set(cw / 2 + pinLen / 2 - 0.1, pinY, offset);
-            rightPin.userData = userData;
-            compGroup.add(rightPin);
-          }
-          compGroup.position.set(cx, cy, cz);
-        }
-
-        boardGroup.add(compGroup);
-
-        const sprite = makeTextSprite(compName);
-        const spriteY = isBottom ? -(substrateThickness / 2 + 1.8) : (substrateThickness / 2 + 1.8);
-        sprite.position.set(cx, spriteY, cz);
-        sprite.userData = userData;
-        boardGroup.add(sprite);
-      });
-
-      const pcbComponents = elements.filter(e => e.type === 'pcb_component');
-      elements.filter(e => e.type === 'pcb_silkscreen_text').forEach(st => {
-        const text = st.text || '';
-        if (!text) return;
-        const sx = st.x ?? st.center?.x ?? st.anchor_position?.x ?? 0;
-        const sz = st.y ?? st.center?.y ?? st.anchor_position?.y ?? 0;
-        const isBottom = st.layer === 'bottom';
-
-        let compThick = 0;
-        pcbComponents.forEach(c => {
-          const ccx = c.center?.x ?? c.x ?? 0;
-          const ccz = c.center?.y ?? c.y ?? 0;
-          const ccw = Math.max(c.width || 4, 1.0) / 2;
-          const cch = Math.max(c.height || 4, 1.0) / 2;
-          if (Math.abs(sx - ccx) <= ccw && Math.abs(sz - ccz) <= cch) {
-            compThick = Math.max(compThick, 1.45);
-          }
-        });
-        const sy = isBottom ? -(substrateThickness / 2 + compThick + 0.04) : (substrateThickness / 2 + compThick + 0.04);
-
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const fontSize = Math.max(16, Math.round((st.font_size || 1.0) * 24));
-        ctx.font = `bold ${fontSize}px sans-serif`;
-        const metrics = ctx.measureText(text);
-        const textW = Math.max(16, Math.ceil(metrics.width) + 8);
-        const textH = Math.max(16, Math.ceil(fontSize * 1.3) + 4);
-        canvas.width = textW;
-        canvas.height = textH;
-
-        ctx.font = `bold ${fontSize}px sans-serif`;
-        ctx.fillStyle = '#FFFFFF';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(text, textW / 2, textH / 2);
-
-        const tex = new THREE.CanvasTexture(canvas);
-        tex.minFilter = THREE.LinearFilter;
-        const planeW = (st.font_size || 1.0) * (textW / fontSize);
-        const planeH = (st.font_size || 1.0) * 1.3;
-        const planeGeo = new THREE.PlaneGeometry(planeW, planeH);
-        const planeMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide });
-        const planeMesh = new THREE.Mesh(planeGeo, planeMat);
-        planeMesh.rotation.x = isBottom ? Math.PI / 2 : -Math.PI / 2;
-        if (st.ccw_rotation) {
-          const rotZ = ((st.ccw_rotation || 0) * Math.PI) / 180;
-          planeMesh.rotation.z = isBottom ? -rotZ : rotZ;
-        }
-        planeMesh.position.set(sx, sy, sz);
-        boardGroup.add(planeMesh);
-      });
-    }
-
     function updateStudio(data) {
       if (!data) return;
       if (data.board_name) {
         document.getElementById('board-name').textContent = data.board_name.toUpperCase();
       }
-      if (window.Tscircuit && data.circuit_json) {
-        try {
-          schematicSvg = window.Tscircuit.convertCircuitJsonToSchematicSvg(data.circuit_json);
-          if (!schematicSvg && data.schematic_svg) schematicSvg = data.schematic_svg;
-        } catch (err) {
-          if (data.schematic_svg) schematicSvg = data.schematic_svg;
-        }
-        try {
-          pcbSvg = window.Tscircuit.convertCircuitJsonToPcbSvg(data.circuit_json);
-          if (!pcbSvg && data.pcb_svg) pcbSvg = data.pcb_svg;
-        } catch (err) {
-          if (data.pcb_svg) pcbSvg = data.pcb_svg;
-        }
-      } else {
-        if (data.schematic_svg) schematicSvg = data.schematic_svg;
-        if (data.pcb_svg) pcbSvg = data.pcb_svg;
-      }
       if (typeof data.revision === 'string') {
         lastRevision = data.revision;
-        if (window.Tscircuit && window.Tscircuit.setMechanicalRevision) window.Tscircuit.setMechanicalRevision(lastRevision);
+        if (window.Tscircuit) window.Tscircuit.setMechanicalRevision(lastRevision);
       }
       if (data.circuit_json) {
         lastCircuitJson = data.circuit_json;
         parseCircuitGraph();
-        if (currentView === '3d') {
-          build3DScene();
-          updateEngineUI();
-        }
       }
       updateDiagnostics(data.fuse_blown, data.diagnostics || []);
-      if (currentView !== '3d') {
-        renderCurrentView();
-      }
+      if (currentView !== 'mechanical') renderView();
     }
 
     window.addEventListener('tscircuit-ready', () => {
       if (lastRevision !== null) window.Tscircuit.setMechanicalRevision(lastRevision);
       initMechanical();
-      if (currentView === 'mechanical') {
-        switchView('mechanical');
-        return;
-      }
-      if (lastCircuitJson) {
-        if (currentView === '3d') {
-          updateEngineUI();
-        } else {
-          renderCurrentView();
-        }
-      }
+      switchView(currentView);
     });
 
     setTimeout(() => {
-      if (!window.Tscircuit) {
-        tscircuitFallback = true;
-        renderCurrentView();
-      }
+      if (!window.Tscircuit) showStatus('STUDIO BUNDLE NOT LOADED. RUN `bun run build` IN studio/');
     }, 2000);
 
     function connectSSE() {

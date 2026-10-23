@@ -9,7 +9,6 @@ use crate::config::FusibleConfig;
 use crate::linter::{LintContext, Linter, Severity};
 use crate::netlist::Netlist;
 use crate::parser::{self, Circuit};
-use crate::svg::{render_pcb_svg, render_schematic_svg};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct DevDiagnostic {
@@ -27,8 +26,6 @@ pub struct DevPayload {
     pub board_name: String,
     pub fuse_blown: bool,
     pub diagnostics: Vec<DevDiagnostic>,
-    pub pcb_svg: String,
-    pub schematic_svg: String,
     pub circuit_json: Option<serde_json::Value>,
     pub revision: String,
 }
@@ -79,8 +76,6 @@ fn source_failure(board_name: String, message: String) -> DevPayload {
             message,
             "Ensure your circuit file compiles and is valid JSON/TSX",
         )],
-        pcb_svg: String::new(),
-        schematic_svg: String::new(),
         circuit_json: None,
         revision: String::new(),
     }
@@ -91,8 +86,6 @@ fn analyze(board_name: String, json_path: &Path, source: &str) -> DevPayload {
         board_name,
         fuse_blown: true,
         diagnostics: Vec::new(),
-        pcb_svg: render_pcb_svg(source),
-        schematic_svg: String::new(),
         circuit_json: serde_json::from_str(source).ok(),
         revision: revision(source),
     };
@@ -109,7 +102,6 @@ fn analyze(board_name: String, json_path: &Path, source: &str) -> DevPayload {
 
 fn lint(payload: &mut DevPayload, circuit: &Circuit) {
     let netlist = Netlist::from_circuit(circuit);
-    payload.schematic_svg = render_schematic_svg(circuit, &netlist);
     let target_mcu = resolve_mcu(None);
     let ctx = LintContext::new(circuit, &netlist).with_mcu(target_mcu.as_deref());
     let violations = Linter::default().run_with_context(&ctx);

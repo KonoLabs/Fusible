@@ -10,11 +10,7 @@ fn pipeline_runs_on_valid_circuit_json() {
     let (payload, source) = execute_pipeline(Path::new("examples/circuit.json"));
     assert!(!payload.fuse_blown);
     assert!(payload.diagnostics.is_empty());
-    assert!(!payload.pcb_svg.is_empty());
-    assert!(!payload.schematic_svg.is_empty());
     assert!(payload.circuit_json.is_some());
-    assert!(payload.pcb_svg.contains("<svg"));
-    assert!(payload.schematic_svg.contains("<svg"));
     assert_eq!(payload.revision, revision(&source.unwrap()));
 }
 

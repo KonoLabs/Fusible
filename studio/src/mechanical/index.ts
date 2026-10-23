@@ -1,5 +1,5 @@
 import { getMechanicalOption, loadMechanicalOptions, setMechanicalOption, type MechanicalOption } from "./prefs";
-import { reconcileMechanicalOverlay, setMechanicalNativeScene, setMechanicalOverlay } from "./overlay";
+import { reconcileMechanicalOverlay, setMechanicalOverlay } from "./overlay";
 import { setMechanicalRevision } from "./store";
 import { hideMechanicalViewer, mechanicalCameraPreset } from "./viewer";
 import { refreshMechanicalViewer, renderMechanicalViewer } from "./viewer";
@@ -19,7 +19,6 @@ export const Mechanical = {
   mechanicalCameraPreset,
   setMechanicalRevision,
   setMechanicalOverlay,
-  setMechanicalNativeScene,
   toggleMechanicalOption,
   getMechanicalOptions: loadMechanicalOptions,
 };
