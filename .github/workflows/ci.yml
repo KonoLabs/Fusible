@@ -35,7 +35,8 @@ jobs:
           set -euo pipefail
           rm -rf viewer-out
           mkdir -p viewer-out
-          for board in $(grep -l "\"pcb_board\"" examples/*.json); do
+          rendered=0
+          while IFS= read -r board; do
             name=$(basename "$board" .json)
             ./target/release/fusible export "$board" --preset fab -o "viewer-out/$name" --skip-lint
             mkdir -p "viewer-out/$name/layers"
@@ -51,8 +52,13 @@ jobs:
                 cat "$out.log"
                 exit 1
               fi
+              rendered=$((rendered + 1))
             done
-          done
+          done < <(grep -l '"pcb_board"' examples/*.json)
+          if [ "$rendered" -eq 0 ]; then
+            echo "no Gerber layer was rendered"
+            exit 1
+          fi
 
       - name: Upload Gerber renders
         if: always()
