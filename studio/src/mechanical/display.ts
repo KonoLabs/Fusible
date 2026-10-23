@@ -45,7 +45,7 @@ function ignoreRaycast(object: THREE.Object3D): THREE.Object3D {
   return object;
 }
 
-function buildPart(geometries: THREE.BufferGeometry[], part: MechanicalPart, style: MechanicalStyle) {
+export function buildPart(geometries: THREE.BufferGeometry[], part: MechanicalPart, style: MechanicalStyle) {
   const group = new THREE.Group();
   group.name = `mechanical-${part}`;
   const surface = surfaceMaterial(part, style);

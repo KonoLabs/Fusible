@@ -35,7 +35,8 @@
       return h.fuse_blown ? `${h.violations} VIOLATION${h.violations === 1 ? '' : 'S'}` : 'FUSE INTACT';
     }
     if (kind === 'firmware') return `→ ${item.board || 'board'}`;
-    return item.kind === 'authored' ? 'AUTHORED' : 'GENERATED';
+    if (item.kind === 'authored') return item.exists === false ? 'MISSING' : 'AUTHORED';
+    return 'GENERATED';
   }
 
   function dotClass(kind, item) {
@@ -79,6 +80,11 @@
     return item.board || state.project.boards[0].name || '';
   }
 
+  function applyBody(kind, item) {
+    if (!window.Tscircuit) return;
+    window.Tscircuit.setMechanicalBody(kind === 'body' ? item.name : null, kind === 'body' ? item.kind : '');
+  }
+
   function select(kind, name) {
     const item = findItem(kind, name);
     if (!item) return;
@@ -86,6 +92,7 @@
     const board = boardOfItem(kind, item);
     if (board !== state.board) showBoard(board);
     if (kind === 'firmware') openSidebar('runs');
+    applyBody(kind, item);
     if (kind === 'body') switchView('mechanical');
     renderTree();
     try {
@@ -227,6 +234,12 @@
     if (state.board === null) state.board = board;
     return board !== state.board;
   }
+
+  window.addEventListener('tscircuit-ready', () => {
+    const [kind, ...rest] = (state.item || '').split(':');
+    const item = findItem(kind, rest.join(':'));
+    if (item) applyBody(kind, item);
+  });
 
   window.Project = { init, handle, board: () => state.board || '' };
 })();

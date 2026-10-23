@@ -1,3 +1,4 @@
+import { setMechanicalBody } from "./authored";
 import { getMechanicalOption, loadMechanicalOptions, setMechanicalOption, type MechanicalOption } from "./prefs";
 import { reconcileMechanicalOverlay, setMechanicalOverlay } from "./overlay";
 import { setMechanicalRevision } from "./store";
@@ -18,6 +19,7 @@ export const Mechanical = {
   hideMechanicalViewer,
   mechanicalCameraPreset,
   setMechanicalRevision,
+  setMechanicalBody,
   setMechanicalOverlay,
   toggleMechanicalOption,
   getMechanicalOptions: loadMechanicalOptions,

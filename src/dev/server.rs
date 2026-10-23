@@ -5,6 +5,7 @@ use tiny_http::{Request, Response, Server};
 
 use super::api;
 use super::assets::static_response;
+use super::bodies;
 use super::hub::stream_events;
 use super::refresh::{rebuild_trigger, refresh, watch_dir};
 use super::state::State;
@@ -39,7 +40,7 @@ pub(super) fn query_param(url: &str, key: &str) -> Option<String> {
     percent_decode(value)
 }
 
-fn percent_decode(value: &str) -> Option<String> {
+pub(super) fn percent_decode(value: &str) -> Option<String> {
     let bytes = value.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());
     let mut i = 0;
@@ -74,6 +75,7 @@ fn handle(request: Request, state: &State, port: u16) {
         "/api/circuit" => api::circuit(request, state),
         "/api/project" => api::project(request, state),
         "/api/runs" => api::runs(request, state),
+        p if p.starts_with("/api/bodies/") => bodies::serve(request, p),
         "/api/run" => api::start_run(request, state, port),
         "/events" => subscribe(request, state),
         _ => {

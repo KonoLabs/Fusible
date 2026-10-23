@@ -13,6 +13,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 - `fusible body kit [board]` writes `bodies/kit/<board>/kit.json` (board outline, thickness, holes, component footprints, and the wall openings of components that reach an edge, in the enclosure generator's coordinate frame) and `board.step` when the board is a tscircuit source and a runner is available.
 - `fusible dev` serves every board of the project in one Studio. A project tree on the left lists boards, firmware, and bodies, shows each board's fuse state, and switches the schematic, PCB, 3D, parts, nets, checks, and bodies views to the selected board. The URL keeps the selection.
 - A `RUNS` tab in Studio starts `check`, `build`, and `body` for one item or the whole project and streams the log live. The runs re-run the same `fusible` binary, so results match the terminal.
+- Studio draws authored bodies. Selecting a body declared with `source:` opens the `BODIES` tab on that file, in the board frame. GLB passes through, STEP and STL are converted with `occt-wasm` and cached by path, modification time, and size. The tree shows `MISSING` for a source file that does not exist.
+- `GET /api/bodies/<name>.glb` serves the GLB of an authored body. The URL carries only the body name, checked against the manifest, so no file outside the declared sources can be read. Files over 64 MiB and unsupported types answer 422.
 - Dev server endpoints: `GET /api/project`, `GET /api/runs`, `POST /api/run`, and a `board` query on `/api/circuit` and `/api/mechanical`. Event stream messages for a board carry a `board` field, and run output arrives as `log` and `run` events.
 
 ### Changed
