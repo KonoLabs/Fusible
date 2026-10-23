@@ -1,6 +1,7 @@
 mod api;
 mod assets;
 mod body;
+mod firmware;
 pub mod hub;
 pub mod pipeline;
 mod project;
@@ -16,6 +17,8 @@ pub mod watcher;
 mod api_tests;
 #[cfg(test)]
 mod body_tests;
+#[cfg(test)]
+mod firmware_tests;
 #[cfg(test)]
 mod runs_tests;
 #[cfg(test)]

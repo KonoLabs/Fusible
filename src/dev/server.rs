@@ -5,6 +5,7 @@ use tiny_http::{Request, Response, Server};
 
 use super::api;
 use super::assets::static_response;
+use super::firmware;
 use super::hub::stream_events;
 use super::refresh::{rebuild_trigger, refresh, watch_dir};
 use super::state::State;
@@ -74,6 +75,7 @@ fn handle(request: Request, state: &State, port: u16) {
         "/api/circuit" => api::circuit(request, state),
         "/api/project" => api::project(request, state),
         "/api/runs" => api::runs(request, state),
+        "/api/firmware" => firmware::serve(request, state),
         "/api/run" => api::start_run(request, state, port),
         "/events" => subscribe(request, state),
         _ => {

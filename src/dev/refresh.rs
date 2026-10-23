@@ -13,6 +13,7 @@ use super::state::{Health, Slot, State};
 pub(super) fn refresh(slot: &Slot, state: &State) {
     let start = std::time::Instant::now();
     let (payload, source) = execute_pipeline(&slot.entry);
+    slot.set_source(source.as_deref());
     slot.body
         .update(source, payload.revision.clone(), slot.name.clone());
     if let Ok(mut health) = slot.health.lock() {
