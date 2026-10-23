@@ -7,6 +7,12 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.11.6] - 2026-10-23
+
+### Fixed
+
+- The schematic warning badge no longer counts warnings the viewer cannot draw, such as `schematic_missing_sheet_warning`. Before, it showed a count that did nothing when clicked.
+
 ## [0.11.5] - 2026-10-23
 
 ### Changed
