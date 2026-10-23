@@ -16,8 +16,8 @@ pub(super) fn validate(cfg: &FusibleConfig) -> Result<(), String> {
     }
     for (name, body) in &cfg.bodies {
         body_kind(name, body)?;
-        if body.generate.is_some() {
-            board_reference(cfg, "body", name, body.around.as_deref())?;
+        if body.generate.is_some() || body.board.is_some() {
+            board_reference(cfg, "body", name, body.board.as_deref())?;
         }
     }
     Ok(())

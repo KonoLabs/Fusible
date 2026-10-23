@@ -14,7 +14,7 @@ firmware:
   sensor-fw: { board: sensor, pins_rs: fw/sensor/pins.rs }
 bodies:
   case: { source: bodies/case.step, build: python bodies/case.py }
-  lid: { generate: enclosure, around: sensor, wall_thickness: 1.5 }
+  lid: { generate: enclosure, board: sensor, wall_thickness: 1.5 }
 "#;
 
 fn invalid(yaml: &str) -> String {
@@ -79,4 +79,16 @@ fn legacy_mechanical_section_keeps_its_output_names() {
 
     let clash = FusibleConfig::from_str("name: main\nhardware: {}\nmechanical: {}\n").unwrap();
     assert!(clash.bodies.contains_key("enclosure"));
+}
+
+#[test]
+fn bodies_name_their_board_with_board_or_the_around_alias() {
+    let yaml = "boards: {a: {}, b: {}}\nbodies:\n  x: {source: x.step, board: b}\n  y: {generate: enclosure, around: a}\n";
+    let cfg = FusibleConfig::from_str(yaml).expect("board and around both parse");
+    assert_eq!(cfg.bodies["x"].board.as_deref(), Some("b"));
+    assert_eq!(cfg.bodies["y"].board.as_deref(), Some("a"));
+    assert!(
+        invalid("boards: {a: {}}\nbodies: {x: {source: x.step, board: z}}")
+            .contains("unknown board `z`")
+    );
 }

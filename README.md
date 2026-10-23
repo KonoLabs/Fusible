@@ -96,13 +96,13 @@ firmware:
 bodies:
   case:  { source: bodies/case.step }                        # drawn in FreeCAD, Fusion, Onshape...
   knob:  { source: bodies/knob.step, build: python bodies/knob.py }   # code-CAD
-  lid:   { generate: enclosure, around: sensor }             # Fusible owns and regenerates it
+  lid:   { generate: enclosure, board: sensor }              # Fusible owns and regenerates it
 ```
 
 - `fusible check` checks every board and reports all violations together. `fusible check sensor` checks one.
 - `fusible build sensor-fw` checks the `sensor` board, writes its pin bindings, then builds that firmware.
 - `fusible export main --preset fab` writes into `dist/main/fab/`. With several boards, `export` and `dev` need a board name.
-- A firmware or generated body must name its board when the project has more than one.
+- A firmware or generated body must name its `board:` when the project has more than one. An authored body may name one too: it is then modeled in that board's coordinate frame, which is what the Studio overlay relies on. `around:` is still accepted as an alias of `board:` for bodies.
 - The single-board form (`hardware:`, `mcu: { chip }`, one `firmware:`, `mechanical:`) still loads. It becomes a board named `main`, a firmware named `firmware`, and a generated body named after the project, which keeps writing `dist/mechanical/<project>.<format>`.
 
 ## Commands

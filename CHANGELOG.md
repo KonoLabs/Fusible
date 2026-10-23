@@ -7,6 +7,10 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+### Changed
+
+- Bodies name their board with `board:`, the same key firmware uses. `around:` still works as an alias. An authored body can now name a board too.
+
 ### Fixed
 
 - The Studio BODIES tab previews the generated body fitted around the board being viewed. Before, it always used the first generated body of the manifest, so `fusible dev sensor` could show the enclosure of `main`.

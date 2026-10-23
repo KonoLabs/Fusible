@@ -50,9 +50,10 @@ pub struct BodyConfig {
     /// Generator that owns this body, regenerated on every run: `enclosure`.
     #[serde(default)]
     pub generate: Option<String>,
-    /// Board the generated body is fitted around; optional with a single board.
-    #[serde(default)]
-    pub around: Option<String>,
+    /// Board the body belongs to. Required for a generated body when the project has several
+    /// boards. An authored body is modeled in this board's coordinate frame.
+    #[serde(default, alias = "around")]
+    pub board: Option<String>,
     #[serde(flatten)]
     pub enclosure: EnclosureConfig,
 }

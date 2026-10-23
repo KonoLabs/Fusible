@@ -112,12 +112,12 @@ fn preview_forces_glb_and_reports_the_outer_box() {
 }
 
 #[test]
-fn preview_uses_the_body_fitted_around_the_viewed_board() {
+fn preview_uses_the_body_of_the_viewed_board() {
     let yaml = concat!(
         "boards: {a: {}, b: {}}\n",
         "bodies:\n",
-        "  lid-a: {generate: enclosure, around: a, wall_thickness: 1.0}\n",
-        "  lid-b: {generate: enclosure, around: b, wall_thickness: 3.0}\n",
+        "  lid-a: {generate: enclosure, board: a, wall_thickness: 1.0}\n",
+        "  lid-b: {generate: enclosure, board: b, wall_thickness: 3.0}\n",
         "  knob: {source: knob.step}\n",
     );
     let cfg = crate::config::FusibleConfig::from_str(yaml).unwrap();

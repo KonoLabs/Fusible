@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use crate::commands::target::{resolve_board, BoardTarget, TargetError};
 use crate::config::{BodyConfig, FusibleConfig};
 
-/// One body to build, with the board a generated body is fitted around.
+/// One body to build, with the board a generated body is fitted to.
 pub(super) enum Job {
     Authored {
         name: String,
@@ -62,7 +62,7 @@ fn job(name: &str, body: &BodyConfig) -> Result<Job, TargetError> {
             body: body.clone(),
         });
     }
-    let board = resolve_board(body.around.clone().map(PathBuf::from))?;
+    let board = resolve_board(body.board.clone().map(PathBuf::from))?;
     Ok(generated(name, body, board))
 }
 
@@ -75,5 +75,5 @@ fn generated(name: &str, body: &BodyConfig, board: BoardTarget) -> Job {
 }
 
 fn fits(body: &BodyConfig, board: &BoardTarget) -> bool {
-    board.name.is_some() && (body.around.is_none() || body.around == board.name)
+    board.name.is_some() && (body.board.is_none() || body.board == board.name)
 }

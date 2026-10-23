@@ -86,7 +86,7 @@ firmware:
 # bodies:
 #   enclosure:
 #     generate: enclosure            # Fusible owns this file and regenerates it
-#     around: main
+#     board: main
 #   bracket:
 #     source: bodies/bracket.step    # authored in any CAD tool, never overwritten
 "#

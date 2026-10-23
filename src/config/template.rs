@@ -39,7 +39,7 @@ firmware:
 #     build: python bodies/case.py  # optional: command that produces `source`
 #   enclosure:
 #     generate: enclosure         # Fusible owns this body and regenerates it
-#     around: main                # board to fit (optional with a single board)
+#     board: main                 # board it belongs to (optional with a single board)
 #     format: step                # step | stl | glb | brep | all
 #     out_dir: dist/bodies
 #     wall_thickness: 2.0

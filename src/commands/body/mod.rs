@@ -162,9 +162,9 @@ pub fn preview(
     result
 }
 
-/// Returns the settings of the first generated body fitted around `board`, for the dev studio.
+/// Returns the settings of the first generated body for `board`, for the dev studio.
 ///
-/// A generated body without `around:` fits every board.
+/// A generated body without `board:` fits every board.
 pub(crate) fn preview_config(board: Option<&str>) -> Option<EnclosureConfig> {
     FusibleConfig::nearest().and_then(|(_, cfg)| fitted_settings(cfg, board))
 }
@@ -173,7 +173,7 @@ fn fitted_settings(cfg: FusibleConfig, board: Option<&str>) -> Option<EnclosureC
     cfg.bodies
         .into_values()
         .find(|body| {
-            body.generate.is_some() && (body.around.is_none() || body.around.as_deref() == board)
+            body.generate.is_some() && (body.board.is_none() || body.board.as_deref() == board)
         })
         .map(|body| body.enclosure)
 }
