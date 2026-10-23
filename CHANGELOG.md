@@ -5,6 +5,17 @@ All notable changes to this project are documented here. The format is
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 `0.x`, a breaking change bumps the minor.
 
+## [Unreleased]
+
+### Added
+
+- Rules now have a severity. A warning prints but leaves the exit code at 0; an error blows the fuse as before.
+
+### Changed
+
+- `schematic_scale` is a warning, so a cosmetic schematic placement no longer blocks exports or codegen.
+- The "several chips" hint names each candidate by its manufacturer part number, so you know what to put in `mcu.chip`.
+
 ## [0.11.0] - 2026-10-23
 
 ### Added
