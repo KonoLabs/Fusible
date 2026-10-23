@@ -86,7 +86,8 @@ pub struct EjectArgs {
     #[arg(value_name = "BODY")]
     pub name: String,
 
-    /// Output file; its extension (step, stl, glb, brep) picks the format [default: bodies/<BODY>.step]
+    /// Output file; its extension (step, stl, glb, brep) picks the format
+    /// [default: bodies/<BODY>.<first configured format, step when unset>]
     #[arg(short = 'o', long, value_name = "FILE")]
     pub output: Option<PathBuf>,
 
@@ -101,7 +102,7 @@ pub struct KitArgs {
     #[arg(value_name = "BOARD")]
     pub board: Option<PathBuf>,
 
-    /// Output directory [default: bodies/kit/<BOARD>]
+    /// Output directory [default: bodies/kit/<BOARD>, or the file name of a bare circuit file]
     #[arg(short = 'o', long, value_name = "DIR")]
     pub output: Option<PathBuf>,
 

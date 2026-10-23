@@ -10,6 +10,7 @@ mod convert;
 mod edges;
 mod eject;
 mod eject_edit;
+mod eject_files;
 mod eject_manifest;
 mod error;
 mod generator;
@@ -23,9 +24,14 @@ mod spec;
 mod yaml_lines;
 
 #[cfg(test)]
+mod eject_comment_tests;
+#[cfg(test)]
+mod eject_files_tests;
+#[cfg(test)]
 mod eject_tests;
 #[cfg(test)]
 mod generator_tests;
+mod jobs_tests;
 #[cfg(test)]
 mod kit_tests;
 #[cfg(test)]

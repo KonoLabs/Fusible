@@ -9,8 +9,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ### Added
 
-- `fusible body eject <name>` generates a body once into `bodies/<name>.step` (or the file and format of `-o`), then rewrites its entry in `fusible.yml` from `generate:` to `source:`. It never overwrites an existing file, keeps the comments and layout of the manifest, and checks that only that body changed. A manifest edit it cannot do safely is reported with the lines to change, and the model is still written. A legacy `mechanical:` block moves into a new `bodies:` section.
-- `fusible body kit [board]` writes `bodies/kit/<board>/kit.json` (board outline, thickness, holes, component footprints, and the wall openings of components that reach an edge, in the enclosure generator's coordinate frame) and `board.step` when the board is a tscircuit source and a runner is available.
+- `fusible body eject <name>` generates a body once into `bodies/<name>.<format>` (the first configured format, `step` by default, or the file and format of `-o`), then rewrites its entry in `fusible.yml` from `generate:` to `source:`. The model is staged and moved into place only when generation succeeds, it never replaces an existing file, and the manifest is replaced in one step, so a crash leaves nothing half written. The edit keeps the comments and layout of the manifest, including a comment after `generate:`, and checks that only that body changed. A manifest edit it cannot do safely leaves `fusible.yml` alone and exits 2 with the lines to change by hand; the model is still written. A legacy `mechanical:` block moves into a new `bodies:` section.
+- `fusible body kit [board]` writes `bodies/kit/<board>/kit.json` (board outline, thickness, holes, component footprints, and the wall openings of components that reach an edge, in the enclosure generator's coordinate frame) and `board.step` when the board is a tscircuit source and a runner is available. Each opening gives the cut as two points on the board edge (`from`, `to`), and the file lists the generator's `notch` constants (`margin`, `edge_tolerance`, `clearance`, `extra_depth`); the cut runs outward for `clearance` + wall + `extra_depth`. Holes with no diameter are left out with an entry in `warnings`. A bare circuit file goes to `bodies/kit/<file name>/`. A runner that is found but fails the `board.step` export exits 2 after `kit.json` is written.
 - `fusible dev` serves every board of the project in one Studio. A project tree on the left lists boards, firmware, and bodies, shows each board's fuse state, and switches the schematic, PCB, 3D, parts, nets, checks, and bodies views to the selected board. The URL keeps the selection.
 - A `RUNS` tab in Studio starts `check`, `build`, and `body` for one item or the whole project and streams the log live. The runs re-run the same `fusible` binary, so results match the terminal.
 - Studio draws authored bodies. Selecting a body declared with `source:` opens the `BODIES` tab on that file, in the board frame. GLB passes through, STEP and STL are converted with `occt-wasm` and cached by path, modification time, and size. The tree shows `MISSING` for a source file that does not exist.
@@ -21,6 +21,9 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ### Changed
 
+- `fusible check` on several boards prefixes each violation with its board (`[sensor] net ...`). When one board has violations and another fails with a tool error, the violation report is still printed and the exit code is 2.
+- A body cannot be named `eject` or `kit`, because `fusible body eject` and `fusible body kit` run those subcommands. The manifest is rejected with a clear message.
+- A manifest name now wins over a local file or directory of the same name when a command picks a board, firmware, or body: `fusible body docs` builds the body `docs` even when a `./docs/` directory exists.
 - `fusible dev` with several boards no longer asks for a board name. `--legacy` still needs exactly one board.
 - Bodies name their board with `board:`, the same key firmware uses. `around:` still works as an alias. An authored body can now name a board too.
 

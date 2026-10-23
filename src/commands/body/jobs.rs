@@ -24,8 +24,7 @@ pub(super) fn select_jobs(
     target: Option<PathBuf>,
 ) -> Result<Vec<Job>, TargetError> {
     let by_name = target
-        .as_ref()
-        .filter(|t| !t.exists())
+        .as_deref()
         .and_then(|t| t.to_str())
         .and_then(|n| cfg.bodies.get_key_value(n));
     if let Some((name, body)) = by_name {

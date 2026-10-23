@@ -97,3 +97,12 @@ fn bodies_name_their_board_with_board_or_the_around_alias() {
             .contains("unknown board `z`")
     );
 }
+
+#[test]
+fn bodies_cannot_take_the_names_of_body_subcommands() {
+    for name in ["eject", "kit"] {
+        let message = invalid(&format!("bodies: {{{name}: {{source: x.step}}}}"));
+        assert!(message.contains("reserved name"), "{message}");
+    }
+    assert!(FusibleConfig::from_str("bodies: {ejector: {source: x.step}}").is_ok());
+}

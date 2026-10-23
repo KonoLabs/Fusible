@@ -45,8 +45,7 @@ type Selection<'a> = (Vec<BoardTarget>, Vec<(&'a String, &'a FirmwareConfig)>);
 
 fn select(cfg: &FusibleConfig, target: Option<PathBuf>) -> Result<Selection<'_>, CheckError> {
     let by_name = target
-        .as_ref()
-        .filter(|t| !t.exists())
+        .as_deref()
         .and_then(|t| t.to_str())
         .and_then(|n| cfg.firmware.get_key_value(n));
     if let Some((name, fw)) = by_name {

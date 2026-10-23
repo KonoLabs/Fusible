@@ -89,7 +89,7 @@ pub fn board_for_entry(entry: &Path) -> BoardTarget {
 
 fn board_for(cfg: &FusibleConfig, arg: PathBuf) -> BoardTarget {
     let by_name = arg.to_str().and_then(|n| cfg.boards.get_key_value(n));
-    if let (false, Some((name, board))) = (arg.exists(), by_name) {
+    if let Some((name, board)) = by_name {
         if let Ok(target) = named_board(cfg, name, board, None) {
             return target;
         }

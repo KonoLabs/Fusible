@@ -2,6 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
+use super::eject_files::{publish_new, staging_path, write_atomic};
 use super::eject_manifest::eject_manifest;
 use super::settings::{resolve_settings, Settings};
 use super::spec::Output;
@@ -13,8 +14,10 @@ use crate::config::{EnclosureConfig, FusibleConfig};
 ///
 /// The file goes to `bodies/<name>.<format>` next to the manifest unless `output` is given;
 /// its extension picks the format. An existing file is never overwritten. Generation is
-/// fuse-gated unless `skip_lint` is set. A manifest edit that cannot be done safely is
-/// reported with the lines to change, and the command still succeeds.
+/// fuse-gated unless `skip_lint` is set. The model is staged next to its final path and
+/// moved into place only when generation succeeds, so a failed run leaves nothing behind.
+/// A manifest edit that cannot be done safely leaves `fusible.yml` untouched and fails with
+/// a tool error (exit 2) that lists the lines to change by hand.
 pub fn eject(name: String, output: Option<PathBuf>, skip_lint: bool) -> Result<(), BodyError> {
     let (manifest, cfg) = FusibleConfig::nearest().ok_or_else(|| unknown(&name, None))?;
     let body = cfg
@@ -35,17 +38,31 @@ pub fn eject(name: String, output: Option<PathBuf>, skip_lint: bool) -> Result<(
     }
     let board = resolve_board(body.board.clone().map(PathBuf::from))?;
     let json = fuse_gate(&board, skip_lint)?;
+    generate_staged(&json, &settings, format, &path)?;
+    println!("✅ Ejected body {name} ({format}) -> {}", path.display());
+    update_manifest(&manifest, &name, &manifest_path(&path, root))
+}
+
+/// Generates the model next to `path` and moves it into place; a failure leaves no file behind.
+fn generate_staged(
+    json: &str,
+    settings: &Settings,
+    format: &'static str,
+    path: &Path,
+) -> Result<(), BodyError> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
+    let staged = staging_path(path);
     let outputs = vec![Output {
         format,
-        path: std::path::absolute(&path)?,
+        path: std::path::absolute(&staged)?,
     }];
-    generate(&json, &settings, outputs)?;
-    println!("✅ Ejected body {name} ({format}) -> {}", path.display());
-    update_manifest(&manifest, &name, &manifest_path(&path, root));
-    Ok(())
+    if let Err(err) = generate(json, settings, outputs) {
+        let _ = std::fs::remove_file(&staged);
+        return Err(err);
+    }
+    publish_new(&staged, path)
 }
 
 fn unknown(name: &str, cfg: Option<&FusibleConfig>) -> BodyError {
@@ -96,25 +113,26 @@ fn manifest_path(path: &Path, root: &Path) -> String {
         .replace('\\', "/")
 }
 
-fn update_manifest(manifest: &Path, name: &str, source: &str) {
-    let edited = std::fs::read_to_string(manifest)
-        .map_err(|e| e.to_string())
-        .and_then(|old| eject_manifest(&old, name, source))
-        .and_then(|new| std::fs::write(manifest, new).map_err(|e| e.to_string()));
-    match edited {
-        Ok(()) => println!(
-            "✅ {}: body {name} now has `source: {source}`",
-            manifest.display()
-        ),
-        Err(reason) => {
-            println!("⚠️  Left {} unchanged: {reason}.", manifest.display());
+pub(super) fn update_manifest(manifest: &Path, name: &str, source: &str) -> Result<(), BodyError> {
+    match edit_manifest(manifest, name, source) {
+        Ok(()) => {
             println!(
-                "   The model is written. In body `{name}`, remove `generate:` and its settings"
+                "✅ {}: body {name} now has `source: {source}`",
+                manifest.display()
             );
-            println!(
-                "   (format, out_dir, wall_thickness, height, cutouts, ventilation, mounting)"
-            );
-            println!("   and add `source: {source}`.");
+            Ok(())
         }
+        Err(reason) => Err(BodyError::ManifestUnchanged {
+            manifest: manifest.to_path_buf(),
+            name: name.to_string(),
+            model: source.to_string(),
+            reason,
+        }),
     }
+}
+
+fn edit_manifest(manifest: &Path, name: &str, source: &str) -> Result<(), String> {
+    let old = std::fs::read_to_string(manifest).map_err(|e| e.to_string())?;
+    let new = eject_manifest(&old, name, source)?;
+    write_atomic(manifest, &new).map_err(|e| e.to_string())
 }

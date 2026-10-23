@@ -1,5 +1,5 @@
 use super::kit_data::build_kit;
-use super::BodyError;
+use super::{BodyError, CLEARANCE, EDGE_TOLERANCE, NOTCH_MARGIN};
 
 const BOARD: &str = r#"[
   {"type":"pcb_board","width":40,"height":30,"center":{"x":0,"y":0},"thickness":1.4},
@@ -40,11 +40,45 @@ fn kit_lists_outline_holes_components_and_edge_openings() {
     assert_eq!(kit.openings.len(), 1);
     let opening = &kit.openings[0];
     assert_eq!((opening.component.as_str(), opening.side), ("J1", "+x"));
-    assert_eq!(
-        (opening.x, opening.y, opening.w, opening.h),
-        (18.0, 0.0, 6.0, 8.0)
-    );
     assert!((opening.normal[0] - 1.0).abs() < 1e-9 && opening.normal[1].abs() < 1e-9);
+    assert_eq!(opening.from[0], 20.0);
+    assert_eq!(opening.to[0], 20.0);
+    let mut ys = [opening.from[1], opening.to[1]];
+    ys.sort_by(f64::total_cmp);
+    assert_eq!(ys, [-4.5, 4.5]);
+}
+
+#[test]
+fn kit_exports_the_notch_constants_the_generator_uses() {
+    let kit = build_kit(BOARD, None).unwrap();
+    assert_eq!(kit.notch.margin, NOTCH_MARGIN);
+    assert_eq!(kit.notch.edge_tolerance, EDGE_TOLERANCE);
+    assert_eq!(kit.notch.clearance, CLEARANCE);
+    let value = serde_json::to_value(&kit).unwrap();
+    assert_eq!(value["notch"]["margin"], 0.5);
+    assert_eq!(value["warnings"], serde_json::json!([]));
+}
+
+#[test]
+fn holes_without_a_diameter_are_left_out_with_a_warning() {
+    let board = r#"[
+      {"type":"pcb_board","width":40,"height":30,"center":{"x":0,"y":0}},
+      {"type":"pcb_hole","x":1,"y":1,"hole_diameter":3.0},
+      {"type":"pcb_hole","x":2,"y":2}
+    ]"#;
+    let kit = build_kit(board, None).unwrap();
+    assert_eq!(kit.holes.len(), 1);
+    assert_eq!(kit.holes[0].diameter, 3.0);
+    assert_eq!(kit.warnings.len(), 1);
+    assert!(kit.warnings[0].contains("1 hole(s)"), "{:?}", kit.warnings);
+}
+
+#[test]
+fn invalid_circuit_json_is_an_error_not_an_empty_kit() {
+    assert!(matches!(
+        build_kit("not json", None),
+        Err(BodyError::InvalidCircuit(_))
+    ));
 }
 
 #[test]
@@ -60,6 +94,8 @@ fn kit_serializes_the_documented_keys() {
         "holes",
         "components",
         "openings",
+        "notch",
+        "warnings",
     ] {
         assert!(value.get(key).is_some(), "missing `{key}`");
     }
