@@ -33,6 +33,16 @@ fn classify(key: &str) -> Result<Action, String> {
     }
 }
 
+/// `source: path`, keeping the comment that trailed the replaced `generate:` value.
+fn source_line(indent: usize, path: &str, value: &str) -> String {
+    let comment = match value.starts_with('#') {
+        true => Some(value),
+        false => value.find(" #").map(|i| value[i + 1..].trim_start()),
+    };
+    let tail = comment.map_or_else(String::new, |c| format!("  {c}"));
+    format!("{}source: {path}{tail}", " ".repeat(indent))
+}
+
 fn edit_block(body: &[String], path: &str) -> Result<Vec<String>, String> {
     let child = body
         .iter()
@@ -48,10 +58,10 @@ fn edit_block(body: &[String], path: &str) -> Result<Vec<String>, String> {
         if indent_of(line) != child {
             return Err("a setting spans several lines".into());
         }
-        let (key, _) = key_value(line).ok_or("a line is not a plain `key: value`")?;
+        let (key, value) = key_value(line).ok_or("a line is not a plain `key: value`")?;
         match classify(key)? {
             Action::Source => {
-                out.push(format!("{}source: {path}", " ".repeat(child)));
+                out.push(source_line(child, path, value));
                 replaced = true;
             }
             Action::Keep => out.push(line.clone()),

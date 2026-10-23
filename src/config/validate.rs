@@ -8,6 +8,9 @@ use super::FusibleConfig;
 /// Generators a body can name in `generate:`.
 pub const GENERATORS: &[&str] = &["enclosure"];
 
+/// Body names that `fusible body` reads as subcommands.
+const RESERVED_BODY_NAMES: &[&str] = &["eject", "kit"];
+
 /// Fails on duplicate names, dangling board references, or ambiguous bodies.
 pub(super) fn validate(cfg: &FusibleConfig) -> Result<(), String> {
     unique_names(cfg)?;
@@ -15,6 +18,7 @@ pub(super) fn validate(cfg: &FusibleConfig) -> Result<(), String> {
         board_reference(cfg, "firmware", name, fw.board.as_deref())?;
     }
     for (name, body) in &cfg.bodies {
+        reserved_name(name)?;
         body_kind(name, body)?;
         if body.generate.is_some() || body.board.is_some() {
             board_reference(cfg, "body", name, body.board.as_deref())?;
@@ -56,6 +60,16 @@ fn board_reference(
         )),
         _ => Ok(()),
     }
+}
+
+fn reserved_name(name: &str) -> Result<(), String> {
+    if RESERVED_BODY_NAMES.contains(&name) {
+        return Err(format!(
+            "body `{name}` uses a reserved name; `fusible body {name}` runs the `{name}` subcommand, \
+             so pick another name"
+        ));
+    }
+    Ok(())
 }
 
 fn body_kind(name: &str, body: &BodyConfig) -> Result<(), String> {

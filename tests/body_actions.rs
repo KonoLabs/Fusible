@@ -137,3 +137,13 @@ fn body_keeps_its_aliases_and_plain_target_form() {
     let (code, stderr) = run(&dir.path, &["body", "case", "--skip-lint"]);
     assert_eq!(code, Some(0), "{stderr}");
 }
+
+#[test]
+fn kit_of_a_bare_circuit_file_is_named_after_the_file() {
+    let dir = TestDir::new("kit_bare");
+    std::fs::write(dir.path.join("sensor.json"), BOARD).unwrap();
+    let (code, stderr) = run(&dir.path, &["body", "kit", "sensor.json", "--skip-lint"]);
+    assert_eq!(code, Some(0), "{stderr}");
+    assert!(dir.path.join("bodies/kit/sensor/kit.json").is_file());
+    assert!(!dir.path.join("bodies/kit/board").exists());
+}

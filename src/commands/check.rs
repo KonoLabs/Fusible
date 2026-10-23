@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use miette::Diagnostic;
 use thiserror::Error;
 
+use crate::commands::check_merge::{label, merge};
 pub use crate::commands::source::{find_fallback_circuit_json, load_circuit_source};
 use crate::commands::target::{resolve_boards, BoardTarget, TargetError};
 use crate::linter::{FuseBlown, LintContext, Linter, Severity};
@@ -94,12 +95,16 @@ pub fn run_boards(
     pins_rs: Option<PathBuf>,
 ) -> Result<(), CheckError> {
     let mut failure = None;
+    let mut report = |blown| eprintln!("Error: {:?}", miette::Report::new(blown));
     for board in boards {
-        if let (true, Some(name)) = (boards.len() > 1, &board.name) {
+        let name = board.name.as_deref().filter(|_| boards.len() > 1);
+        if let Some(name) = name {
             println!("\n▸ board {name}");
         }
-        let result = check_board(board, mcu.clone(), pins_rs.clone());
-        failure = merge_failures(failure, result.err());
+        let next = check_board(board, mcu.clone(), pins_rs.clone())
+            .err()
+            .map(|error| label(error, name));
+        failure = merge(failure, next, &mut report);
     }
     failure.map_or(Ok(()), Err)
 }
@@ -120,17 +125,6 @@ fn check_board(
     let ctx = LintContext::new(&circuit, &netlist).with_mcu(target_mcu.as_deref());
     pins.iter()
         .try_for_each(|path| write_pins_rs(&ctx, path, &board.title))
-}
-
-fn merge_failures(first: Option<CheckError>, next: Option<CheckError>) -> Option<CheckError> {
-    match (first, next) {
-        (Some(CheckError::FuseBlown(mut a)), Some(CheckError::FuseBlown(b))) => {
-            a.violations.extend(b.violations);
-            Some(CheckError::FuseBlown(a))
-        }
-        (Some(CheckError::FuseBlown(_)), Some(tool_error)) => Some(tool_error),
-        (first, next) => first.or(next),
-    }
 }
 
 /// Generates firmware pin bindings for the circuit's MCU into `pins_path`.

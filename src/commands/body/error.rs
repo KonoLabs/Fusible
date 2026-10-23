@@ -83,6 +83,35 @@ pub enum BodyError {
     )]
     Exists { path: PathBuf },
 
+    #[error("{} was left unchanged: {reason}", manifest.display())]
+    #[diagnostic(
+        code(fusible::body::manifest_unchanged),
+        help(
+            "the model is written to {model}. In body `{name}`, remove `generate:` and its settings \
+             (format, out_dir, wall_thickness, height, cutouts, ventilation, mounting) and add `source: {model}`"
+        )
+    )]
+    ManifestUnchanged {
+        manifest: PathBuf,
+        name: String,
+        model: String,
+        reason: String,
+    },
+
+    #[error("cannot read the Circuit JSON: {0}")]
+    #[diagnostic(
+        code(fusible::body::invalid_circuit),
+        help("rebuild the board so its Circuit JSON is valid, then rerun")
+    )]
+    InvalidCircuit(String),
+
+    #[error("kit.json is written to {dir}, but the board model export failed: {reason}")]
+    #[diagnostic(
+        code(fusible::body::kit_step_failed),
+        help("run `fusible doctor` to check the tscircuit runner, then rerun `fusible body kit`")
+    )]
+    KitStepFailed { dir: String, reason: String },
+
     #[error("bun is required to run the enclosure generator")]
     #[diagnostic(
         code(fusible::body::bun_missing),
