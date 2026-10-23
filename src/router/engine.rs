@@ -5,6 +5,7 @@ mod index;
 mod json;
 mod output;
 mod passes;
+pub(crate) mod ripup;
 mod trace;
 
 use serde_json::Value;

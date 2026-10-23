@@ -2,6 +2,7 @@
 
 use super::super::astar::{find_path, AStarConfig, RoutePath};
 use super::super::spatial::SpatialRoutingIndex;
+use super::ripup::rip_up_and_reroute;
 use super::trace::insert_path;
 use super::ConnectionJob;
 
@@ -40,5 +41,6 @@ pub(super) fn route_jobs(
             order.iter().partition(|&&j| paths[j].is_none());
         order = failed.into_iter().chain(done).collect();
     }
+    rip_up_and_reroute(jobs, base, config, &mut best);
     best
 }

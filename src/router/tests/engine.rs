@@ -3,8 +3,11 @@
 use serde_json::Value;
 
 use super::fixtures::{circuit, connect, crossing_nets, pad};
-use crate::router::engine::{route_circuit, RouteOptions};
+use crate::router::astar::{AStarConfig, RoutePath, RouteStepKind, Terminal};
+use crate::router::engine::ripup::rip_up_and_reroute;
+use crate::router::engine::{route_circuit, ConnectionJob, RouteOptions};
 use crate::router::spatial::segment_distance;
+use crate::router::spatial::SpatialRoutingIndex;
 
 #[test]
 fn engine_resolves_nets_through_pcb_port_and_source_trace() {
@@ -105,4 +108,44 @@ fn routed_output_feeds_the_strict_gerber_generator() {
     let res = route_circuit(&crossing_nets(), &RouteOptions::default()).unwrap();
     assert_eq!(res.routed_nets, 2);
     crate::gerber::generate_gerber_files(&res.output_json, "t").expect("routed JSON is fabricable");
+}
+
+fn job(net: &str, from: [f64; 2], to: [f64; 2]) -> ConnectionJob {
+    let terminal = |point: [f64; 2]| Terminal {
+        point,
+        layers: vec!["top".to_string()],
+    };
+    ConnectionJob {
+        net_id: net.to_string(),
+        start: terminal(from),
+        target: terminal(to),
+    }
+}
+
+#[test]
+fn rip_up_moves_a_blocking_route_to_free_a_blocked_one() {
+    let config = AStarConfig {
+        layers: vec!["top".to_string()],
+        ..Default::default()
+    };
+    let jobs = [
+        job("a", [-8.0, 0.0], [8.0, 0.0]),
+        job("b", [0.0, -3.0], [0.0, 3.0]),
+    ];
+    let base = SpatialRoutingIndex::new();
+    let wire = |x, y| RouteStepKind::Wire {
+        layer: "top".to_string(),
+        x,
+        y,
+    };
+    let mut paths = vec![
+        Some(RoutePath {
+            steps: vec![wire(-8.0, 0.0), wire(8.0, 0.0)],
+        }),
+        None,
+    ];
+
+    rip_up_and_reroute(&jobs, &base, &config, &mut paths);
+
+    assert!(paths.iter().all(Option::is_some));
 }
