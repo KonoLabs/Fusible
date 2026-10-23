@@ -38,6 +38,7 @@ impl Rule for PinMuxRule {
                 rule: self.name().to_string(),
                 message: conflict_message(conflict),
                 help: Some(conflict_help(conflict)),
+                ..Default::default()
             })
             .collect()
     }

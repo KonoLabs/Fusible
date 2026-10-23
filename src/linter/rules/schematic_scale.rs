@@ -4,8 +4,8 @@ mod element;
 
 use std::collections::HashSet;
 
-use crate::linter::{Diagnostic, LintContext, Rule};
-use element::{extract_coord, resolve_refdes};
+use crate::linter::{Diagnostic, LintContext, Rule, Severity};
+use element::{detect_multiple_sheets, extract_coord, resolve_refdes};
 
 const MAX_CENTER_COORD_MM: f64 = 150.0;
 const MAX_SPAN_MM: f64 = 300.0;
@@ -39,6 +39,10 @@ impl Rule for SchematicScaleRule {
         "E_SCHEMATIC_SCALE_EXCESSIVE"
     }
 
+    fn severity(&self) -> Severity {
+        Severity::Warning
+    }
+
     fn check(&self, ctx: &LintContext<'_>) -> Vec<Diagnostic> {
         let placements = collect_placements(ctx);
         if placements.is_empty() {
@@ -56,6 +60,7 @@ impl Rule for SchematicScaleRule {
                      sheet bounds"
                 ),
                 help: Some(SCALE_HELP.to_string()),
+                ..Default::default()
             })
             .collect()
     }
@@ -118,30 +123,4 @@ fn collect_placements(ctx: &LintContext<'_>) -> Vec<Placement> {
             })
         })
         .collect()
-}
-
-fn detect_multiple_sheets(ctx: &LintContext<'_>) -> bool {
-    let sheet_count = ctx
-        .circuit
-        .raw_elements
-        .iter()
-        .filter(|e| e.get("type").and_then(|v| v.as_str()) == Some("schematic_sheet"))
-        .count();
-
-    if sheet_count > 1 {
-        return true;
-    }
-
-    let distinct_sheets: HashSet<&str> = ctx
-        .circuit
-        .raw_elements
-        .iter()
-        .filter_map(|e| {
-            e.get("schematic_sheet_id")
-                .or_else(|| e.get("schematicSheetId"))
-                .and_then(|v| v.as_str())
-        })
-        .collect();
-
-    distinct_sheets.len() > 1
 }

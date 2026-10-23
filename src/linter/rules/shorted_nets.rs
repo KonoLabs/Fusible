@@ -26,6 +26,7 @@ impl Rule for ShortedNetsRule {
                     "remove the trace that joins them, or rename the nets if they are meant to be one"
                         .to_string(),
                 ),
+                ..Default::default()
             })
             .collect()
     }

@@ -100,6 +100,7 @@ fn diagnostic_exposes_code_severity_and_help() {
         rule: "unconnected_net".to_string(),
         message: "net is floating".to_string(),
         help: Some("route it".to_string()),
+        ..Default::default()
     };
 
     assert_eq!(
@@ -113,6 +114,7 @@ fn diagnostic_exposes_code_severity_and_help() {
         rule: "r".to_string(),
         message: "m".to_string(),
         help: None,
+        ..Default::default()
     };
     assert!(silent.help().is_none());
 }
@@ -123,6 +125,7 @@ fn fuse_blown_renders_its_violations_as_related_errors() {
         rule: "unconnected_net".to_string(),
         message: "net \"I2C_SDA\" is floating".to_string(),
         help: None,
+        ..Default::default()
     }]));
     let rendered = format!("{report:?}");
 

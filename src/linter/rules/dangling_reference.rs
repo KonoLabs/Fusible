@@ -23,6 +23,7 @@ impl Rule for DanglingReferenceRule {
                     "add the missing element, or fix the reference: its connection cannot be verified"
                         .to_string(),
                 ),
+                ..Default::default()
             })
             .collect()
     }

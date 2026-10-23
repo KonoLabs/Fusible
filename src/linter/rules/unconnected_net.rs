@@ -30,6 +30,7 @@ impl Rule for UnconnectedNetRule {
                     "every net must connect at least two pads/ports — complete the routing in tscircuit"
                         .to_string(),
                 ),
+                ..Default::default()
             })
             .collect()
     }

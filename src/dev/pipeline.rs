@@ -6,7 +6,7 @@ use serde::Serialize;
 
 use crate::commands::check::{load_circuit_source, resolve_mcu};
 use crate::config::FusibleConfig;
-use crate::linter::{LintContext, Linter};
+use crate::linter::{LintContext, Linter, Severity};
 use crate::netlist::Netlist;
 use crate::parser::{self, Circuit};
 use crate::svg::{render_pcb_svg, render_schematic_svg};
@@ -113,7 +113,7 @@ fn lint(payload: &mut DevPayload, circuit: &Circuit) {
     let target_mcu = resolve_mcu(None);
     let ctx = LintContext::new(circuit, &netlist).with_mcu(target_mcu.as_deref());
     let violations = Linter::default().run_with_context(&ctx);
-    payload.fuse_blown = !violations.is_empty();
+    payload.fuse_blown = violations.iter().any(|v| v.severity == Severity::Error);
     payload.diagnostics = violations
         .into_iter()
         .map(|v| DevDiagnostic {

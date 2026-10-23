@@ -1,5 +1,7 @@
 //! Field readers for raw `schematic_component` JSON elements.
 
+use std::collections::HashSet;
+
 use serde_json::Value;
 
 use crate::linter::LintContext;
@@ -65,4 +67,31 @@ fn raw_component_name<'a>(ctx: &'a LintContext<'_>, id: &str) -> Option<&'a str>
                 == Some(id)
         })
         .find_map(|raw| non_empty(raw.get("name").and_then(Value::as_str)))
+}
+
+/// True when the circuit spans more than one schematic sheet.
+pub(super) fn detect_multiple_sheets(ctx: &LintContext<'_>) -> bool {
+    let sheet_count = ctx
+        .circuit
+        .raw_elements
+        .iter()
+        .filter(|e| e.get("type").and_then(|v| v.as_str()) == Some("schematic_sheet"))
+        .count();
+
+    if sheet_count > 1 {
+        return true;
+    }
+
+    let distinct_sheets: HashSet<&str> = ctx
+        .circuit
+        .raw_elements
+        .iter()
+        .filter_map(|e| {
+            e.get("schematic_sheet_id")
+                .or_else(|| e.get("schematicSheetId"))
+                .and_then(|v| v.as_str())
+        })
+        .collect();
+
+    distinct_sheets.len() > 1
 }

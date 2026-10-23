@@ -23,6 +23,7 @@ fn unknown_mcu(chip: &str) -> Diagnostic {
             "mcu \"{chip}\" is not in the silicon database; pin assignments cannot be verified"
         ),
         help: Some("use a supported chip id: esp32-s3, rp2040, stm32g431".to_string()),
+        ..Default::default()
     }
 }
 

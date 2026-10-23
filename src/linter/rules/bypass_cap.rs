@@ -81,6 +81,7 @@ impl BypassCapRule {
                 "connect a local ceramic bypass capacitor (e.g. 100nF) between \"{net_name}\" \
                  and GND near \"{comp_name}\""
             )),
+            ..Default::default()
         }
     }
 }

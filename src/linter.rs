@@ -19,7 +19,7 @@ mod rules;
 mod tests;
 
 pub use context::LintContext;
-pub use diagnostics::{Diagnostic, FuseBlown};
+pub use diagnostics::{Diagnostic, FuseBlown, Severity};
 pub use rules::{
     BypassCapRule, DanglingReferenceRule, GhostNetRule, MalformedElementRule, PinMuxRule,
     SchematicScaleRule, ShortedNetsRule, TraceClearanceRule, UnconnectedNetRule,
@@ -33,6 +33,11 @@ pub use rules::{
 pub trait Rule {
     /// Short rule name, reused as the diagnostic's error code.
     fn name(&self) -> &'static str;
+
+    /// Whether this rule blows the fuse or only warns. Errors by default.
+    fn severity(&self) -> Severity {
+        Severity::Error
+    }
 
     /// Runs the rule against the lint context. An empty vector = rule passed.
     fn check(&self, ctx: &LintContext<'_>) -> Vec<Diagnostic>;
@@ -69,7 +74,15 @@ impl Linter {
 
     /// Runs every pass against a pre-built lint context.
     pub fn run_with_context(&self, ctx: &LintContext<'_>) -> Vec<Diagnostic> {
-        self.rules.iter().flat_map(|rule| rule.check(ctx)).collect()
+        self.rules
+            .iter()
+            .flat_map(|rule| {
+                let severity = rule.severity();
+                rule.check(ctx)
+                    .into_iter()
+                    .map(move |d| Diagnostic { severity, ..d })
+            })
+            .collect()
     }
 }
 

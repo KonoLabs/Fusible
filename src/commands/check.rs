@@ -8,7 +8,7 @@ use thiserror::Error;
 use crate::commands::manifest::resolve_pins_rs;
 pub use crate::commands::manifest::{resolve_board_name, resolve_mcu};
 use crate::commands::target::{is_kicad_target, is_tsx_target, resolve_entry, MissingTargetError};
-use crate::linter::{FuseBlown, LintContext, Linter};
+use crate::linter::{FuseBlown, LintContext, Linter, Severity};
 use crate::netlist::Netlist;
 use crate::parser;
 use crate::tscircuit::{Runner, RunnerError};
@@ -133,8 +133,14 @@ pub fn lint_source(entry: &Path, mcu: Option<String>) -> Result<(PathBuf, String
     let circuit = parser::parse(&source, &json_path)?;
     let netlist = Netlist::from_circuit(&circuit);
     let ctx = LintContext::new(&circuit, &netlist).with_mcu(target_mcu.as_deref());
-    let violations = Linter::default().run_with_context(&ctx);
+    let (warnings, violations): (Vec<_>, Vec<_>) = Linter::default()
+        .run_with_context(&ctx)
+        .into_iter()
+        .partition(|d| d.severity == Severity::Warning);
 
+    for warning in warnings {
+        eprintln!("{:?}", miette::Report::new(warning));
+    }
     if !violations.is_empty() {
         return Err(CheckError::FuseBlown(FuseBlown::new(violations)));
     }

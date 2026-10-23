@@ -10,6 +10,14 @@ use std::fmt;
 
 use thiserror::Error;
 
+/// How a violation affects the fuse: errors blow it, warnings only print.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Severity {
+    #[default]
+    Error,
+    Warning,
+}
+
 /// A violation detected by a rule.
 ///
 /// `miette::Diagnostic` is implemented **by hand** instead of derived: the
@@ -18,7 +26,7 @@ use thiserror::Error;
 /// produces fixed literals at the struct level. The `code` also replaces the
 /// rule prefix the `Display` used to carry, so miette no longer prints the
 /// rule name twice.
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Default)]
 #[error("{message}")]
 pub struct Diagnostic {
     /// Stable rule identifier, e.g. `unconnected_net`.
@@ -27,6 +35,8 @@ pub struct Diagnostic {
     pub message: String,
     /// Contextual help rendered as `help: ...` under the diagnostic.
     pub help: Option<String>,
+    /// Set by the linter from the rule that produced this diagnostic.
+    pub severity: Severity,
 }
 
 impl miette::Diagnostic for Diagnostic {
@@ -35,7 +45,10 @@ impl miette::Diagnostic for Diagnostic {
     }
 
     fn severity(&self) -> Option<miette::Severity> {
-        Some(miette::Severity::Error)
+        Some(match self.severity {
+            Severity::Error => miette::Severity::Error,
+            Severity::Warning => miette::Severity::Warning,
+        })
     }
 
     fn help(&self) -> Option<Box<dyn fmt::Display + '_>> {

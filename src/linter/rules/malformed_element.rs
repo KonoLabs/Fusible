@@ -44,6 +44,7 @@ fn missing_identifier(index: usize, kind: &str, expected: &str) -> Diagnostic {
             "add a `{expected}` field — canonical circuit-json always \
              carries it, so this file deviates from the format"
         )),
+        ..Default::default()
     }
 }
 
@@ -55,6 +56,7 @@ fn empty_trace(index: usize) -> Diagnostic {
             "fill `connected_source_port_ids` or `connected_source_net_ids`, or delete the trace"
                 .to_string(),
         ),
+        ..Default::default()
     }
 }
 

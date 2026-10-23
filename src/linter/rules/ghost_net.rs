@@ -24,6 +24,7 @@ impl Rule for GhostNetRule {
                     "add the missing source_net element, or fix the net_id reference on the port/pad"
                         .to_string(),
                 ),
+                ..Default::default()
             })
             .collect()
     }

@@ -37,6 +37,7 @@ impl Rule for TraceClearanceRule {
                     rule: self.name().to_string(),
                     message,
                     help: Some(CLEARANCE_HELP.to_string()),
+                    ..Default::default()
                 }));
             }
         }
