@@ -162,12 +162,19 @@ pub fn preview(
     result
 }
 
-/// Returns the settings of the first generated body, which the dev studio previews.
-pub(crate) fn preview_config() -> Option<EnclosureConfig> {
-    let (_, cfg) = FusibleConfig::nearest()?;
+/// Returns the settings of the first generated body fitted around `board`, for the dev studio.
+///
+/// A generated body without `around:` fits every board.
+pub(crate) fn preview_config(board: Option<&str>) -> Option<EnclosureConfig> {
+    FusibleConfig::nearest().and_then(|(_, cfg)| fitted_settings(cfg, board))
+}
+
+fn fitted_settings(cfg: FusibleConfig, board: Option<&str>) -> Option<EnclosureConfig> {
     cfg.bodies
         .into_values()
-        .find(|body| body.generate.is_some())
+        .find(|body| {
+            body.generate.is_some() && (body.around.is_none() || body.around.as_deref() == board)
+        })
         .map(|body| body.enclosure)
 }
 

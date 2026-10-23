@@ -23,6 +23,7 @@ type Generated = Result<Arc<BodyPreview>, String>;
 struct Current {
     json: Option<Arc<str>>,
     revision: String,
+    board: Option<String>,
 }
 
 /// Shared circuit source plus a one-entry cache of the generated preview, keyed by revision.
@@ -33,19 +34,21 @@ pub struct BodyCache {
 }
 
 impl BodyCache {
-    /// Records the Circuit JSON source and revision of the latest rebuild.
-    pub fn update(&self, json: Option<String>, revision: String) {
+    /// Records the Circuit JSON source, revision, and manifest board of the latest rebuild.
+    pub fn update(&self, json: Option<String>, revision: String, board: Option<String>) {
         *lock(&self.current) = Current {
             json: json.map(Arc::from),
             revision,
+            board,
         };
     }
 
     /// Answers `request` on a spawned thread so the request loop never blocks on generation.
     pub fn serve(&self, request: Request, glb: bool) {
         let cache = self.clone();
+        let board = lock(&self.current).board.clone();
         thread::spawn(move || {
-            let _ = request.respond(cache.response(glb, generate));
+            let _ = request.respond(cache.response(glb, |json| generate(json, board.as_deref())));
         });
     }
 
@@ -92,8 +95,8 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
-fn generate(json: &str) -> Generated {
-    preview(json, preview_config())
+fn generate(json: &str, board: Option<&str>) -> Generated {
+    preview(json, preview_config(board))
         .map(Arc::new)
         .map_err(|e| match e.help() {
             Some(help) => format!("{e}: {help}"),

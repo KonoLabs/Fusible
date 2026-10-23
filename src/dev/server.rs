@@ -6,6 +6,8 @@ use std::thread;
 
 use tiny_http::{Request, Response, Server};
 
+use crate::commands::target::board_for_entry;
+
 use super::assets::{http_response, load_studio_bundle, static_response};
 use super::body::BodyCache;
 use super::hub::{stream_events, ClientHub};
@@ -38,7 +40,8 @@ pub(super) fn route_path(url: &str) -> &str {
 fn refresh(entry: &Path, state: &State) {
     let start = std::time::Instant::now();
     let (payload, source) = execute_pipeline(entry);
-    state.body.update(source, payload.revision.clone());
+    let board = board_for_entry(entry).name;
+    state.body.update(source, payload.revision.clone(), board);
     if let Ok(json_str) = serde_json::to_string(&payload) {
         if let Ok(mut lock) = state.payload.lock() {
             *lock = json_str.clone();

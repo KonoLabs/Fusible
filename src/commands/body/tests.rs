@@ -110,3 +110,19 @@ fn preview_forces_glb_and_reports_the_outer_box() {
         assert!((got - want).abs() < 1e-9, "{:?}", p.size);
     }
 }
+
+#[test]
+fn preview_uses_the_body_fitted_around_the_viewed_board() {
+    let yaml = concat!(
+        "boards: {a: {}, b: {}}\n",
+        "bodies:\n",
+        "  lid-a: {generate: enclosure, around: a, wall_thickness: 1.0}\n",
+        "  lid-b: {generate: enclosure, around: b, wall_thickness: 3.0}\n",
+        "  knob: {source: knob.step}\n",
+    );
+    let cfg = crate::config::FusibleConfig::from_str(yaml).unwrap();
+    let wall = |board| fitted_settings(cfg.clone(), board).and_then(|e| e.wall_thickness);
+    assert_eq!(wall(Some("a")), Some(1.0));
+    assert_eq!(wall(Some("b")), Some(3.0));
+    assert_eq!(wall(Some("c")), None);
+}

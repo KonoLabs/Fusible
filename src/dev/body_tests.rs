@@ -34,12 +34,12 @@ fn cache_generates_once_per_revision_including_errors() {
         Err("boom".to_string())
     };
     assert!(cache.resolve_with(fail).is_none());
-    cache.update(Some("[1]".into()), "r1".into());
+    cache.update(Some("[1]".into()), "r1".into(), None);
     let (rev, first) = cache.resolve_with(fail).unwrap();
     assert_eq!((rev.as_str(), first), ("r1", Err("boom".to_string())));
     assert!(cache.resolve_with(fail).unwrap().1.is_err());
     assert_eq!(calls.get(), 1);
-    cache.update(Some("[2]".into()), "r2".into());
+    cache.update(Some("[2]".into()), "r2".into(), None);
     let (rev, second) = cache
         .resolve_with(|json| {
             assert_eq!(json, "[2]");
@@ -70,9 +70,9 @@ fn responses_carry_status_type_and_no_store() {
     };
     assert_eq!(status(false, true), 503);
     assert_eq!(status(true, true), 503);
-    cache.update(Some("[]".into()), "a".into());
+    cache.update(Some("[]".into()), "a".into(), None);
     assert_eq!(status(true, false), 422);
-    cache.update(Some("[]".into()), "b".into());
+    cache.update(Some("[]".into()), "b".into(), None);
     assert_eq!(status(false, true), 200);
     assert_eq!(status(true, true), 200);
 }
