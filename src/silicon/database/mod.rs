@@ -72,18 +72,25 @@ pub fn find_target(query: &str) -> Option<&'static SiliconTarget> {
     match clean.as_str() {
         "rp2040" => Some(&rp2040::RP2040),
         "esp32s3" => Some(&esp32s3::ESP32S3),
-        _ if is_stm32g431(&clean) => Some(&stm32::STM32G431),
-        _ => None,
+        _ => stm32g431(clean.strip_prefix("stm32g431")?),
     }
 }
 
-fn is_stm32g431(clean: &str) -> bool {
-    match clean.strip_prefix("stm32g431") {
-        Some("") => true,
-        Some(suffix) => {
-            let b = suffix.as_bytes();
-            b.len() == 2 && b"cgkmrv".contains(&b[0]) && b"68b".contains(&b[1])
-        }
-        None => false,
+fn stm32g431(suffix: &str) -> Option<&'static SiliconTarget> {
+    let (package, flash) = match suffix.as_bytes() {
+        [] => return Some(&stm32::STM32G431),
+        [package, flash] => (package, flash),
+        _ => return None,
+    };
+    if !b"68b".contains(flash) {
+        return None;
+    }
+    match package {
+        b'k' => Some(&stm32::STM32G431K),
+        b'c' => Some(&stm32::STM32G431C),
+        b'r' => Some(&stm32::STM32G431R),
+        b'm' => Some(&stm32::STM32G431M),
+        b'v' => Some(&stm32::STM32G431V),
+        _ => None,
     }
 }
