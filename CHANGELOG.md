@@ -7,6 +7,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.11.4] - 2026-10-23
+
 ### Changed
 
 - Studio drops the top bar. The view switcher floats at the top center, view controls sit in a dock at the bottom center, and the board name and fuse status float at the bottom left. Clicking the fuse status opens the checks tab.
