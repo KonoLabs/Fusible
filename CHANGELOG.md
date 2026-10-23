@@ -7,6 +7,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.11.3] - 2026-10-23
+
 ### Added
 
 - `stm32g431cbu` (UFQFPN48) and `stm32g431cby` (WLCSP49) accept the GPIOs LQFP48 lacks: PC4, PC6, PC11 on both, plus PC10 on UFQFPN48. `stm32g431c` and `stm32g431cbt` keep the 38-pin LQFP48 set. Source: DS12589 Rev 6 Table 12.
