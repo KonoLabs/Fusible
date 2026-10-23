@@ -86,8 +86,8 @@ Fusible unifies the hardware development workflow by wrapping tscircuit commands
   - Bodies are authored (`source:`, optional `build:`) or generated (`generate: enclosure`).
   - Studio shows the whole project: project tree, per-board views, and a `RUNS` tab that runs `check`, `build`, and `body` with live logs.
 - [ ] **Milestone 15: Bodies workflow**:
-  - `fusible body eject <name>` turns a generated body into an authored file you edit in your CAD tool.
-  - `fusible body kit <board>` exports a reference kit (board STEP, hole positions, connector openings, keep-out volumes) to model around.
+  - [x] `fusible body eject <name>` turns a generated body into an authored file you edit in your CAD tool.
+  - [x] `fusible body kit <board>` exports a reference kit (`kit.json` with outline, holes, footprints, edge openings; `board.step` for TSX entries) to model around. Component heights and keep-out volumes are still to do.
   - Studio draws authored bodies (STL and GLB directly, STEP converted with occt-wasm) over the board they name with `board:`.
   - Studio firmware view: a pin map from the generated `pins.rs` data, with a click-through to the net on the PCB.
 - [ ] **Milestone 16: Assembly and cross-world fuse rules**:

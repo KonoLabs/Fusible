@@ -234,6 +234,20 @@ fusible body --no-cutouts --no-mounting
 
 A board without any body gets a default enclosure, so `fusible body` works without a `bodies:` section. `mechanical`, `case`, and `housing` remain aliases of `body`.
 
+#### Start from the generated body, or design your own
+
+Generation is a feature, not a lock. Two commands hand the design over to you:
+
+```sh
+fusible body eject lid                   # generate once into bodies/lid.step, then switch the manifest to source:
+fusible body eject lid -o parts/lid.stl  # another file; the extension picks the format
+fusible body kit sensor                  # reference kit in bodies/kit/sensor/
+```
+
+- `eject` is fuse-gated like `body` (`--skip-lint` for drafts). It refuses to overwrite a file and edits only that body's entry in `fusible.yml`, keeping your comments. If the entry has a shape it cannot edit safely, it leaves the manifest alone, prints the lines to change, and still writes the model. Afterwards the body is authored: edit the file in your CAD tool and Fusible never touches it again.
+- `kit` writes `kit.json` for people who model from scratch: board `outline` and `thickness`, every `hole` (`x`, `y`, `diameter`, `plated`), every component footprint (`x`, `y` is the center, `w` x `h` the size, `layer`, `touches_edge`), and the `openings` where a component reaches an outline edge (`side` is `+x`, `-x`, `+y`, or `-y`). Units are mm in the pcb frame the enclosure generator uses. `board.step` is added when the board entry is a tscircuit source and a runner is installed. The kit is fuse-gated.
+- `body` keeps its plain form, so `fusible body eject` and `fusible body kit` are the only reserved words: a body named `eject` or `kit` cannot be targeted by name.
+
 Enclosure details:
 
 - The outline comes from `pcb_board` (`outline` points, or `width` x `height`).

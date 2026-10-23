@@ -9,7 +9,9 @@ use clap::{Parser, Subcommand};
 
 mod args;
 
-pub use args::{BodyArgs, ExportArgs, InitArgs, RouteArgs, SyncArgs};
+pub use args::{
+    BodyAction, BodyArgs, EjectArgs, ExportArgs, InitArgs, KitArgs, RouteArgs, SyncArgs,
+};
 
 /// Fusible — electronic linter & hardware-firmware bridge for tscircuit.
 #[derive(Debug, Parser)]

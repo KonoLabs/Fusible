@@ -6,13 +6,24 @@
 //! vents) from Circuit JSON, then hands a JSON spec to an embedded TypeScript generator
 //! that runs the OpenCascade kernel (`occt-wasm`) under bun and writes the CAD files.
 
+mod edges;
+mod eject;
+mod eject_edit;
+mod eject_manifest;
 mod error;
 mod generator;
 mod jobs;
+mod kit;
+mod kit_data;
 mod layout;
 mod settings;
 mod spec;
+mod yaml_lines;
 
+#[cfg(test)]
+mod eject_tests;
+#[cfg(test)]
+mod kit_tests;
 #[cfg(test)]
 mod layout_tests;
 #[cfg(test)]
@@ -27,9 +38,11 @@ use crate::commands::target::BoardTarget;
 use crate::config::{BodyConfig, EnclosureConfig, FusibleConfig};
 use crate::gerber::PcbModel;
 
+pub use eject::eject;
 pub use error::BodyError;
 use generator::{generator_dir, run_generator};
 use jobs::{select_jobs, Job};
+pub use kit::kit;
 use settings::{preview_settings, resolve_settings, Settings};
 use spec::{build_spec, preview_from, Output, Spec};
 

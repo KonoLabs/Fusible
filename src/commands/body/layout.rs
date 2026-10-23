@@ -1,5 +1,6 @@
 //! Wall notches and lid vents derived from the board outline.
 
+use super::edges::edge_normal;
 use super::settings::Ventilation;
 use super::spec::{Bounds, Notch, Vent};
 use super::{CLEARANCE, EDGE_TOLERANCE, NOTCH_MARGIN, VENT_INSET};
@@ -29,7 +30,7 @@ pub(super) fn notches(
         .collect()
 }
 
-fn footprint(c: &PcbComponentElm) -> Option<Corners> {
+pub(super) fn footprint(c: &PcbComponentElm) -> Option<Corners> {
     let (center, w, h) = (c.center?, c.width?, c.height?);
     let (hw, hh) = (w / 2.0 + NOTCH_MARGIN, h / 2.0 + NOTCH_MARGIN);
     Some(
@@ -37,7 +38,7 @@ fn footprint(c: &PcbComponentElm) -> Option<Corners> {
     )
 }
 
-fn edge_notch(
+pub(super) fn edge_notch(
     corners: &Corners,
     a: PcbPoint,
     b: PcbPoint,
@@ -49,7 +50,7 @@ fn edge_notch(
         return None;
     }
     let (ux, uy) = ((b.x - a.x) / len, (b.y - a.y) / len);
-    let (nx, ny) = (uy * winding, -ux * winding);
+    let (nx, ny) = edge_normal(a, b, winding)?;
     let along = corners.map(|(x, y)| (x - a.x) * ux + (y - a.y) * uy);
     let outward = corners.map(|(x, y)| (x - a.x) * nx + (y - a.y) * ny);
     let t0 = along.into_iter().fold(f64::INFINITY, f64::min).max(0.0);
@@ -62,7 +63,7 @@ fn edge_notch(
     })
 }
 
-fn signed_area(polygon: &[PcbPoint]) -> f64 {
+pub(super) fn signed_area(polygon: &[PcbPoint]) -> f64 {
     polygon
         .iter()
         .zip(polygon.iter().cycle().skip(1))

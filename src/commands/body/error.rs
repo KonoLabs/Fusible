@@ -63,6 +63,26 @@ pub enum BodyError {
     )]
     NoBoard,
 
+    #[error("no body named `{name}` in fusible.yml")]
+    #[diagnostic(code(fusible::body::unknown_body), help("{help}"))]
+    UnknownBody { name: String, help: String },
+
+    #[error("body `{name}` is authored, not generated")]
+    #[diagnostic(
+        code(fusible::body::not_generated),
+        help(
+            "only a body with `generate:` can be ejected; an authored body already has a `source:`"
+        )
+    )]
+    NotGenerated { name: String },
+
+    #[error("\"{}\" already exists", path.display())]
+    #[diagnostic(
+        code(fusible::body::exists),
+        help("fusible never overwrites a file you may have edited; move it or pass another `-o` path")
+    )]
+    Exists { path: PathBuf },
+
     #[error("bun is required to run the enclosure generator")]
     #[diagnostic(
         code(fusible::body::bun_missing),

@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-use clap::Args;
+use clap::{Args, Subcommand};
 
 #[derive(Debug, Args, PartialEq)]
 pub struct ExportArgs {
@@ -28,7 +28,11 @@ pub struct ExportArgs {
 }
 
 #[derive(Debug, Args, PartialEq)]
+#[command(args_conflicts_with_subcommands = true)]
 pub struct BodyArgs {
+    #[command(subcommand)]
+    pub action: Option<BodyAction>,
+
     /// Body name, board name, or circuit file [default: every body of the manifest]
     #[arg(value_name = "TARGET")]
     pub target: Option<PathBuf>,
@@ -62,6 +66,46 @@ pub struct BodyArgs {
     pub no_mounting: bool,
 
     /// Skip electrical rule verification before generating the model
+    #[arg(long)]
+    pub skip_lint: bool,
+}
+
+/// Actions on bodies other than building them.
+#[derive(Debug, Subcommand, PartialEq)]
+pub enum BodyAction {
+    /// Turn a generated body into a file you own and edit in your CAD tool
+    Eject(EjectArgs),
+
+    /// Export a reference kit (outline, holes, openings, board STEP) to model parts around a board
+    Kit(KitArgs),
+}
+
+#[derive(Debug, Args, PartialEq)]
+pub struct EjectArgs {
+    /// Name of the generated body to eject
+    #[arg(value_name = "BODY")]
+    pub name: String,
+
+    /// Output file; its extension (step, stl, glb, brep) picks the format [default: bodies/<BODY>.step]
+    #[arg(short = 'o', long, value_name = "FILE")]
+    pub output: Option<PathBuf>,
+
+    /// Skip electrical rule verification before generating the model
+    #[arg(long)]
+    pub skip_lint: bool,
+}
+
+#[derive(Debug, Args, PartialEq)]
+pub struct KitArgs {
+    /// Board name or circuit file [default: the only board]
+    #[arg(value_name = "BOARD")]
+    pub board: Option<PathBuf>,
+
+    /// Output directory [default: bodies/kit/<BOARD>]
+    #[arg(short = 'o', long, value_name = "DIR")]
+    pub output: Option<PathBuf>,
+
+    /// Skip electrical rule verification before writing the kit
     #[arg(long)]
     pub skip_lint: bool,
 }

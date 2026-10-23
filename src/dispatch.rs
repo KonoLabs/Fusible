@@ -1,13 +1,15 @@
 //! Runs fuse-gated subcommands and maps their results onto the exit-code contract.
 
+mod body;
+
+pub use body::body;
+
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use crate::cli::{BodyArgs, ExportArgs, RouteArgs, SyncArgs};
+use crate::cli::{ExportArgs, RouteArgs, SyncArgs};
 use crate::commands;
-use crate::commands::body::BodyError;
 use crate::commands::check::CheckError;
-use crate::config::EnclosureConfig;
 use crate::router::RouteOptions;
 use crate::{fail, tool_exit, EXIT_TOOL_ERROR, EXIT_VIOLATIONS};
 
@@ -53,24 +55,6 @@ pub fn export(args: ExportArgs) -> ExitCode {
         Err(commands::export::ExportError::Check(CheckError::FuseBlown(blown))) => {
             fail(blown, EXIT_VIOLATIONS)
         }
-        Err(err) => fail(err, EXIT_TOOL_ERROR),
-    }
-}
-
-/// Builds the project bodies; CLI flags override generated enclosure settings.
-pub fn body(args: BodyArgs) -> ExitCode {
-    let overrides = EnclosureConfig {
-        format: args.format,
-        out_dir: args.output,
-        wall_thickness: args.wall_thickness,
-        height: args.height,
-        cutouts: args.no_cutouts.then_some(false),
-        ventilation: args.ventilation,
-        mounting: args.no_mounting.then_some(false),
-    };
-    match commands::body::run(args.target, overrides, args.skip_lint) {
-        Ok(()) => ExitCode::SUCCESS,
-        Err(BodyError::Check(CheckError::FuseBlown(blown))) => fail(blown, EXIT_VIOLATIONS),
         Err(err) => fail(err, EXIT_TOOL_ERROR),
     }
 }

@@ -9,6 +9,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ### Added
 
+- `fusible body eject <name>` generates a body once into `bodies/<name>.step` (or the file and format of `-o`), then rewrites its entry in `fusible.yml` from `generate:` to `source:`. It never overwrites an existing file, keeps the comments and layout of the manifest, and checks that only that body changed. A manifest edit it cannot do safely is reported with the lines to change, and the model is still written. A legacy `mechanical:` block moves into a new `bodies:` section.
+- `fusible body kit [board]` writes `bodies/kit/<board>/kit.json` (board outline, thickness, holes, component footprints, and the wall openings of components that reach an edge, in the enclosure generator's coordinate frame) and `board.step` when the board is a tscircuit source and a runner is available.
 - `fusible dev` serves every board of the project in one Studio. A project tree on the left lists boards, firmware, and bodies, shows each board's fuse state, and switches the schematic, PCB, 3D, parts, nets, checks, and bodies views to the selected board. The URL keeps the selection.
 - A `RUNS` tab in Studio starts `check`, `build`, and `body` for one item or the whole project and streams the log live. The runs re-run the same `fusible` binary, so results match the terminal.
 - Dev server endpoints: `GET /api/project`, `GET /api/runs`, `POST /api/run`, and a `board` query on `/api/circuit` and `/api/mechanical`. Event stream messages for a board carry a `board` field, and run output arrives as `log` and `run` events.
