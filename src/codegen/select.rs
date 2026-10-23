@@ -4,7 +4,7 @@ use crate::parser::{Circuit, Component};
 mod fields;
 
 use crate::silicon::model::{parse_gpio_index, parse_port_pin};
-use fields::{descriptors, matches_target, names_database_part};
+use fields::{descriptors, manufacturer_part_number, matches_target, names_database_part};
 
 /// Picks the MCU component among the board's chips, never a passive.
 ///
@@ -35,7 +35,7 @@ pub(crate) fn select_mcu_component<'a>(
         })
         .or_else(|| only(chips.iter().copied()));
     if picked.is_none() && chips.len() > 1 {
-        print_hint(&chips);
+        eprintln!("{}", hint_message(circuit, &chips));
     }
     picked
 }
@@ -52,21 +52,25 @@ fn only<'a>(mut candidates: impl Iterator<Item = &'a Component>) -> Option<&'a C
     candidates.next().is_none().then_some(first)
 }
 
-fn print_hint(chips: &[&Component]) {
-    let names: Vec<&str> = chips
-        .iter()
-        .map(|c| {
-            c.name
-                .as_deref()
-                .or(c.component_id.as_deref())
-                .unwrap_or("?")
-        })
-        .collect();
-    eprintln!(
+pub(crate) fn hint_message(circuit: &Circuit, chips: &[&Component]) -> String {
+    let labels: Vec<String> = chips.iter().map(|c| chip_label(circuit, c)).collect();
+    format!(
         "hint: several chips on the board ({}), none picked as the MCU; \
          set `mcu.chip` in fusible.yml or pass --mcu",
-        names.join(", ")
-    );
+        labels.join(", ")
+    )
+}
+
+fn chip_label(circuit: &Circuit, chip: &Component) -> String {
+    let name = chip
+        .name
+        .as_deref()
+        .or(chip.component_id.as_deref())
+        .unwrap_or("?");
+    match manufacturer_part_number(circuit, chip) {
+        Some(part) => format!("{name} [{part}]"),
+        None => name.to_string(),
+    }
 }
 
 /// Resolves the emitted pin number for a port label. See

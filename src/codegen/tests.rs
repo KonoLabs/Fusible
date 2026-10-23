@@ -2,6 +2,7 @@
 
 mod fixtures;
 mod select;
+mod select_hint;
 
 use super::*;
 use crate::netlist::Netlist;

@@ -17,7 +17,7 @@ pub(super) fn descriptors(circuit: &Circuit, component: &Component) -> Vec<Strin
     fields
 }
 
-fn manufacturer_part_number(circuit: &Circuit, component: &Component) -> Option<String> {
+pub(super) fn manufacturer_part_number(circuit: &Circuit, component: &Component) -> Option<String> {
     let id = component.component_id.as_deref()?;
     circuit.raw_elements.iter().find_map(|raw| {
         let is_match = raw.get("type").and_then(|t| t.as_str()) == Some("source_component")
