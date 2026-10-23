@@ -8,10 +8,10 @@
   <script type="module" src="/studio.bundle.js"></script>
   <style>
     .tscircuit-schematic {
-      background-color: #0d1117 !important;
+      background-color: var(--bg) !important;
     }
     .tscircuit-schematic .boundary {
-      fill: #0d1117 !important;
+      fill: var(--bg) !important;
     }
     .tscircuit-schematic text {
       fill: #f1f5f9 !important;
@@ -25,7 +25,7 @@
     }
     .tscircuit-schematic .net-label,
     .tscircuit-schematic .sch-net-label {
-      fill: #1F1F1F !important;
+      fill: var(--surface) !important;
       stroke: #f59e0b !important;
     }
     .tscircuit-schematic .sch-net-label-text,
@@ -54,10 +54,11 @@
     }
     :root {
       --bg: #000000;
-      --surface: #1F1F1F;
-      --surface-hover: #2B2B2B;
-      --border: #353535;
-      --border-subtle: #222222;
+      --surface: #111111;
+      --surface-hover: #1a1a1a;
+      --glass: rgba(17, 17, 17, 0.92);
+      --border: #2e2e2e;
+      --border-subtle: #1a1a1a;
       --green: #86A881;
       --green-dark: #229147;
       --olive: #A8B365;
@@ -68,71 +69,117 @@
       --copper: #c87d32;
       --gold: #d4af37;
       --blue: #38bdf8;
+      --gutter: 12px;
+      --sidebar-width: 340px;
+      --shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
     }
     body {
       font-family: 'Undefined', monospace;
       background: var(--bg);
       color: var(--text);
-      display: flex;
-      flex-direction: column;
       height: 100vh;
       overflow: hidden;
       user-select: none;
+    }
+    button {
+      font: inherit;
+      color: inherit;
+    }
+    :focus-visible {
+      outline: 1px solid var(--green);
+      outline-offset: 2px;
     }
     #sidebar, #sidebar *, .sidebar-pane, .sidebar-pane *, .check-item, .check-item *, code, pre {
       user-select: text !important;
       -webkit-user-select: text !important;
     }
-    header {
-      height: 56px;
-      background: var(--surface);
-      border-bottom: none;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 24px;
+    .floating {
+      position: absolute;
       z-index: 20;
-    }
-    .brand {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 2px;
+      padding: 4px;
+      background: var(--glass);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      user-select: none !important;
     }
-    .brand-title {
-      font-size: 14px;
+    .floating-views {
+      top: var(--gutter);
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .floating-dock {
+      bottom: var(--gutter);
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .floating-status {
+      bottom: var(--gutter);
+      left: var(--gutter);
+      gap: 4px;
+      padding: 4px 4px 4px 10px;
+      font-size: 11px;
       letter-spacing: 0.05em;
-      color: var(--text);
-      font-weight: bold;
     }
-    .brand-sub {
-      color: var(--olive);
-      font-size: 13px;
+    .floating-panel-toggle {
+      top: var(--gutter);
+      right: var(--gutter);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(8px);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    body.sidebar-collapsed .floating-panel-toggle {
+      opacity: 1;
+      pointer-events: auto;
+      transform: none;
+    }
+    .dock-divider {
+      width: 1px;
+      height: 18px;
+      margin: 0 4px;
+      background: var(--border);
+    }
+    .brand-logo {
+      font-size: 16px;
+      color: var(--green);
+      display: inline-flex;
+      align-items: center;
     }
     .board-name {
-      color: var(--text-subtle);
-      font-size: 11px;
-      padding: 3px 8px;
-      background: var(--surface-hover);
-      border: none;
+      color: var(--text);
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      padding: 0 6px;
     }
     .fuse-badge {
       white-space: nowrap;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 3px 10px;
+      padding: 6px 10px;
       font-size: 11px;
       letter-spacing: 0.05em;
       border: none;
+      cursor: pointer;
+      transition: filter 0.15s ease;
+    }
+    .fuse-badge:hover {
+      filter: brightness(1.25);
     }
     .fuse-intact {
-      background: rgba(34, 145, 71, 0.15);
+      background: rgba(134, 168, 129, 0.14);
       color: var(--green);
     }
     .fuse-blown {
-      background: rgba(244, 63, 94, 0.15);
+      background: rgba(197, 84, 84, 0.18);
       color: var(--alert);
       animation: fusePulse 1.5s infinite;
     }
@@ -140,19 +187,24 @@
       0%, 100% { opacity: 1; }
       50% { opacity: 0.6; }
     }
-    .tabs {
-      display: flex;
-      background: var(--bg);
-      border: none;
-      gap: 4px;
+    .live {
+      display: inline-flex;
+      align-items: center;
+      padding: 0 6px;
     }
-    .tab-btn {
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--green);
+    }
+    .tab-btn,
+    .btn {
       white-space: nowrap;
       background: transparent;
       border: none;
       color: var(--text-subtle);
-      padding: 8px 16px;
-      font-family: 'Undefined', monospace;
+      height: 30px;
+      padding: 0 12px;
       font-size: 11px;
       letter-spacing: 0.05em;
       cursor: pointer;
@@ -161,45 +213,40 @@
       align-items: center;
       gap: 8px;
     }
-    .tab-btn:hover {
+    .tab-btn:hover,
+    .btn:hover {
       color: var(--text);
       background: var(--surface-hover);
     }
     .tab-btn.active {
-      background: var(--surface-hover);
+      background: var(--green);
+      color: #000000;
+    }
+    .btn.icon-only {
+      width: 30px;
+      padding: 0;
+      justify-content: center;
+    }
+    .btn.is-on {
       color: var(--green);
-      border-bottom: 2px solid var(--green);
+      background: rgba(134, 168, 129, 0.14);
     }
     .controls {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 2px;
     }
-    .btn {
-      white-space: nowrap;
-      background: var(--surface);
-      border: none;
-      color: var(--text-body);
-      font-family: 'Undefined', monospace;
-      padding: 7px 14px;
-      font-size: 11px;
-      letter-spacing: 0.05em;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .btn:hover {
-      background: var(--surface-hover);
-      color: var(--text);
-    }
-    @media (max-width: 1440px) {
-      .btn .btn-label {
+    @container viewport (max-width: 900px) {
+      .btn .btn-label,
+      .board-name {
         display: none;
       }
     }
-    .btn.is-on {
-      color: var(--green);
+    @container viewport (max-width: 560px) {
+      .tab-btn span,
+      #fuse-text {
+        display: none;
+      }
     }
     #mechanical-container {
       position: absolute;
@@ -222,13 +269,15 @@
       pointer-events: none;
     }
     main {
-      flex: 1;
+      height: 100%;
       display: flex;
       position: relative;
       overflow: hidden;
     }
     #viewport-container {
       flex: 1;
+      min-width: 0;
+      container: viewport / inline-size;
       position: relative;
       background: var(--bg);
       overflow: hidden;
@@ -244,8 +293,8 @@
       position: absolute;
       inset: 0;
       background-image:
-        linear-gradient(to right, rgba(53, 53, 53, 0.25) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(53, 53, 53, 0.25) 1px, transparent 1px);
+        linear-gradient(to right, rgba(134, 168, 129, 0.07) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(134, 168, 129, 0.07) 1px, transparent 1px);
       background-size: 32px 32px;
       pointer-events: none;
     }
@@ -268,33 +317,59 @@
       cursor: default;
     }
     #sidebar {
-      width: 340px;
+      width: calc(var(--sidebar-width) + var(--gutter));
+      flex-shrink: 0;
+      padding: var(--gutter) var(--gutter) var(--gutter) 0;
+      overflow: hidden;
+      z-index: 10;
+      transition: width 0.22s ease, padding 0.22s ease;
+    }
+    .sidebar-card {
+      width: var(--sidebar-width);
+      height: 100%;
       background: var(--surface);
-      border-left: none;
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow);
       display: flex;
       flex-direction: column;
-      z-index: 10;
+      transition: opacity 0.18s ease, transform 0.22s ease;
+    }
+    body.sidebar-collapsed #sidebar {
+      width: 0;
+      padding-right: 0;
+    }
+    body.sidebar-collapsed .sidebar-card {
+      opacity: 0;
+      transform: translateX(16px);
+      pointer-events: none;
+    }
+    @media (max-width: 900px) {
+      #sidebar {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 30;
+      }
     }
     .sidebar-tabs {
       display: flex;
-      border-bottom: none;
-      background: var(--bg);
+      align-items: center;
+      gap: 2px;
+      padding: 4px;
+      border-bottom: 1px solid var(--border-subtle);
     }
     .sidebar-tab-btn {
       flex: 1;
-      padding: 10px 4px;
+      height: 28px;
+      padding: 0 4px;
       background: transparent;
       border: none;
       color: var(--text-subtle);
-      font-family: 'Undefined', monospace;
       font-size: 10px;
       letter-spacing: 0.05em;
       cursor: pointer;
-      border-right: none;
       transition: color 0.15s, background 0.15s;
-    }
-    .sidebar-tab-btn:last-child {
-      border-right: none;
     }
     .sidebar-tab-btn:hover {
       color: var(--text);
@@ -302,8 +377,12 @@
     }
     .sidebar-tab-btn.active {
       color: var(--green);
-      background: var(--surface);
-      border-bottom: 2px solid var(--green);
+      background: rgba(134, 168, 129, 0.12);
+    }
+    .sidebar-tabs .btn.icon-only {
+      flex: 0 0 28px;
+      width: 28px;
+      height: 28px;
     }
     .sidebar-pane {
       display: none;
@@ -484,31 +563,11 @@
       letter-spacing: 0.05em;
       text-align: center;
     }
-    .hud-toast {
-      position: absolute;
-      bottom: 16px;
-      left: 16px;
-      background: rgba(31, 31, 31, 0.95);
-      border: none;
-      padding: 6px 12px;
-      font-size: 11px;
-      color: var(--text-subtle);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      pointer-events: none;
-      z-index: 10;
-    }
-    .status-dot {
-      width: 6px;
-      height: 6px;
-      background: var(--green);
-    }
     .hover-tooltip {
       position: fixed;
       z-index: 1000;
       pointer-events: none;
-      background: rgba(31, 31, 31, 0.95);
+      background: var(--glass);
       border: none;
       padding: 8px 12px;
       font-size: 11px;
@@ -549,12 +608,6 @@
       vertical-align: middle;
       font-size: 13px;
     }
-    .brand-logo {
-      font-size: 20px;
-      color: var(--green);
-      display: inline-flex;
-      align-items: center;
-    }
     [role="menu"],
     [role="menuitem"],
     div[role="menu"],
@@ -562,7 +615,7 @@
     div[aria-label*="Visibility"],
     .sv-sheet-item,
     [data-radix-popper-content-wrapper] > div {
-      background: rgba(31, 31, 31, 0.96) !important;
+      background: var(--glass) !important;
       color: var(--text) !important;
       border: none !important;
       border-radius: 2px !important;
@@ -602,7 +655,7 @@
     #schematic-container div[style*="rgba(255, 255, 255"],
     #schematic-container div[style*="background-color: rgba(255, 255, 255"],
     #schematic-container div[style*="backgroundColor: rgba(255, 255, 255"] {
-      background-color: rgba(31, 31, 31, 0.96) !important;
+      background-color: var(--glass) !important;
       color: var(--text) !important;
       border: none !important;
       border-radius: 2px !important;
@@ -739,8 +792,8 @@
     [data-toolbar-overlay] div[style*="minWidth: 120"],
     [data-toolbar-overlay] div[style*="min-width: 120"],
     [data-toolbar-overlay] div[style*="position: absolute"] {
-      background: rgba(31, 31, 31, 0.96) !important;
-      background-color: rgba(31, 31, 31, 0.96) !important;
+      background: var(--glass) !important;
+      background-color: var(--glass) !important;
       border: 1px solid var(--border) !important;
       border-radius: 2px !important;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8) !important;
@@ -764,7 +817,7 @@
     #three-cad div[style*="background-color: rgb(255, 255, 255)"],
     #three-cad div[style*="background: white"],
     #three-cad div[style*="background:white"] {
-      background-color: rgba(31, 31, 31, 0.95) !important;
+      background-color: var(--glass) !important;
       color: var(--text) !important;
       border: none !important;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7) !important;
@@ -781,49 +834,6 @@
   </style>
 </head>
 <body>
-  <header>
-    <div class="brand">
-      <iconify-icon icon="pixelarticons:cpu-sharp" class="brand-logo"></iconify-icon>
-      <span class="board-name" id="board-name">BOARD PREVIEW</span>
-      <div id="fuse-status" class="fuse-badge fuse-intact">
-        <span id="fuse-icon"><iconify-icon icon="pixelarticons:zap"></iconify-icon></span>
-        <span id="fuse-text">[OK] FUSE INTACT</span>
-      </div>
-    </div>
-
-    <div class="tabs">
-      <button class="tab-btn active" data-view="schematic" onclick="switchView('schematic')"><iconify-icon icon="pixelarticons:git-commit"></iconify-icon><span>SCHEMATIC</span></button>
-      <button class="tab-btn" data-view="pcb" onclick="switchView('pcb')"><iconify-icon icon="pixelarticons:grid"></iconify-icon><span>PCB LAYOUT</span></button>
-      <button class="tab-btn" data-view="3d" onclick="switchView('3d')"><iconify-icon icon="pixelarticons:cube"></iconify-icon><span>3D VIEW</span></button>
-      <button class="tab-btn" data-view="mechanical" onclick="switchView('mechanical')"><iconify-icon icon="pixelarticons:box"></iconify-icon><span>MECHANICAL</span></button>
-    </div>
-
-    <div class="controls" id="controls-2d">
-      <button class="btn" id="btn-pcb-mode" style="display: none;" onclick="togglePcbMode()"><iconify-icon icon="pixelarticons:switch"></iconify-icon> <span id="pcb-mode-label">VIEW: INSPECTOR</span></button>
-      <button class="btn" onclick="zoomIn()"><iconify-icon icon="pixelarticons:zoom-in"></iconify-icon> ZOOM +</button>
-      <button class="btn" onclick="zoomOut()"><iconify-icon icon="pixelarticons:zoom-out"></iconify-icon> ZOOM -</button>
-      <button class="btn" onclick="resetZoom()"><iconify-icon icon="pixelarticons:undo"></iconify-icon> RESET</button>
-    </div>
-
-    <div class="controls" id="controls-3d" style="display: none;">
-      <button class="btn" onclick="setCameraPreset('TOP')" title="TOP VIEW"><iconify-icon icon="pixelarticons:arrow-up"></iconify-icon> <span class="btn-label">TOP</span></button>
-      <button class="btn" onclick="setCameraPreset('ISO')" title="ISO VIEW"><iconify-icon icon="pixelarticons:corner-up-right"></iconify-icon> <span class="btn-label">ISO</span></button>
-      <button class="btn" onclick="setCameraPreset('FRONT')" title="FRONT VIEW"><iconify-icon icon="pixelarticons:arrow-down"></iconify-icon> <span class="btn-label">FRONT</span></button>
-      <button class="btn" onclick="setCameraPreset('RESET')" title="RESET VIEW"><iconify-icon icon="pixelarticons:reload"></iconify-icon> <span class="btn-label">RESET</span></button>
-      <button class="btn" id="btn-engine-toggle" onclick="toggle3dEngine()"><iconify-icon icon="pixelarticons:switch"></iconify-icon> <span id="engine-label">ENGINE: CAD</span></button>
-      <button class="btn" id="btn-mechanical-overlay" onclick="toggleMechanical('overlay')"><iconify-icon icon="pixelarticons:box"></iconify-icon> <span id="mechanical-overlay-label">MECHANICAL: OFF</span></button>
-    </div>
-
-    <div class="controls" id="controls-mechanical" style="display: none;">
-      <button class="btn" onclick="setCameraPreset('TOP')" title="TOP VIEW"><iconify-icon icon="pixelarticons:arrow-up"></iconify-icon> <span class="btn-label">TOP</span></button>
-      <button class="btn" onclick="setCameraPreset('ISO')" title="ISO VIEW"><iconify-icon icon="pixelarticons:corner-up-right"></iconify-icon> <span class="btn-label">ISO</span></button>
-      <button class="btn" onclick="setCameraPreset('FRONT')" title="FRONT VIEW"><iconify-icon icon="pixelarticons:arrow-down"></iconify-icon> <span class="btn-label">FRONT</span></button>
-      <button class="btn" onclick="setCameraPreset('RESET')" title="RESET VIEW"><iconify-icon icon="pixelarticons:reload"></iconify-icon> <span class="btn-label">RESET</span></button>
-      <button class="btn" id="btn-mechanical-lid" onclick="toggleMechanical('lid')"><iconify-icon icon="pixelarticons:eye"></iconify-icon> <span id="mechanical-lid-label">LID: ON</span></button>
-      <button class="btn" id="btn-mechanical-explode" onclick="toggleMechanical('explode')"><iconify-icon icon="pixelarticons:expand"></iconify-icon> <span id="mechanical-explode-label">EXPLODE: OFF</span></button>
-    </div>
-  </header>
-
   <main>
     <div id="viewport-container">
       <div id="viewport-grid"></div>
@@ -835,87 +845,137 @@
         <div id="three-cad" style="width:100%;height:100%;position:absolute;inset:0;display:none;"></div>
       </div>
       <div id="mechanical-container"></div>
-      <div class="hud-toast">
-        <div class="status-dot" id="live-dot"></div>
-        <span id="live-status">SSE CONNECTED</span>
+
+      <nav class="floating floating-views" aria-label="Views">
+        <button class="tab-btn active" data-view="schematic" onclick="switchView('schematic')" title="Schematic (1)"><iconify-icon icon="pixelarticons:git-commit"></iconify-icon><span>SCHEMATIC</span></button>
+        <button class="tab-btn" data-view="pcb" onclick="switchView('pcb')" title="PCB layout (2)"><iconify-icon icon="pixelarticons:grid"></iconify-icon><span>PCB</span></button>
+        <button class="tab-btn" data-view="3d" onclick="switchView('3d')" title="3D view (3)"><iconify-icon icon="pixelarticons:globe"></iconify-icon><span>3D</span></button>
+        <button class="tab-btn" data-view="mechanical" onclick="switchView('mechanical')" title="Mechanical (4)"><iconify-icon icon="pixelarticons:box"></iconify-icon><span>MECHANICAL</span></button>
+      </nav>
+
+      <div class="floating floating-dock" role="toolbar" aria-label="View controls">
+        <div class="controls" id="controls-2d">
+          <button class="btn" id="btn-pcb-mode" style="display: none;" onclick="togglePcbMode()" title="Switch PCB renderer"><iconify-icon icon="pixelarticons:switch"></iconify-icon> <span class="btn-label" id="pcb-mode-label">VIEW: INSPECTOR</span></button>
+          <button class="btn icon-only" onclick="zoomOut()" title="Zoom out" aria-label="Zoom out"><iconify-icon icon="pixelarticons:zoom-out"></iconify-icon></button>
+          <button class="btn icon-only" onclick="zoomIn()" title="Zoom in" aria-label="Zoom in"><iconify-icon icon="pixelarticons:zoom-in"></iconify-icon></button>
+          <button class="btn icon-only" onclick="resetZoom()" title="Reset view" aria-label="Reset view"><iconify-icon icon="pixelarticons:undo"></iconify-icon></button>
+        </div>
+
+        <div class="controls" id="controls-3d" style="display: none;">
+          <button class="btn icon-only" onclick="setCameraPreset('TOP')" title="Top view" aria-label="Top view"><iconify-icon icon="pixelarticons:arrow-up"></iconify-icon></button>
+          <button class="btn icon-only" onclick="setCameraPreset('ISO')" title="Isometric view" aria-label="Isometric view"><iconify-icon icon="pixelarticons:corner-up-right"></iconify-icon></button>
+          <button class="btn icon-only" onclick="setCameraPreset('FRONT')" title="Front view" aria-label="Front view"><iconify-icon icon="pixelarticons:arrow-down"></iconify-icon></button>
+          <button class="btn icon-only" onclick="setCameraPreset('RESET')" title="Reset camera" aria-label="Reset camera"><iconify-icon icon="pixelarticons:reload"></iconify-icon></button>
+          <span class="dock-divider"></span>
+          <button class="btn" id="btn-engine-toggle" onclick="toggle3dEngine()" title="Switch 3D engine"><iconify-icon icon="pixelarticons:switch"></iconify-icon> <span class="btn-label" id="engine-label">ENGINE: CAD</span></button>
+          <button class="btn" id="btn-mechanical-overlay" onclick="toggleMechanical('overlay')" title="Show enclosure"><iconify-icon icon="pixelarticons:box"></iconify-icon> <span class="btn-label">ENCLOSURE</span></button>
+        </div>
+
+        <div class="controls" id="controls-mechanical" style="display: none;">
+          <button class="btn icon-only" onclick="setCameraPreset('TOP')" title="Top view" aria-label="Top view"><iconify-icon icon="pixelarticons:arrow-up"></iconify-icon></button>
+          <button class="btn icon-only" onclick="setCameraPreset('ISO')" title="Isometric view" aria-label="Isometric view"><iconify-icon icon="pixelarticons:corner-up-right"></iconify-icon></button>
+          <button class="btn icon-only" onclick="setCameraPreset('FRONT')" title="Front view" aria-label="Front view"><iconify-icon icon="pixelarticons:arrow-down"></iconify-icon></button>
+          <button class="btn icon-only" onclick="setCameraPreset('RESET')" title="Reset camera" aria-label="Reset camera"><iconify-icon icon="pixelarticons:reload"></iconify-icon></button>
+          <span class="dock-divider"></span>
+          <button class="btn" id="btn-mechanical-lid" onclick="toggleMechanical('lid')" title="Show lid"><iconify-icon icon="pixelarticons:eye"></iconify-icon> <span class="btn-label">LID</span></button>
+          <button class="btn" id="btn-mechanical-explode" onclick="toggleMechanical('explode')" title="Explode enclosure"><iconify-icon icon="pixelarticons:expand"></iconify-icon> <span class="btn-label">EXPLODE</span></button>
+        </div>
       </div>
+
+      <div class="floating floating-status">
+        <iconify-icon icon="pixelarticons:cpu-sharp" class="brand-logo"></iconify-icon>
+        <span class="board-name" id="board-name">BOARD PREVIEW</span>
+        <span class="live" title="Live reload connected" id="live-indicator"><span class="status-dot" id="live-dot"></span></span>
+        <button id="fuse-status" class="fuse-badge fuse-intact" onclick="openSidebar('checks')" title="Show checks">
+          <span id="fuse-icon"><iconify-icon icon="pixelarticons:zap"></iconify-icon></span>
+          <span id="fuse-text">FUSE INTACT</span>
+        </button>
+      </div>
+
+      <div class="floating floating-panel-toggle">
+        <button class="btn icon-only" onclick="toggleSidebar(true)" title="Show panel (\)" aria-label="Show panel"><iconify-icon icon="pixelarticons:layout-sidebar-right"></iconify-icon></button>
+      </div>
+
       <div id="hover-tooltip" class="hover-tooltip"></div>
     </div>
 
     <aside id="sidebar">
-      <div class="sidebar-tabs">
-        <button class="sidebar-tab-btn active" onclick="switchSidebarTab('inspector')">INSPECT</button>
-        <button class="sidebar-tab-btn" onclick="switchSidebarTab('components')">PARTS</button>
-        <button class="sidebar-tab-btn" onclick="switchSidebarTab('nets')">NETS</button>
-        <button class="sidebar-tab-btn" onclick="switchSidebarTab('layers')">LAYERS</button>
-        <button class="sidebar-tab-btn" onclick="switchSidebarTab('checks')">CHECKS</button>
-      </div>
-
-      <div class="sidebar-pane active" id="pane-inspector">
-        <div id="inspector-content" class="inspector-card">
-          <div class="empty-state">
-            <span>SELECT OR HOVER A COMPONENT OR PAD TO INSPECT</span>
+      <div class="sidebar-card">
+        <div class="sidebar-tabs">
+          <button class="sidebar-tab-btn active" onclick="switchSidebarTab('inspector')">INSPECT</button>
+          <button class="sidebar-tab-btn" onclick="switchSidebarTab('components')">PARTS</button>
+          <button class="sidebar-tab-btn" onclick="switchSidebarTab('nets')">NETS</button>
+          <button class="sidebar-tab-btn" onclick="switchSidebarTab('layers')">LAYERS</button>
+          <button class="sidebar-tab-btn" onclick="switchSidebarTab('checks')">CHECKS</button>
+          <button class="btn icon-only" onclick="toggleSidebar(false)" title="Hide panel (\)" aria-label="Hide panel"><iconify-icon icon="pixelarticons:chevron-right"></iconify-icon></button>
+        </div>
+  
+        <div class="sidebar-pane active" id="pane-inspector">
+          <div id="inspector-content" class="inspector-card">
+            <div class="empty-state">
+              <span>SELECT OR HOVER A COMPONENT OR PAD TO INSPECT</span>
+            </div>
           </div>
         </div>
-      </div>
-
-      <div class="sidebar-pane" id="pane-components">
-        <div id="components-list">
-          <div class="empty-state"><span>NO COMPONENTS PARSED</span></div>
-        </div>
-      </div>
-
-      <div class="sidebar-pane" id="pane-nets">
-        <div id="nets-list">
-          <div class="empty-state"><span>NO NETS DETECTED</span></div>
-        </div>
-      </div>
-
-      <div class="sidebar-pane" id="pane-layers">
-        <div class="sidebar-section">
-          <div class="section-title">PCB COPPER & MASKS</div>
-          <div class="layer-item">
-            <div class="layer-label">
-              <span class="layer-color-dot" style="background: var(--copper);"></span>
-              <span>TOP COPPER</span>
-            </div>
-            <input type="checkbox" class="toggle-checkbox" checked onchange="toggleLayer('top_copper', this.checked)">
-          </div>
-          <div class="layer-item">
-            <div class="layer-label">
-              <span class="layer-color-dot" style="background: var(--blue);"></span>
-              <span>BOTTOM COPPER</span>
-            </div>
-            <input type="checkbox" class="toggle-checkbox" checked onchange="toggleLayer('bottom_copper', this.checked)">
-          </div>
-          <div class="layer-item">
-            <div class="layer-label">
-              <span class="layer-color-dot" style="background: var(--gold);"></span>
-              <span>PADS (ENIG GOLD)</span>
-            </div>
-            <input type="checkbox" class="toggle-checkbox" checked onchange="toggleLayer('pads', this.checked)">
-          </div>
-          <div class="layer-item">
-            <div class="layer-label">
-              <span class="layer-color-dot" style="background: #ffffff;"></span>
-              <span>SILKSCREEN</span>
-            </div>
-            <input type="checkbox" class="toggle-checkbox" checked onchange="toggleLayer('silkscreen', this.checked)">
-          </div>
-          <div class="layer-item">
-            <div class="layer-label">
-              <span class="layer-color-dot" style="background: var(--border);"></span>
-              <span>HOLES & VIAS</span>
-            </div>
-            <input type="checkbox" class="toggle-checkbox" checked onchange="toggleLayer('holes_and_vias', this.checked)">
+  
+        <div class="sidebar-pane" id="pane-components">
+          <div id="components-list">
+            <div class="empty-state"><span>NO COMPONENTS PARSED</span></div>
           </div>
         </div>
-      </div>
-
-      <div class="sidebar-pane" id="pane-checks">
-        <div id="diagnostics-panel">
-          <div class="empty-state">
-            <span>NO ELECTRICAL VIOLATIONS DETECTED.</span>
+  
+        <div class="sidebar-pane" id="pane-nets">
+          <div id="nets-list">
+            <div class="empty-state"><span>NO NETS DETECTED</span></div>
+          </div>
+        </div>
+  
+        <div class="sidebar-pane" id="pane-layers">
+          <div class="sidebar-section">
+            <div class="section-title">PCB COPPER & MASKS</div>
+            <div class="layer-item">
+              <div class="layer-label">
+                <span class="layer-color-dot" style="background: var(--copper);"></span>
+                <span>TOP COPPER</span>
+              </div>
+              <input type="checkbox" class="toggle-checkbox" checked onchange="toggleLayer('top_copper', this.checked)">
+            </div>
+            <div class="layer-item">
+              <div class="layer-label">
+                <span class="layer-color-dot" style="background: var(--blue);"></span>
+                <span>BOTTOM COPPER</span>
+              </div>
+              <input type="checkbox" class="toggle-checkbox" checked onchange="toggleLayer('bottom_copper', this.checked)">
+            </div>
+            <div class="layer-item">
+              <div class="layer-label">
+                <span class="layer-color-dot" style="background: var(--gold);"></span>
+                <span>PADS (ENIG GOLD)</span>
+              </div>
+              <input type="checkbox" class="toggle-checkbox" checked onchange="toggleLayer('pads', this.checked)">
+            </div>
+            <div class="layer-item">
+              <div class="layer-label">
+                <span class="layer-color-dot" style="background: #ffffff;"></span>
+                <span>SILKSCREEN</span>
+              </div>
+              <input type="checkbox" class="toggle-checkbox" checked onchange="toggleLayer('silkscreen', this.checked)">
+            </div>
+            <div class="layer-item">
+              <div class="layer-label">
+                <span class="layer-color-dot" style="background: var(--border);"></span>
+                <span>HOLES & VIAS</span>
+              </div>
+              <input type="checkbox" class="toggle-checkbox" checked onchange="toggleLayer('holes_and_vias', this.checked)">
+            </div>
+          </div>
+        </div>
+  
+        <div class="sidebar-pane" id="pane-checks">
+          <div id="diagnostics-panel">
+            <div class="empty-state">
+              <span>NO ELECTRICAL VIOLATIONS DETECTED.</span>
+            </div>
           </div>
         </div>
       </div>
@@ -1057,13 +1117,12 @@
     let mechanicalOptions = { lid: true, explode: false, overlay: false };
 
     function syncMechanicalButtons() {
-      const labels = { lid: 'LID', explode: 'EXPLODE', overlay: 'MECHANICAL' };
-      Object.keys(labels).forEach((option) => {
+      ['lid', 'explode', 'overlay'].forEach((option) => {
         const on = !!mechanicalOptions[option];
-        const label = document.getElementById(`mechanical-${option}-label`);
-        if (label) label.textContent = `${labels[option]}: ${on ? 'ON' : 'OFF'}`;
         const btn = document.getElementById(`btn-mechanical-${option}`);
-        if (btn) btn.classList.toggle('is-on', on);
+        if (!btn) return;
+        btn.classList.toggle('is-on', on);
+        btn.setAttribute('aria-pressed', String(on));
       });
     }
 
@@ -1185,6 +1244,40 @@
       const activePane = document.getElementById(`pane-${tabId}`);
       if (activePane) activePane.classList.add('active');
     }
+
+    function toggleSidebar(open) {
+      const collapsed = !open;
+      document.body.classList.toggle('sidebar-collapsed', collapsed);
+      document.querySelector('.sidebar-card').inert = collapsed;
+      try {
+        localStorage.setItem('fusible.sidebarCollapsed', collapsed ? '1' : '0');
+      } catch (err) {}
+    }
+
+    function openSidebar(tabId) {
+      switchSidebarTab(tabId);
+      toggleSidebar(true);
+    }
+
+    try {
+      if (localStorage.getItem('fusible.sidebarCollapsed') === '1') toggleSidebar(false);
+    } catch (err) {}
+
+    document.getElementById('sidebar').addEventListener('transitionend', (e) => {
+      if (e.target.id === 'sidebar' && e.propertyName === 'width') {
+        window.dispatchEvent(new Event('resize'));
+      }
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.target.closest('input, textarea, select, [contenteditable]')) return;
+      const views = { '1': 'schematic', '2': 'pcb', '3': '3d', '4': 'mechanical' };
+      if (views[e.key]) {
+        if (views[e.key] !== currentView) switchView(views[e.key]);
+      } else if (e.key === '\\') {
+        toggleSidebar(document.body.classList.contains('sidebar-collapsed'));
+      }
+    });
 
     function togglePcbMode() {
       pcbMode = pcbMode === 'inspector' ? '3d' : 'inspector';
@@ -1637,7 +1730,7 @@
       document.querySelectorAll('.net-item').forEach(el => {
         el.classList.toggle('selected', el.textContent.includes(netName));
       });
-      showTooltip(window.innerWidth / 2, 80, {
+      showTooltip(window.innerWidth / 2, 72, {
         name: `NET: ${netName}`,
         type: 'SIGNAL TRACE HIGHLIGHT',
         net: netName
@@ -1653,7 +1746,7 @@
 
       if (fuseBlown) {
         statusEl.className = 'fuse-badge fuse-blown';
-        textEl.textContent = `[BLOWN] FUSE BLOWN (${diagnostics.length})`;
+        textEl.textContent = `FUSE BLOWN · ${diagnostics.length}`;
         if (iconEl) iconEl.innerHTML = '<iconify-icon icon="pixelarticons:alert"></iconify-icon>';
 
         if (diagnostics.length > 0) {
@@ -1667,7 +1760,7 @@
         }
       } else {
         statusEl.className = 'fuse-badge fuse-intact';
-        textEl.textContent = '[OK] FUSE INTACT';
+        textEl.textContent = 'FUSE INTACT';
         if (iconEl) iconEl.innerHTML = '<iconify-icon icon="pixelarticons:zap"></iconify-icon>';
         diagPanel.innerHTML = '<div class="empty-state"><span>NO ELECTRICAL VIOLATIONS DETECTED.</span></div>';
       }
@@ -1761,7 +1854,7 @@
       camera.add(headlight);
       scene.add(camera);
 
-      const grid = new THREE.GridHelper(200, 40, 0x353535, 0x1F1F1F);
+      const grid = new THREE.GridHelper(200, 40, 0x2e2e2e, 0x1a1a1a);
       grid.position.y = -1.0;
       scene.add(grid);
 
@@ -2491,11 +2584,11 @@
     function connectSSE() {
       const eventSource = new EventSource('/events');
       const liveDot = document.getElementById('live-dot');
-      const liveStatus = document.getElementById('live-status');
+      const liveIndicator = document.getElementById('live-indicator');
 
       eventSource.onopen = () => {
         liveDot.style.background = 'var(--green)';
-        liveStatus.textContent = 'SSE CONNECTED';
+        liveIndicator.title = 'Live reload connected';
       };
 
       eventSource.onmessage = (event) => {
@@ -2509,7 +2602,7 @@
 
       eventSource.onerror = () => {
         liveDot.style.background = 'var(--alert)';
-        liveStatus.textContent = 'RECONNECTING...';
+        liveIndicator.title = 'Reconnecting to dev server';
       };
     }
 

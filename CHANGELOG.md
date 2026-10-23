@@ -7,6 +7,12 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+### Changed
+
+- Studio drops the top bar. The view switcher floats at the top center, view controls sit in a dock at the bottom center, and the board name and fuse status float at the bottom left. Clicking the fuse status opens the checks tab.
+- The Studio sidebar is a floating panel you can collapse with its chevron or the `\` key. Studio remembers the choice. Keys `1` to `4` switch views.
+- Studio uses the Vitrine palette: `#111111` surfaces, `#2e2e2e` borders, a sage `#86A881` active state, and a faint sage grid.
+
 ## [0.11.3] - 2026-10-23
 
 ### Added
