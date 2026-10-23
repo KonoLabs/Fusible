@@ -7,6 +7,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.11.5] - 2026-10-23
+
 ### Changed
 
 - Studio renders every view with the tscircuit viewers, so it picks up their fixes on each bundle update. When WebGL is unavailable, the 3D and mechanical views say so instead of failing.
