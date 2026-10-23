@@ -9,7 +9,7 @@ use super::{DanglingRef, Netlist};
 use crate::parser::{Pad, PcbPort};
 
 /// `source_pad "<id>"`, or the pad's position when it has no id.
-fn pad_label(pad: &Pad, index: usize) -> String {
+pub(super) fn pad_label(pad: &Pad, index: usize) -> String {
     match pad.pad_id.as_deref() {
         Some(id) => format!("pad \"{id}\""),
         None => format!("pad #{index}"),

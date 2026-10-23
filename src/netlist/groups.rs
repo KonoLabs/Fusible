@@ -10,6 +10,7 @@ pub(super) struct Group {
     pub root: usize,
     pub net_ids: Vec<String>,
     pub first_trace: Option<String>,
+    pub short_trace: Option<String>,
 }
 
 pub(super) fn collect(graph: &mut Connectivity) -> Vec<Group> {
@@ -22,6 +23,7 @@ pub(super) fn collect(graph: &mut Connectivity) -> Vec<Group> {
                 root,
                 net_ids: Vec::new(),
                 first_trace: None,
+                short_trace: None,
             });
             groups.len() - 1
         });
@@ -31,6 +33,11 @@ pub(super) fn collect(graph: &mut Connectivity) -> Vec<Group> {
         let root = graph.sets.find(trace.anchor);
         let group = &mut groups[index[&root]];
         group.first_trace.get_or_insert_with(|| trace.label.clone());
+    }
+    for join in &graph.short_joins {
+        let root = graph.sets.find(join.anchor);
+        let group = &mut groups[index[&root]];
+        group.short_trace.get_or_insert_with(|| join.label.clone());
     }
     groups
 }
@@ -111,8 +118,9 @@ impl Group {
         (names.len() > 1).then(|| Short {
             nets: names.into_iter().collect(),
             trace: self
-                .first_trace
+                .short_trace
                 .clone()
+                .or_else(|| self.first_trace.clone())
                 .unwrap_or_else(|| "a source_port net_id".to_string()),
         })
     }

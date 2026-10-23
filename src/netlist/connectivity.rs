@@ -25,6 +25,8 @@ pub(super) struct Connectivity {
     pub synthetic: HashMap<String, Option<String>>,
     pub refs: HashMap<String, usize>,
     pub traces: Vec<TraceJoin>,
+    pub short_joins: Vec<TraceJoin>,
+    pub declared_nodes: Vec<usize>,
     pub dangling: Vec<DanglingRef>,
 }
 
@@ -36,7 +38,8 @@ impl Connectivity {
         let mut graph = Self::default();
         for net in circuit.nets() {
             if let Some(id) = net.net_id.as_deref() {
-                graph.net(id);
+                let node = graph.net(id);
+                graph.declared_nodes.push(node);
                 graph.declared.insert(id.to_string(), net.name.clone());
             }
         }
@@ -44,10 +47,7 @@ impl Connectivity {
         for (index, trace) in circuit.traces().enumerate() {
             graph.join_trace(index, trace, ports);
         }
-        for net_id in circuit.pads().filter_map(|pad| pad.net_id.as_deref()) {
-            graph.net(net_id);
-            graph.reference(net_id);
-        }
+        graph.join_pads(circuit, ports);
         (graph, anonymous)
     }
 
@@ -55,7 +55,7 @@ impl Connectivity {
         joined.or_else(|| self.port_nodes.get(port.port_id.as_deref()?).copied())
     }
 
-    fn net(&mut self, id: &str) -> usize {
+    pub(super) fn net(&mut self, id: &str) -> usize {
         if let Some(&node) = self.net_nodes.get(id) {
             return node;
         }
@@ -65,7 +65,7 @@ impl Connectivity {
         node
     }
 
-    fn port(&mut self, id: Option<&str>) -> usize {
+    pub(super) fn port(&mut self, id: Option<&str>) -> usize {
         let Some(id) = id else {
             return self.sets.add();
         };
@@ -77,7 +77,7 @@ impl Connectivity {
         node
     }
 
-    fn reference(&mut self, net_id: &str) {
+    pub(super) fn reference(&mut self, net_id: &str) {
         *self.refs.entry(net_id.to_string()).or_default() += 1;
     }
 
@@ -85,7 +85,8 @@ impl Connectivity {
         let net_id = port.net_id.as_deref()?;
         let node = self.port(port.port_id.as_deref());
         let net = self.net(net_id);
-        self.sets.union(node, net);
+        let label = format!("source_port \"{}\"", port.port_id.as_deref().unwrap_or("?"));
+        self.link(node, net, &label);
         self.reference(net_id);
         Some(node)
     }
@@ -125,7 +126,7 @@ impl Connectivity {
             return;
         };
         for &node in &nodes {
-            self.sets.union(anchor, node);
+            self.link(anchor, node, &label);
         }
         self.traces.push(TraceJoin { label, anchor });
     }

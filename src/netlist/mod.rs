@@ -24,6 +24,7 @@ mod builder;
 mod connectivity;
 mod endpoint;
 mod groups;
+mod joins;
 mod labels;
 #[cfg(test)]
 mod merge_tests;

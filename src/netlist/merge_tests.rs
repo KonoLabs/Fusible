@@ -66,3 +66,37 @@ fn ghost_nets_survive_a_merge_into_a_declared_net() {
     assert_eq!(n.ghost_nets().count(), 1);
     assert_eq!(n.by_id["missing"], n.by_id["n_gnd"]);
 }
+
+#[test]
+fn short_names_the_trace_that_joined_the_declared_nets() {
+    let n = netlist(
+        r#"[
+        {"type": "source_net", "source_net_id": "n_gnd", "name": "GND"},
+        {"type": "source_net", "source_net_id": "n_3v3", "name": "3V3"},
+        {"type": "source_port", "source_port_id": "a"},
+        {"type": "source_port", "source_port_id": "b"},
+        {"type": "source_trace", "source_trace_id": "t_gnd",
+         "connected_source_port_ids": ["a"], "connected_source_net_ids": ["n_gnd"]},
+        {"type": "source_trace", "source_trace_id": "t_3v3",
+         "connected_source_port_ids": ["b"], "connected_source_net_ids": ["n_3v3"]},
+        {"type": "source_trace", "source_trace_id": "t_bad", "connected_source_port_ids": ["a", "b"]}
+    ]"#,
+    );
+    assert_eq!(n.shorts().len(), 1);
+    assert_eq!(n.shorts()[0].trace, r#"source_trace "t_bad""#);
+}
+
+#[test]
+fn pad_on_another_net_than_its_port_is_a_short() {
+    let n = netlist(
+        r#"[
+        {"type": "source_net", "source_net_id": "n_gnd", "name": "GND"},
+        {"type": "source_net", "source_net_id": "n_3v3", "name": "3V3"},
+        {"type": "source_port", "source_port_id": "a", "net_id": "n_3v3"},
+        {"type": "pcb_port", "pcb_port_id": "pp_a", "source_port_id": "a"},
+        {"type": "pcb_smtpad", "pcb_smtpad_id": "pad_a", "pcb_port_id": "pp_a", "net_id": "n_gnd"}
+    ]"#,
+    );
+    assert_eq!(n.shorts().len(), 1);
+    assert_eq!(n.shorts()[0].trace, r#"pad "pad_a""#);
+}
