@@ -29,6 +29,7 @@ type Listener = (state: MechanicalState) => void;
 const listeners = new Set<Listener>();
 const consumers = new Set<string>();
 let revision: string | null = null;
+let board = "";
 let state: MechanicalState = { status: "idle" };
 let requested: string | null = null;
 let shown: MechanicalModel | null = null;
@@ -42,8 +43,12 @@ function emit(next: MechanicalState): void {
   shown = model;
 }
 
-function fail(rev: string, err: Error): void {
-  if (revision !== rev) return;
+function currentKey(): string | null {
+  return revision === null ? null : `${board}|${revision}`;
+}
+
+function fail(key: string, err: Error): void {
+  if (currentKey() !== key) return;
   requested = null;
   emit({ status: "error", error: err.message || String(err) });
 }
@@ -53,20 +58,22 @@ function disposeModel(model: MechanicalModel): void {
 }
 
 function refresh(): void {
-  if (!consumers.size || revision === null || requested === revision) return;
+  const key = currentKey();
+  if (!consumers.size || revision === null || key === null || requested === key) return;
   const rev = revision;
-  requested = rev;
+  requested = key;
   emit({ status: "loading" });
-  fetchModel(rev).then(
-    (model) => (revision === rev ? emit({ status: "ready", model }) : disposeModel(model)),
-    (err: Error) => fail(rev, err)
+  fetchModel(rev, board).then(
+    (model) => (currentKey() === key ? emit({ status: "ready", model }) : disposeModel(model)),
+    (err: Error) => fail(key, err)
   );
 }
 
-/** Records the circuit revision from the studio payload and refetches the model when a consumer needs it. */
-export function setMechanicalRevision(next: string): void {
-  if (next === revision) return;
+/** Records the circuit revision and board from the studio payload and refetches the model when a consumer needs it. */
+export function setMechanicalRevision(next: string, nextBoard = ""): void {
+  if (next === revision && nextBoard === board) return;
   revision = next;
+  board = nextBoard;
   requested = null;
   refresh();
 }

@@ -29,12 +29,17 @@ pub(super) fn is_allowed_origin(origin: Option<&str>, port: u16) -> bool {
     })
 }
 
-/// Returns the percent-decoded value of `key` in the URL's query string.
+/// Returns the percent-decoded value of `key` in the URL's query string; empty counts as absent.
 pub(super) fn query_param(url: &str, key: &str) -> Option<String> {
     let (_, query) = url.split_once('?')?;
     let value = query
         .split('&')
-        .find_map(|pair| pair.strip_prefix(key)?.strip_prefix('='))?;
+        .find_map(|pair| pair.strip_prefix(key)?.strip_prefix('='))
+        .filter(|value| !value.is_empty())?;
+    percent_decode(value)
+}
+
+fn percent_decode(value: &str) -> Option<String> {
     let bytes = value.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());
     let mut i = 0;

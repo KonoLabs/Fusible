@@ -137,7 +137,8 @@ help: every net must connect at least two pads/ports: complete the routing in ts
 Starts the native dark-theme web previewer powered by an embedded Rust HTTP server and live-reload event streamer:
 
 ```sh
-fusible dev                       # launches native Fusible Studio on port 3020
+fusible dev                       # launches native Fusible Studio on port 3020, every board of the project
+fusible dev sensor                # same studio, opened on one board
 fusible view --port 3030          # custom port
 fusible dev --legacy              # fallback to legacy tsci dev server
 ```
@@ -148,7 +149,9 @@ Features:
 - Vitrine brutalist dark UI palette (`#000000`, `#131313`, `#353535`, `#86A881`, `#A8B365`) and embedded `Undefined` monospace typography.
 - Interactive pan and zoom vector canvas for multi-layer PCB layout (`01 // PCB LAYOUT`) and schematic diagrams (`02 // SCHEMATIC`).
 - Interactive Three.js 3D board viewer (`03 // 3D VIEW`) rendering substrate, ENIG gold pads, copper vias, traces, and components with OrbitControls and view presets.
-- `BODIES` tab showing the generated base and lid, with lid and explode toggles. The 3D view has an `ENCLOSURE` toggle that draws the shell translucent around the board. The studio builds the model on demand from the first generated body in `fusible.yml` and rebuilds it when the circuit changes. Needs `bun`.
+- A project tree on the left lists the boards, firmware, and bodies of `fusible.yml`. Click a board to switch to it: schematic, PCB, 3D, parts, nets, and checks all follow. A dot shows each board's fuse state. Click a firmware to see the board it runs on, and a body to open the `BODIES` tab. The URL keeps the selection (`?item=board:sensor`), so a view can be bookmarked. The tree appears when the project has firmware, bodies, or several boards.
+- A `RUNS` tab starts `check`, `build`, and `body` from the browser, on one item (the play button in the tree) or on the whole project. It re-runs this same `fusible` binary, so the log and the result (`OK`, `FUSE BLOWN`, `FAILED`) match the terminal. One run goes at a time. Runs accept only names from `fusible.yml`, a JSON body, and a local `Origin`.
+- `BODIES` tab showing the generated base and lid of the selected board, with lid and explode toggles. The 3D view has an `ENCLOSURE` toggle that draws the shell translucent around the board. The studio builds the model on demand from the first generated body of that board and rebuilds it when the circuit changes. Needs `bun`. Authored bodies are listed in the tree but not drawn yet.
 - Real-time fuse status badge (glowing green when intact, pulsing red on blown fuse).
 - Diagnostics inspector showing rule violations, severity, and remediation advice.
 - PCB layer visibility toggles (top copper, bottom copper, ENIG pads, silkscreen).

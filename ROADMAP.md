@@ -84,9 +84,12 @@ Fusible unifies the hardware development workflow by wrapping tscircuit commands
 - [x] **Milestone 14: One project, three worlds** (Unreleased):
   - Named `boards`, `firmware`, and `bodies` in `fusible.yml`; every command takes a name as its target.
   - Bodies are authored (`source:`, optional `build:`) or generated (`generate: enclosure`).
+  - Studio shows the whole project: project tree, per-board views, and a `RUNS` tab that runs `check`, `build`, and `body` with live logs.
 - [ ] **Milestone 15: Bodies workflow**:
   - `fusible body eject <name>` turns a generated body into an authored file you edit in your CAD tool.
   - `fusible body kit <board>` exports a reference kit (board STEP, hole positions, connector openings, keep-out volumes) to model around.
+  - Studio draws authored bodies (STL and GLB directly, STEP converted with occt-wasm) over the board they name with `board:`.
+  - Studio firmware view: a pin map from the generated `pins.rs` data, with a click-through to the net on the PCB.
 - [ ] **Milestone 16: Assembly and cross-world fuse rules**:
   - `assembly:` places boards and bodies in one coordinate frame and exports `dist/assembly.{step,glb}`.
   - `links:` declares board-to-board wiring; `harness_mismatch` blows the fuse on pin or net mismatches.

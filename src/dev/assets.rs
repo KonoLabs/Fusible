@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use tiny_http::{Header, Response};
 
 const VIEWER_HTML: &str = include_str!("../assets/viewer.html");
+const PROJECT_JS: &str = include_str!("../assets/project.js");
 const FONT_DATA: &[u8] = include_bytes!("../assets/undefined-medium.otf");
 const FAVICON_SVG: &str = concat!(
     r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">"##,
@@ -50,6 +51,11 @@ pub(super) fn static_response(path: &str, bundle: Option<String>) -> Option<Http
     let response = match path {
         "/" | "/index.html" => http_response(200, "text/html; charset=utf-8", VIEWER_HTML.into()),
         "/studio.bundle.js" => bundle_response(bundle),
+        "/project.js" => http_response(
+            200,
+            "application/javascript; charset=utf-8",
+            PROJECT_JS.into(),
+        ),
         "/undefined-medium.otf" => http_response(200, "font/otf", FONT_DATA.to_vec()),
         "/favicon.ico" | "/favicon.svg" => http_response(200, "image/svg+xml", FAVICON_SVG.into()),
         _ => return None,

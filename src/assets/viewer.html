@@ -237,6 +237,182 @@
       white-space: pre-wrap;
       pointer-events: none;
     }
+    #project {
+      width: 232px;
+      flex-shrink: 0;
+      padding: var(--gutter) 0 var(--gutter) var(--gutter);
+      z-index: 10;
+    }
+    #project[hidden] {
+      display: none;
+    }
+    .project-card {
+      height: 100%;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .project-title {
+      padding: 14px 16px 8px;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      color: var(--green);
+    }
+    #project-tree {
+      flex: 1;
+      overflow-y: auto;
+      padding-bottom: 8px;
+    }
+    .tree-group {
+      padding: 14px 16px 6px;
+      font-size: 10px;
+      letter-spacing: 0.05em;
+      color: var(--text-subtle);
+    }
+    .tree-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 34px;
+      padding: 4px 8px 4px 16px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .tree-item:hover {
+      background: var(--surface-hover);
+    }
+    .tree-item.selected {
+      background: var(--green);
+      color: #000000;
+    }
+    .tree-dot {
+      width: 8px;
+      height: 8px;
+      flex-shrink: 0;
+      background: var(--text-subtle);
+    }
+    .tree-dot.ok {
+      background: var(--green);
+    }
+    .tree-dot.blown {
+      background: var(--alert);
+    }
+    .tree-dot.authored {
+      background: var(--blue);
+    }
+    .tree-dot.generated {
+      background: var(--olive);
+    }
+    .tree-name {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .tree-sub {
+      font-size: 9px;
+      letter-spacing: 0.05em;
+      color: var(--text-subtle);
+      white-space: nowrap;
+    }
+    .tree-item.selected .tree-dot {
+      background: #000000;
+    }
+    .tree-item.selected .tree-sub {
+      color: rgba(0, 0, 0, 0.6);
+    }
+    .tree-run {
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      color: var(--text-subtle);
+      cursor: pointer;
+    }
+    .tree-run:hover {
+      color: var(--text);
+      background: var(--surface-hover);
+    }
+    .tree-item.selected .tree-run {
+      color: #000000;
+    }
+    @media (max-width: 900px) {
+      #project {
+        display: none;
+      }
+    }
+    #runs-toolbar {
+      display: flex;
+      gap: 2px;
+      padding: 4px;
+    }
+    #runs-toolbar .btn {
+      flex: 1;
+      justify-content: center;
+    }
+    #runs-toolbar .btn:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+    #run-list {
+      max-height: 168px;
+      overflow-y: auto;
+    }
+    .run-item {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 6px 16px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .run-item:hover {
+      background: var(--surface-hover);
+    }
+    .run-item.selected {
+      background: rgba(134, 168, 129, 0.14);
+    }
+    .run-status {
+      font-size: 9px;
+      letter-spacing: 0.05em;
+      min-width: 74px;
+    }
+    .run-status.ok {
+      color: var(--green);
+    }
+    .run-status.running {
+      color: var(--olive);
+    }
+    .run-status.fuse_blown,
+    .run-status.error {
+      color: var(--alert);
+    }
+    #run-log {
+      flex: 1;
+      min-height: 0;
+      margin: 8px 0 0;
+      padding: 12px 16px;
+      overflow: auto;
+      background: var(--bg);
+      color: var(--text-body);
+      font: inherit;
+      font-size: 11px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    #pane-runs.active {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
     main {
       height: 100%;
       display: flex;
@@ -715,6 +891,12 @@
 </head>
 <body>
   <main>
+    <nav id="project" hidden aria-label="Project">
+      <div class="project-card">
+        <div class="project-title" id="project-title"></div>
+        <div id="project-tree"></div>
+      </div>
+    </nav>
     <div id="viewport-container">
       <div id="viewport-grid"></div>
       <div id="schematic-container" class="view-host"></div>
@@ -779,6 +961,7 @@
           <button class="sidebar-tab-btn" onclick="switchSidebarTab('components')">PARTS</button>
           <button class="sidebar-tab-btn" onclick="switchSidebarTab('nets')">NETS</button>
           <button class="sidebar-tab-btn" onclick="switchSidebarTab('checks')">CHECKS</button>
+          <button class="sidebar-tab-btn" onclick="switchSidebarTab('runs')">RUNS</button>
           <button class="btn icon-only" onclick="toggleSidebar(false)" title="Hide panel (\)" aria-label="Hide panel"><iconify-icon icon="pixelarticons:chevron-right"></iconify-icon></button>
         </div>
 
@@ -802,6 +985,16 @@
           </div>
         </div>
 
+        <div class="sidebar-pane" id="pane-runs">
+          <div id="runs-toolbar">
+            <button class="btn" data-action="check">CHECK ALL</button>
+            <button class="btn" data-action="build">BUILD ALL</button>
+            <button class="btn" data-action="body">BODIES</button>
+          </div>
+          <div id="run-list"></div>
+          <pre id="run-log" aria-label="Run log"></pre>
+        </div>
+
         <div class="sidebar-pane" id="pane-checks">
           <div id="diagnostics-panel">
             <div class="empty-state">
@@ -813,6 +1006,7 @@
     </aside>
   </main>
 
+  <script src="/project.js"></script>
   <script>
     let currentView = 'schematic';
     let lastCircuitJson = null;
@@ -1298,7 +1492,7 @@
       }
       if (typeof data.revision === 'string') {
         lastRevision = data.revision;
-        if (window.Tscircuit) window.Tscircuit.setMechanicalRevision(lastRevision);
+        if (window.Tscircuit) window.Tscircuit.setMechanicalRevision(lastRevision, data.board || '');
       }
       if (data.circuit_json) {
         lastCircuitJson = data.circuit_json;
@@ -1309,7 +1503,7 @@
     }
 
     window.addEventListener('tscircuit-ready', () => {
-      if (lastRevision !== null) window.Tscircuit.setMechanicalRevision(lastRevision);
+      if (lastRevision !== null) window.Tscircuit.setMechanicalRevision(lastRevision, window.Project.board());
       initMechanical();
       switchView(currentView);
     });
@@ -1331,7 +1525,7 @@
       eventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          updateStudio(data);
+          if (!window.Project.handle(data)) updateStudio(data);
         } catch (err) {
           console.error(err);
         }
@@ -1419,7 +1613,7 @@
     delegateClick('components-list', '.comp-item', (item) => selectComponent(item.dataset.name));
     delegateClick('nets-list', '.net-item', (item) => selectNet(item.dataset.name));
     delegateClick('inspector-content', '.pin-item', (item) => selectNet(item.dataset.net));
-    connectSSE();
+    window.Project.init().finally(connectSSE);
   </script>
 </body>
 </html>

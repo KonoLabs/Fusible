@@ -46,6 +46,7 @@ fn query_params_are_decoded() {
     );
     assert_eq!(query_param("/x?boardx=main", "board"), None);
     assert_eq!(query_param("/x", "board"), None);
+    assert_eq!(query_param("/x?board=&rev=1", "board"), None);
 }
 
 #[test]
@@ -88,4 +89,14 @@ fn project_lists_served_items_with_relative_paths() {
     assert_eq!(names(&json["firmware"]), ["main-fw"]);
     assert_eq!(names(&json["bodies"]), ["case"]);
     assert_eq!(json["firmware"][0]["buildable"], true);
+}
+
+#[test]
+fn viewer_loads_the_project_script_the_server_serves() {
+    let page = super::assets::static_response("/", None).unwrap();
+    assert_eq!(page.status_code().0, 200);
+    let script = super::assets::static_response("/project.js", None).unwrap();
+    assert_eq!(script.status_code().0, 200);
+    let html = include_str!("../assets/viewer.html");
+    assert!(html.contains(r#"<script src="/project.js"></script>"#));
 }
