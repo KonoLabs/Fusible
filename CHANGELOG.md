@@ -7,6 +7,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-23
+
 ### Added
 
 - `fusible.yml` holds named `boards`, `firmware`, and `bodies`, so one project can link several PCBs, several firmware crates, and several physical parts. Names are unique across the three sections, and every command takes one as its target.
