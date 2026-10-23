@@ -12,7 +12,7 @@
 
   function headerHtml(name, data) {
     const build = lastBuild(name);
-    const busy = ((window.Project && window.Project.runs()) || []).some((r) => r.status === 'running');
+    const busy = !!(window.Project && window.Project.isBusy());
     const meta = data
       ? [data.board && `BOARD ${data.board}`, `MCU ${data.mcu}`, data.framework && `FRAMEWORK ${data.framework}`]
       : [];
@@ -32,13 +32,13 @@
   function pinHtml(pin) {
     const signal = pin.const.replace(/^gpio::/, '');
     const remote = pin.remote ? `<span class="fw-remote">${escapeHtml(pin.remote)}</span>` : '';
-    const violation = pin.violation ? `<div class="fw-violation">${escapeHtml(pin.violation)}</div>` : '';
+    const violation = pin.violation ? `<span class="fw-violation">${escapeHtml(pin.violation)}</span>` : '';
     const part = pin.remote ? pin.remote.split('.')[0] : '';
-    return `<div class="fw-pin${pin.violation ? ' blown' : ''}" data-net="${escapeHtml(pin.net)}" data-part="${escapeHtml(part)}" title="${escapeHtml(pin.net)}" tabindex="0">
+    return `<button class="fw-pin${pin.violation ? ' blown' : ''}" data-net="${escapeHtml(pin.net)}" data-part="${escapeHtml(part)}" title="${escapeHtml(pin.net)}">
       <span class="fw-pin-name">${escapeHtml(pin.pin)}</span>
       <span class="fw-net">${escapeHtml(signal)}</span>${remote}
       <span class="fw-rust">${escapeHtml(pin.field)}</span>${violation}
-    </div>`;
+    </button>`;
   }
 
   function groupsHtml(data) {
@@ -72,7 +72,7 @@
     let error = null;
     try {
       const response = await fetch(`/api/firmware?name=${encodeURIComponent(name)}`, { cache: 'no-store' });
-      const body = await response.json();
+      const body = await response.json().catch(() => ({}));
       if (response.ok) data = body;
       else error = body.error || `HTTP ${response.status}`;
     } catch (err) {
@@ -92,7 +92,7 @@
     if (name !== state.name) Object.assign(state, { name, data: null, error: null });
     render();
     switchSidebarTab('pins');
-    toggleSidebar(true);
+    toggleSidebar(true, false);
     load(name);
   }
 
@@ -117,20 +117,13 @@
     if (state.data && state.data.board === board) reload(300);
   }
 
-  function onRun() {
+  function onRun(status) {
     render();
-    reload(0);
+    if (status !== 'running') reload(0);
   }
 
   document.addEventListener('DOMContentLoaded', () => {
     view().addEventListener('click', onClick);
-    view().addEventListener('keydown', (event) => {
-      const onRow = event.target.classList && event.target.classList.contains('fw-pin');
-      if (onRow && (event.key === 'Enter' || event.key === ' ')) {
-        event.preventDefault();
-        onClick(event);
-      }
-    });
   });
 
   window.FirmwareView = { show, onBoard, onRun };

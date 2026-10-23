@@ -1,6 +1,6 @@
 import type * as THREE from "three";
 import { fetchAuthored } from "./authoredFetch";
-import { mechanicalBoard } from "./store";
+import { errorMessage } from "./gltf";
 
 export interface AuthoredModel {
   key: string;
@@ -36,18 +36,17 @@ function emit(next: AuthoredState): void {
 function refresh(): void {
   if (selected === null || !consumers.size) return;
   const name = selected;
-  const board = mechanicalBoard();
-  const key = `${board}|${name}|${nonce}`;
+  const key = `${name}|${nonce}`;
   if (requested === key) return;
   requested = key;
   emit({ status: "loading" });
-  fetchAuthored(name, board, nonce).then(
+  fetchAuthored(name, nonce).then(
     (geometries) => {
       if (requested === key) emit({ status: "ready", model: { key, name, geometries } });
       else geometries.forEach((geometry) => geometry.dispose());
     },
-    (err: Error) => {
-      if (requested === key) emit({ status: "error", error: err.message || String(err) });
+    (reason: unknown) => {
+      if (requested === key) emit({ status: "error", error: errorMessage(reason) });
     }
   );
 }

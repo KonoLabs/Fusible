@@ -1,7 +1,11 @@
 (() => {
   const NARROW = window.matchMedia('(max-width: 900px)');
   const KEY = 'fusible.treeCollapsed';
+  const BEHIND = ['viewport-container', 'sidebar'];
   const body = document.body;
+  let opener = null;
+
+  const byId = (id) => document.getElementById(id);
 
   function fitViewers() {
     window.dispatchEvent(new Event('resize'));
@@ -11,14 +15,37 @@
     body.classList.toggle('tree-collapsed', collapsed);
     try {
       localStorage.setItem(KEY, collapsed ? '1' : '0');
-    } catch (err) {}
+    } catch (err) {
+      console.warn('cannot remember the project tree state', err);
+    }
     fitViewers();
   }
 
+  function markDialog(open) {
+    const nav = byId('project');
+    if (open) {
+      nav.setAttribute('role', 'dialog');
+      nav.setAttribute('aria-modal', 'true');
+    } else {
+      nav.removeAttribute('role');
+      nav.removeAttribute('aria-modal');
+    }
+    BEHIND.forEach((id) => { byId(id).inert = open; });
+  }
+
   function setDrawer(open) {
+    if (open === body.classList.contains('tree-drawer-open')) return;
+    if (open) opener = document.activeElement;
     body.classList.toggle('tree-drawer-open', open);
-    const toggle = document.getElementById('tree-open');
-    if (toggle) toggle.setAttribute('aria-expanded', String(open));
+    byId('tree-open').setAttribute('aria-expanded', String(open));
+    markDialog(open);
+    if (open) {
+      byId('tree-close').focus();
+      return;
+    }
+    const target = opener && opener.isConnected && opener.offsetParent !== null ? opener : byId('tree-open');
+    opener = null;
+    target.focus();
   }
 
   function isOpen() {
@@ -34,19 +61,19 @@
 
   function onKey(event) {
     if (event.ctrlKey || event.metaKey || event.altKey) return;
-    if (event.target.closest('input, textarea, select, [contenteditable]')) return;
-    if (event.key === '[' && body.classList.contains('has-project')) {
-      toggle();
-    } else if (event.key === 'Escape' && body.classList.contains('tree-drawer-open')) {
+    if (event.key === 'Escape' && body.classList.contains('tree-drawer-open')) {
       setDrawer(false);
+      return;
     }
+    if (event.target.closest('input, textarea, select, [contenteditable]')) return;
+    if (event.key === '[' && body.classList.contains('has-project')) toggle();
   }
 
   function bind() {
-    document.getElementById('tree-open').addEventListener('click', () => toggle(true));
-    document.getElementById('tree-close').addEventListener('click', () => toggle(false));
-    document.getElementById('tree-scrim').addEventListener('click', () => setDrawer(false));
-    document.getElementById('project-tree').addEventListener('click', (event) => {
+    byId('tree-open').addEventListener('click', () => toggle(true));
+    byId('tree-close').addEventListener('click', () => toggle(false));
+    byId('tree-scrim').addEventListener('click', () => setDrawer(false));
+    byId('project-tree').addEventListener('click', (event) => {
       if (NARROW.matches && event.target.closest('.tree-item')) setDrawer(false);
     });
     NARROW.addEventListener('change', () => {
@@ -59,10 +86,11 @@
   function init() {
     try {
       if (localStorage.getItem(KEY) === '1') body.classList.add('tree-collapsed');
-    } catch (err) {}
+    } catch (err) {
+      console.warn('cannot read the project tree state', err);
+    }
     bind();
   }
 
   document.addEventListener('DOMContentLoaded', init);
-  window.TreeDrawer = { toggle };
 })();
