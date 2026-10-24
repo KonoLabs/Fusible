@@ -60,7 +60,8 @@ fn keep_mine_puts_my_version_on_top_and_shares_it() {
     );
     assert!(text(&pair.bob).contains("(a 20)"));
     assert!(!text(&pair.bob).contains("<<<<"));
-    assert_eq!(save(&pair.bob, "").code, 200);
+    let shared = save(&pair.bob, "");
+    assert_eq!(shared.body["message"], "Saved and shared.");
     sh(&pair.alice, &["pull", "-q"]);
     assert!(text(&pair.alice).contains("(a 20)"));
 }

@@ -9,7 +9,7 @@ use super::git_run::Git;
 pub(super) enum Shared {
     Local,
     Waiting,
-    Pushed,
+    Pushed { sent: bool },
 }
 
 /// Whether the upstream branch has a shared copy to get updates from.
@@ -53,12 +53,15 @@ pub(super) fn share(git: &Git) -> Result<Shared, Failure> {
         if !pull(git)? {
             return Ok(Shared::Waiting);
         }
+        let sent = git
+            .text(&["rev-list", "--count", "@{upstream}..HEAD"])
+            .is_some_and(|n| n != "0");
         step(git, &["push"])?;
-        return Ok(Shared::Pushed);
+        return Ok(Shared::Pushed { sent });
     }
     let branch = git
         .text(&["symbolic-ref", "--short", "HEAD"])
         .unwrap_or_default();
     step(git, &["push", "--set-upstream", &remote, &branch])?;
-    Ok(Shared::Pushed)
+    Ok(Shared::Pushed { sent: true })
 }

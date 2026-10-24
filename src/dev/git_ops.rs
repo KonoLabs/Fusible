@@ -77,14 +77,14 @@ fn blocked(git: &Git) -> Result<(), Failure> {
 pub(super) fn save(git: &Git, message: &str) -> Outcome {
     blocked(git)?;
     let message = Some(message.trim()).filter(|m| !m.is_empty());
-    let committed = commit(git, message.unwrap_or(DEFAULT_MESSAGE))?;
+    commit(git, message.unwrap_or(DEFAULT_MESSAGE))?;
     let before = head(git);
     let shared = share(git)?;
     let message = match shared {
         Shared::Local => "Saved on this computer. Add a remote to share.",
         Shared::Waiting => "Saved, but some files need your decision.",
-        Shared::Pushed if committed => "Saved and shared.",
-        Shared::Pushed => "Everything was already saved and shared.",
+        Shared::Pushed { sent: true } => "Saved and shared.",
+        Shared::Pushed { sent: false } => "Everything was already saved and shared.",
     };
     Ok(Done {
         message: message.into(),

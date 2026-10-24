@@ -9,6 +9,7 @@ const PROJECT_JS: &str = include_str!("../assets/project.js");
 const BOM_JS: &str = include_str!("../assets/bom.js");
 const FIRMWARE_JS: &str = include_str!("../assets/firmware.js");
 const DRAWER_JS: &str = include_str!("../assets/drawer.js");
+const GIT_JS: &str = include_str!("../assets/git.js");
 const FONT_DATA: &[u8] = include_bytes!("../assets/undefined-medium.otf");
 const FAVICON_SVG: &str = concat!(
     r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">"##,
@@ -62,6 +63,7 @@ pub(super) fn static_response(path: &str, bundle: Option<String>) -> Option<Http
         "/bom.js" => script_response(BOM_JS),
         "/firmware.js" => script_response(FIRMWARE_JS),
         "/drawer.js" => script_response(DRAWER_JS),
+        "/git.js" => script_response(GIT_JS),
         "/undefined-medium.otf" => http_response(200, "font/otf", FONT_DATA.to_vec()),
         "/favicon.ico" | "/favicon.svg" => http_response(200, "image/svg+xml", FAVICON_SVG.into()),
         _ => return None,
