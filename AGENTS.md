@@ -96,5 +96,6 @@ Commit messages MUST adhere to [Conventional Commits](https://www.conventionalco
   - `--skip-lint`: Bypasses electrical rule checking (for drafts only).
 - `fusible body [TARGET]`: Builds physical bodies. A body is authored (`source:`, optional `build:` command) or generated (`generate: enclosure`, fuse-gated). TARGET is a body name or a board.
 - `fusible bom [TARGET] [-f table|csv|json] [-o PATH]`: Bill of materials from the placed components, the bodies as prints, and `bom.yml` (prices, picks, manual parts). Never blows the fuse.
+- Studio `SYNC` panel (`src/assets/git.js`, `src/dev/git_*.rs`): git for non-developers. Every git call goes through `Git::run` in `src/dev/git_run.rs` (real binary, no shell, 30 s deadline, `GIT_TERMINAL_PROMPT=0`, no credential reads). `GET /api/git`, `POST /api/git/{save,update,resolve}` share the `/api/run` same-origin and JSON guard. UI wording: Sync, Save, Get updates, Saves; never commit, push, pull, rebase, or stage outside error details. During a rebase, `--ours` is the other person's side, so Keep mine is `--theirs` (see `git_resolve::flag`). Tests build two clones of a bare repo in a temp dir (`git_support.rs`).
 - `fusible doctor [--install]`: Inspects bun/node/npm/tsci toolchains and optionally provisions `tscircuit`.
 - `fusible init [--name <NAME>]`: Generates a clean `fusible.yml` project manifest.

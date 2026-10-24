@@ -7,6 +7,10 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+### Added
+
+- Studio `SYNC` panel for teams that keep the project in git, with no terminal: `SAVE`, `GET UPDATES`, the last 20 saves, and a card per conflicting file with `KEEP MINE` and `KEEP THEIRS`. It appears only inside a git work tree, rebuilds the boards after updates that touch project files, says so when there is no remote, and offers a download link and `RE-CHECK` when `git` is missing. Backed by `GET /api/git` and `POST /api/git/save`, `/update`, `/resolve`, guarded like `/api/run`.
+
 ## [0.14.3] - 2026-10-24
 
 ### Changed
