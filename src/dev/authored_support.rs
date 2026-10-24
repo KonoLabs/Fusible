@@ -49,7 +49,7 @@ impl Drop for Dir {
 pub(super) fn manifest(bodies: &[(&str, &Path)]) -> FusibleConfig {
     let lines: Vec<String> = bodies
         .iter()
-        .map(|(name, path)| format!("  {name}: {{source: \"{}\"}}\n", path.display()))
+        .map(|(name, path)| format!("  {name}: {{source: '{}'}}\n", path.display()))
         .collect();
     let yaml = format!(
         "bodies:\n{}  lid: {{generate: enclosure}}\n",
