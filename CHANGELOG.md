@@ -7,6 +7,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-24
+
 ### Added
 
 - Fusible Studio desktop app (`desktop/`): a Tauri shell with a Projects page (cards, new project, open folder, recent) and a Settings page, which runs `fusible dev --desktop` per project. The desktop workflow publishes `Fusible-Studio-windows-x64-setup.exe`, `Fusible-Studio-macos-universal.dmg`, and `Fusible-Studio-linux-x64.AppImage` and `.deb` to each release. The installers ship `bun`; they are not code-signed yet.
