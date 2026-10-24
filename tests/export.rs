@@ -133,11 +133,9 @@ fn subcommand_export_docs_without_chromium_warns_and_writes_svg_only() {
     std::fs::write(out_dir.join("schematic.pdf"), b"%PDF stale").unwrap();
 
     let out = fusible()
+        .env_clear()
+        .envs(std::env::vars_os().filter(|(key, _)| key.eq_ignore_ascii_case("SystemRoot")))
         .env("HOME", &dir.path)
-        .env("PATH", "")
-        .env_remove("ProgramFiles")
-        .env_remove("ProgramFiles(x86)")
-        .env_remove("LocalAppData")
         .args(["export", "examples/circuit.json", "--preset", "docs", "-o"])
         .arg(&out_dir)
         .output()
