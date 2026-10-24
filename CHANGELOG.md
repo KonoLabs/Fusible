@@ -17,6 +17,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 - When no `tsci` is installed, runner detection falls back to `bun x --bun tsci`.
 - `fusible init --currency CODE` writes `bom.yml` with that currency. It accepts the 12 currencies the studio offers and rejects any other before writing a file.
 - `fusible doctor --json` prints `{"bun", "node", "tsci"}`, each a `{path, version}` object or null, and exits 0 when tools are missing.
+- Studio `SYNC` panel for teams that keep the project in git, with no terminal: `SAVE`, `GET UPDATES`, the last 20 saves, and a card per conflicting file with `KEEP MINE` and `KEEP THEIRS`. It appears only inside a git work tree, rebuilds the boards after updates that touch project files, says so when there is no remote, and offers a download link and `RE-CHECK` when `git` is missing. Backed by `GET /api/git` and `POST /api/git/save`, `/update`, `/resolve`, guarded like `/api/run`.
 
 ### Fixed
 
