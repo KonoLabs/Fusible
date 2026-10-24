@@ -421,6 +421,12 @@
     #bom-view::-webkit-scrollbar {
       display: none;
     }
+    #sidebar, #sidebar * {
+      scrollbar-width: none;
+    }
+    #sidebar::-webkit-scrollbar, #sidebar *::-webkit-scrollbar {
+      display: none;
+    }
     body.bom-open #bom-view:not([hidden]) {
       display: flex;
     }
