@@ -7,6 +7,18 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+### Added
+
+- Windows builds: the release workflow publishes `fusible_<version>_windows_amd64.zip` (with `fusible.exe`) next to the Linux and macOS archives, and lists it in `checksums.txt`. CI runs format, clippy, and tests on `windows-latest`.
+- `.gitattributes` keeps text files on LF, so a Windows checkout compiles and tests the same bytes.
+
+### Fixed
+
+- On Windows, runner detection skips the extensionless shell shims in `node_modules/.bin` and picks `tsci.cmd`, which `CreateProcess` can run.
+- On Windows, `fusible init` and `fusible doctor --install` resolve `npm` through `PATH`, so the `npm.cmd` shim starts.
+- On Windows, the dev file watcher compares changes against the path it was given as well as its canonical form, so edits under a `\\?\` prefix still reload.
+- On Windows, the schematic PDF export builds a `file:///C:/...` URL and also looks for Chrome and Edge in the standard install directories.
+
 ## [0.14.3] - 2026-10-24
 
 ### Changed
