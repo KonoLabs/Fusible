@@ -14,7 +14,7 @@ use crate::config::FusibleConfig;
 
 const MAX_REQUEST: u64 = 4096;
 
-fn forbidden(request: &Request, port: u16) -> bool {
+pub(super) fn forbidden(request: &Request, port: u16) -> bool {
     let header = |name: &'static str| {
         let found = request.headers().iter().find(|h| h.field.equiv(name));
         found.map(|h| h.value.as_str().to_string())

@@ -98,6 +98,10 @@
       left: 50%;
       transform: translateX(-50%);
     }
+    .floating-tree {
+      top: var(--gutter);
+      left: var(--gutter);
+    }
     .floating-status {
       bottom: var(--gutter);
       left: var(--gutter);
@@ -401,6 +405,118 @@
         z-index: 35;
         background: rgba(0, 0, 0, 0.55);
       }
+    }
+    #bom-view {
+      position: absolute;
+      inset: 56px var(--gutter) 64px var(--gutter);
+      z-index: 15;
+      display: none;
+      flex-direction: column;
+      overflow: auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+    body.bom-open #bom-view:not([hidden]) {
+      display: flex;
+    }
+    .bom-head {
+      padding: 14px 16px 6px;
+    }
+    .bom-sum {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 24px;
+      padding: 8px 16px;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+    }
+    .bom-sum span {
+      display: block;
+      font-size: 9px;
+      color: var(--text-subtle);
+    }
+    .bom-sum b {
+      font-weight: normal;
+      color: var(--green);
+    }
+    .bom-warn {
+      padding: 0 16px;
+      font-size: 10px;
+      letter-spacing: 0.05em;
+      color: var(--alert);
+    }
+    .bom-settings {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 8px 16px;
+      padding: 8px 16px 12px;
+      font-size: 9px;
+      letter-spacing: 0.05em;
+      color: var(--text-subtle);
+    }
+    .bom-settings label {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .bom-scroll {
+      overflow-x: auto;
+      padding-bottom: 12px;
+    }
+    .bom-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+    .bom-table th {
+      padding: 6px 8px;
+      font-size: 9px;
+      font-weight: normal;
+      letter-spacing: 0.05em;
+      text-align: left;
+      color: var(--text-subtle);
+      border-bottom: 1px solid var(--border);
+    }
+    .bom-table td {
+      padding: 6px 8px;
+      vertical-align: top;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .bom-table tr:hover td {
+      background: var(--surface-hover);
+    }
+    #bom-view input:not([type="checkbox"]) {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font: inherit;
+      padding: 3px 6px;
+    }
+    #bom-view input:focus-visible {
+      outline: 1px solid var(--green);
+    }
+    .bom-num {
+      width: 72px;
+    }
+    .bom-wide {
+      width: 100%;
+      min-width: 140px;
+    }
+    .bom-refs {
+      margin-top: 2px;
+      font-size: 9px;
+      letter-spacing: 0.05em;
+      color: var(--text-subtle);
+      overflow-wrap: anywhere;
+    }
+    .bom-refs a,
+    .bom-table td a {
+      color: var(--blue);
+    }
+    .bom-total {
+      white-space: nowrap;
+      color: var(--green);
     }
     .fw-head {
       padding: 14px 16px 10px;
@@ -1071,6 +1187,7 @@
       <div id="three-cad" class="view-host"></div>
       <div id="mechanical-container" class="view-host"></div>
       <div id="studio-status" class="studio-status" hidden></div>
+      <section id="bom-view" aria-label="Parts and costs" hidden></section>
 
       <nav class="floating floating-views" aria-label="Views">
         <button class="tab-btn active" data-view="schematic" onclick="switchView('schematic')" title="Schematic (1)"><iconify-icon icon="pixelarticons:git-commit"></iconify-icon><span>SCHEMATIC</span></button>
@@ -1108,8 +1225,11 @@
         </div>
       </div>
 
+      <div class="floating floating-tree tree-open">
+        <button class="btn icon-only" id="tree-open" title="Show project ([)" aria-label="Show project" aria-expanded="false"><iconify-icon icon="pixelarticons:layout-sidebar-left"></iconify-icon></button>
+      </div>
+
       <div class="floating floating-status">
-        <button class="btn icon-only tree-open" id="tree-open" title="Show project ([)" aria-label="Show project" aria-expanded="false"><iconify-icon icon="pixelarticons:layout-sidebar-left"></iconify-icon></button>
         <iconify-icon icon="pixelarticons:cpu-sharp" class="brand-logo"></iconify-icon>
         <span class="board-name" id="board-name">BOARD PREVIEW</span>
         <span class="live" title="Live reload connected" id="live-indicator"><span class="status-dot" id="live-dot"></span></span>
@@ -1184,6 +1304,7 @@
 
   <script src="/project.js"></script>
   <script src="/firmware.js"></script>
+  <script src="/bom.js"></script>
   <script src="/drawer.js"></script>
   <script>
     let currentView = 'schematic';

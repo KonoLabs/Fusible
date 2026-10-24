@@ -5,6 +5,7 @@
 //! * `1` — electrical violations: the fuse blew, generation is blocked;
 //! * `2` — tool error (unreadable/malformed input, runner failure, usage error).
 
+pub mod bom;
 pub mod cli;
 pub mod codegen;
 pub mod commands;
@@ -59,6 +60,7 @@ fn run_command(command: Commands) -> ExitCode {
         Commands::Build { file } => dispatch::build(file),
         Commands::Export(args) => dispatch::export(args),
         Commands::Body(args) => dispatch::body(args),
+        Commands::Bom(args) => tool_exit(commands::bom::run(args)),
         Commands::Route(args) => dispatch::route(args),
         Commands::Diff { kicad_pcb, file } => dispatch::diff(kicad_pcb, file),
         Commands::Sync(args) => dispatch::sync(args),

@@ -4,6 +4,7 @@ mod authored;
 mod authored_cache;
 mod bodies;
 mod body;
+mod bom;
 mod firmware;
 mod guard;
 pub mod hub;
@@ -31,6 +32,8 @@ mod authored_support;
 mod authored_tests;
 #[cfg(test)]
 mod body_tests;
+#[cfg(test)]
+mod bom_tests;
 #[cfg(test)]
 mod firmware_tests;
 #[cfg(test)]

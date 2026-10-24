@@ -10,7 +10,8 @@ use clap::{Parser, Subcommand};
 mod args;
 
 pub use args::{
-    BodyAction, BodyArgs, EjectArgs, ExportArgs, InitArgs, KitArgs, RouteArgs, SyncArgs,
+    BodyAction, BodyArgs, BomArgs, BomFormat, EjectArgs, ExportArgs, InitArgs, KitArgs, RouteArgs,
+    SyncArgs,
 };
 
 /// Fusible — electronic linter & hardware-firmware bridge for tscircuit.
@@ -88,6 +89,10 @@ pub enum Commands {
         alias = "housing"
     )]
     Body(BodyArgs),
+
+    /// List the parts of the project with quantities and prices (bill of materials)
+    #[command(alias = "parts")]
+    Bom(BomArgs),
 
     /// Run the autorouter to solve circuit traces
     Route(RouteArgs),

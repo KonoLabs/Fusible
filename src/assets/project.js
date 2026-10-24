@@ -70,14 +70,22 @@
     const nav = byId('project');
     const project = state.project;
     const count = GROUPS.reduce((sum, [list]) => sum + project[list].length, 0);
-    const shown = count > 1 || project.firmware.length || project.bodies.length;
+    const shown = count > 0;
     nav.hidden = !shown;
     document.body.classList.toggle('has-project', !!shown);
     byId('project-title').textContent = (project.name || 'PROJECT').toUpperCase();
     byId('project-tree').innerHTML = GROUPS.filter(([list]) => project[list].length)
       .map(([list, kind, title, action, hint]) => `<div class="tree-group">${title}</div>${project[list]
         .map((item) => rowHtml(kind, item, action, hint)).join('')}`)
-      .join('');
+      .join('') + bomRowHtml();
+  }
+
+  function bomRowHtml() {
+    const selected = state.item === 'bom:';
+    return `<div class="tree-group">COSTS</div><div class="tree-item${selected ? ' selected' : ''}" data-kind="bom" data-name="">
+      <button class="tree-select"${selected ? ' aria-current="true"' : ''}>
+        <span class="tree-dot authored"></span><span class="tree-name">PARTS &amp; COSTS</span><span class="tree-sub">BOM</span>
+      </button></div>`;
   }
 
   function showBoard(name) {
@@ -126,6 +134,7 @@
     if (kind === 'firmware') window.FirmwareView.show(name);
     applyBody(kind, item);
     if (kind === 'body') switchView('mechanical');
+    else if (kind === 'board' && currentView === 'mechanical') switchView('pcb');
     renderTree();
     rememberItem();
   }
@@ -232,7 +241,12 @@
       return;
     }
     const row = event.target.closest('.tree-item');
-    if (row) select(row.dataset.kind, row.dataset.name);
+    if (!row) return;
+    window.BomView.hide();
+    if (row.dataset.kind !== 'bom') return select(row.dataset.kind, row.dataset.name);
+    state.item = 'bom:';
+    renderTree();
+    window.BomView.show();
   }
 
   function bindEvents() {

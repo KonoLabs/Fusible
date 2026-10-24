@@ -6,6 +6,7 @@ use tiny_http::{Header, Response};
 
 const VIEWER_HTML: &str = include_str!("../assets/viewer.html");
 const PROJECT_JS: &str = include_str!("../assets/project.js");
+const BOM_JS: &str = include_str!("../assets/bom.js");
 const FIRMWARE_JS: &str = include_str!("../assets/firmware.js");
 const DRAWER_JS: &str = include_str!("../assets/drawer.js");
 const FONT_DATA: &[u8] = include_bytes!("../assets/undefined-medium.otf");
@@ -58,6 +59,7 @@ pub(super) fn static_response(path: &str, bundle: Option<String>) -> Option<Http
             "application/javascript; charset=utf-8",
             PROJECT_JS.into(),
         ),
+        "/bom.js" => script_response(BOM_JS),
         "/firmware.js" => script_response(FIRMWARE_JS),
         "/drawer.js" => script_response(DRAWER_JS),
         "/undefined-medium.otf" => http_response(200, "font/otf", FONT_DATA.to_vec()),

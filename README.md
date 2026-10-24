@@ -283,6 +283,30 @@ fusible doctor
 fusible doctor --install
 ```
 
+### Parts and costs
+
+```sh
+fusible bom                              # every board: parts, quantities, prices, totals
+fusible bom main -f csv -o parts.csv     # one board, as CSV
+fusible bom -f json                      # the full report for scripts
+```
+
+Fusible lists the components placed on each board, grouped by kind, value, and part number, and adds each body of the manifest as a 3D print. Prices, picks, and extra parts live in `bom.yml` next to `fusible.yml`; the Studio `PARTS & COSTS` view edits the same file.
+
+```yaml
+currency: EUR
+print:
+  price_per_kg: 25
+parts:
+  resistor-10kohm: {unit_price: 0.02, supplier: LCSC, url: "https://example.com/c25744"}
+  m3-screw: {description: M3x8 screw, quantity: 8, unit_price: 0.05}
+  chip-esp32-s3: {picked: false}
+prints:
+  case: {grams: 42}
+```
+
+A key that matches a detected part (the `id` of `fusible bom -f json`) overrides it; any other key is a manual part. Print cost is `grams / 1000 * price_per_kg`. A part without a price gets an estimate by kind and value (marked `~`), and a body with an STL gets its weight from the model volume (PLA, 40% effective fill). Both yield to what you type in `bom.yml`.
+
 ## Exit codes
 
 The codes are part of the contract, so CI can tell failures apart:

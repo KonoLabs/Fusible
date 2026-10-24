@@ -43,17 +43,17 @@ fn compile_tsx(entry: &Path) -> Result<(PathBuf, String), CheckError> {
         Ok(runner) => runner,
         Err(runner_err) => {
             let fallback = find_fallback_circuit_json(entry).ok_or(runner_err)?;
-            println!(
+            eprintln!(
                 "⚠️  tscircuit runner not found; using \"{}\", which is newer than the source.",
                 fallback.display()
             );
             return read_json(fallback);
         }
     };
-    println!("⚙️  Compiling \"{}\" via tscircuit...", entry.display());
+    eprintln!("⚙️  Compiling \"{}\" via tscircuit...", entry.display());
     let start = std::time::Instant::now();
     let built_json = runner.build(entry, None)?;
-    println!(
+    eprintln!(
         "✓ Circuit compiled in {:.1}s — preview ready",
         start.elapsed().as_secs_f32()
     );

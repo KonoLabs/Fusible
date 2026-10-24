@@ -5,6 +5,7 @@ use tiny_http::{Request, Response, Server};
 use super::api;
 use super::assets::static_response;
 use super::bodies;
+use super::bom;
 use super::firmware;
 use super::guard::{is_allowed_host, is_same_origin};
 use super::hub::stream_events;
@@ -64,6 +65,7 @@ fn handle(request: Request, state: &State, port: u16) {
         "/api/mechanical.glb" => api::body_preview(request, state, true),
         "/api/circuit" => api::circuit(request, state),
         "/api/project" => api::project(request, state),
+        "/api/bom" => bom::serve(request, state, port),
         "/api/runs" => api::runs(request, state),
         p if p.starts_with("/api/bodies/") => bodies::serve(request, p),
         "/api/firmware" => firmware::serve(request, state),

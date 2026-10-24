@@ -27,6 +27,29 @@ pub struct ExportArgs {
     pub skip_lint: bool,
 }
 
+/// Output format of `fusible bom`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
+pub enum BomFormat {
+    Table,
+    Csv,
+    Json,
+}
+
+#[derive(Debug, Args, PartialEq)]
+pub struct BomArgs {
+    /// Board name or circuit file [default: every board of the manifest]
+    #[arg(value_name = "TARGET")]
+    pub target: Option<PathBuf>,
+
+    /// Output format
+    #[arg(short = 'f', long, value_enum, default_value = "table")]
+    pub format: BomFormat,
+
+    /// Write the output to this file instead of stdout
+    #[arg(short = 'o', long, value_name = "PATH")]
+    pub output: Option<PathBuf>,
+}
+
 #[derive(Debug, Args, PartialEq)]
 #[command(args_conflicts_with_subcommands = true)]
 pub struct BodyArgs {

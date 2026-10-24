@@ -7,6 +7,25 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+### Added
+
+- `fusible bom [TARGET] [-f table|csv|json] [-o PATH]` (alias `parts`) lists the parts of the project: the components placed on each board, grouped by kind, value, and part number, plus the manifest bodies as 3D prints and the manual parts of `bom.yml`. It never blows the fuse; exit codes are 0 and 2.
+- `bom.yml` next to `fusible.yml` holds what the circuit cannot know: `currency`, `print.price_per_kg`, per-part `quantity`, `unit_price`, `supplier`, `url`, `mpn`, `picked`, extra `parts:` such as screws, and `prints:` with the weight in grams of each body. A part key that matches a detected part overrides it.
+- Studio `PARTS & COSTS` view, opened from the project tree: pick lines in or out, edit quantities, prices, suppliers, links, and print weights, add manual parts, and read the totals for electronics, prints, and other parts. Each part has search links for LCSC, DigiKey, and Mouser. Edits are saved to `bom.yml`.
+- Parts without a price get an estimate by kind and value (resistors, capacitors, LEDs, common chip families, connectors), marked `~` in the table, `estimated` in CSV and JSON, and as a placeholder in the studio. A price set in `bom.yml` always wins. No supplier account or part number is needed.
+- A body with an STL (authored `source:` or a generated one in its `out_dir`) gets its print weight from the model volume, with PLA density and a 40% effective fill. Typing `grams` in `bom.yml` overrides it.
+- `GET /api/bom` returns the report and the editable file; `POST /api/bom` validates and saves the file. The POST needs a same-origin request with a JSON content type.
+
+### Changed
+
+- The project tree also shows for a project with a single board, so `PARTS & COSTS` is always reachable.
+- `fusible check` and the other commands that compile a TSX file now print the compile progress on stderr, so `fusible bom -f json` stays clean on stdout.
+
+### Fixed
+
+- Selecting a board in the project tree while a body is shown now returns to the PCB view.
+- The button that reopens the collapsed project tree sits at the top left instead of the bottom left.
+
 ## [0.13.0] - 2026-10-24
 
 ### Added

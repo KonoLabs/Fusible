@@ -2,6 +2,7 @@
 
 pub mod add;
 pub mod body;
+pub mod bom;
 pub mod build;
 pub mod check;
 mod check_merge;

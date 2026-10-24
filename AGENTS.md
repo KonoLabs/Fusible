@@ -95,5 +95,6 @@ Commit messages MUST adhere to [Conventional Commits](https://www.conventionalco
   - `-f <FORMAT>`: Direct export (`gerbers`, `pcb-svg`, `step`, `glb`, `kicad_zip`, etc.).
   - `--skip-lint`: Bypasses electrical rule checking (for drafts only).
 - `fusible body [TARGET]`: Builds physical bodies. A body is authored (`source:`, optional `build:` command) or generated (`generate: enclosure`, fuse-gated). TARGET is a body name or a board.
+- `fusible bom [TARGET] [-f table|csv|json] [-o PATH]`: Bill of materials from the placed components, the bodies as prints, and `bom.yml` (prices, picks, manual parts). Never blows the fuse.
 - `fusible doctor [--install]`: Inspects bun/node/npm/tsci toolchains and optionally provisions `tscircuit`.
 - `fusible init [--name <NAME>]`: Generates a clean `fusible.yml` project manifest.
