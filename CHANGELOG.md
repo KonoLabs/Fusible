@@ -7,6 +7,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-10-24
+
 ### Added
 
 - `fusible bom [TARGET] [-f table|csv|json] [-o PATH]` (alias `parts`) lists the parts of the project: the components placed on each board, grouped by kind, value, and part number, plus the manifest bodies as 3D prints and the manual parts of `bom.yml`. It never blows the fuse; exit codes are 0 and 2.
