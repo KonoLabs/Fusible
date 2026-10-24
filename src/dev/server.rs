@@ -3,7 +3,6 @@ use std::thread;
 use tiny_http::{Request, Response};
 
 use super::api;
-use super::assets::static_response;
 use super::bind::bind;
 use super::bodies;
 use super::bom;
@@ -16,6 +15,7 @@ use super::kicad_watch::start_kicad_watchers;
 use super::limiter::handlers;
 use super::refresh::{load_bundle, rebuild_trigger, refresh, warn_if_bundle_missing, watch_dir};
 use super::run_api;
+use super::serve::serve_static;
 use super::state::{Slot, State};
 use super::watcher::start_file_watcher;
 use crate::commands::target::BoardTarget;
@@ -79,13 +79,6 @@ fn handle(request: Request, state: &State, port: u16) {
         "/events" => subscribe(request, state),
         _ => serve_static(request, state, &path),
     }
-}
-
-fn serve_static(request: Request, state: &State, path: &str) {
-    let bundle = state.bundle.lock().ok().and_then(|lock| lock.clone());
-    let response = static_response(path, bundle, state.desktop)
-        .unwrap_or_else(|| Response::from_string("Not Found").with_status_code(404));
-    let _ = request.respond(response);
 }
 
 fn subscribe(request: Request, state: &State) {

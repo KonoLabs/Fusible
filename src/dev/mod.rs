@@ -34,6 +34,7 @@ mod run_exec;
 mod run_request;
 mod run_status;
 mod runs;
+mod serve;
 pub mod server;
 mod shared;
 mod stamps;
