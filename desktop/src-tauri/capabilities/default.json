@@ -1,0 +1,22 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Local Projects and Settings pages",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:allow-open",
+    "opener:default",
+    "allow-list-projects",
+    "allow-open-project",
+    "allow-create-project",
+    "allow-inspect-folder",
+    "allow-forget-project",
+    "allow-reveal-project",
+    "allow-get-settings",
+    "allow-set-settings",
+    "allow-toolchain-status",
+    "allow-open-projects",
+    "allow-last-error"
+  ]
+}
