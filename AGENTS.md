@@ -85,7 +85,7 @@ Commit messages MUST adhere to [Conventional Commits](https://www.conventionalco
 ## 4. Fusible CLI Commands Reference
 
 - `fusible check [TARGET] [--mcu <MCU>]`: Runs the electrical linter on a board name, Circuit JSON, or TSX file. Without a target it checks every board of `fusible.yml`. Falls back to cached `dist/circuit.json` if runner is absent.
-- `fusible dev [FILE] [-p <PORT>]`: Launches interactive hot-reloading webview.
+- `fusible dev [FILE] [-p <PORT>] [--desktop]`: Launches interactive hot-reloading webview. `--desktop` prints one `FUSIBLE_READY {"url","port"}` line when bound, exits 0 when stdin closes, and adds a Projects button to the studio dock.
 - `fusible export [FILE] [--preset <PRESET>] [-f <FORMAT>] [-o <PATH>]`:
   - **Fuse-gated**: Validates rules before creating any files.
   - `--preset fab`: Exports `gerbers.zip` and `circuit.json` into `dist/fab/`.
@@ -96,5 +96,5 @@ Commit messages MUST adhere to [Conventional Commits](https://www.conventionalco
   - `--skip-lint`: Bypasses electrical rule checking (for drafts only).
 - `fusible body [TARGET]`: Builds physical bodies. A body is authored (`source:`, optional `build:` command) or generated (`generate: enclosure`, fuse-gated). TARGET is a body name or a board.
 - `fusible bom [TARGET] [-f table|csv|json] [-o PATH]`: Bill of materials from the placed components, the bodies as prints, and `bom.yml` (prices, picks, manual parts). Never blows the fuse.
-- `fusible doctor [--install]`: Inspects bun/node/npm/tsci toolchains and optionally provisions `tscircuit`.
-- `fusible init [--name <NAME>]`: Generates a clean `fusible.yml` project manifest.
+- `fusible doctor [--install] [--json]`: Inspects bun/node/npm/tsci toolchains and optionally provisions `tscircuit`. `--json` prints `{"bun","node","tsci"}` (`{path, version}` or null) and exits 0. Env `FUSIBLE_BUN` overrides the bun lookup everywhere; without a `tsci`, the runner falls back to `bun x --bun tsci`.
+- `fusible init [--name <NAME>] [--currency <CODE>]`: Generates a clean `fusible.yml` project manifest. `--currency` also writes `bom.yml`.
