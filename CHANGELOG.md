@@ -7,6 +7,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-10-24
+
 ### Added
 
 - The repository is a GitHub Action (`uses: KonoLabs/Fusible@vX.Y.Z`). It installs a release binary, sets up bun, runs `fusible check`, and fails the job when the fuse blows. Inputs: `target`, `version`, `working-directory`, `install-deps`. The `fuse` output is `intact`, `blown`, or `error`.
