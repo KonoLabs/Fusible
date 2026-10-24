@@ -7,6 +7,12 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.15.2] - 2026-10-24
+
+### Fixed
+
+- The `KICAD: IN SYNC` chip is green on a green tint like the fuse badge, instead of the browser's default gray button.
+
 ## [0.15.1] - 2026-10-24
 
 ### Fixed
