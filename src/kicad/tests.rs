@@ -113,7 +113,7 @@ fn applies_sync_to_manual_edits() {
 
     let sexpr_str = r#"
         (kicad_pcb
-          (footprint "R" (layer "F.Cu") (at 15.0 25.0) (property "Reference" "R1"))
+          (footprint "R" (layer "F.Cu") (at 15.0 25.0 90) (property "Reference" "R1"))
         )
     "#;
     let kicad_fps = extract_footprints(&parse_sexpr(sexpr_str).unwrap());
@@ -140,8 +140,7 @@ fn sync_replaces_a_non_object_center_instead_of_panicking() {
     )
     .unwrap();
 
-    let sexpr_str =
-        r#"(kicad_pcb (footprint "R" (layer "F.Cu") (at 15.0 25.0) (property "Reference" "R1")))"#;
+    let sexpr_str = r#"(kicad_pcb (footprint "R" (layer "F.Cu") (at 15.0 25.0 90) (property "Reference" "R1")))"#;
     let kicad_fps = extract_footprints(&parse_sexpr(sexpr_str).unwrap());
     let report = compare_kicad_with_circuit(
         &kicad_fps,

@@ -4,6 +4,8 @@ use std::collections::BTreeMap;
 
 use serde_json::Value;
 
+use super::sexpr::KicadFootprint;
+
 /// A component's center, rotation in degrees and layer.
 pub(super) type Placement = ([f64; 2], f64, String);
 
@@ -65,5 +67,37 @@ pub(super) fn rotation_delta(to: f64, from: f64) -> f64 {
         d - 360.0
     } else {
         d
+    }
+}
+
+/// Returns the offset aligning the KiCad frame with the Circuit JSON frame, with Y flipped
+/// between the two.
+///
+/// It is the median over the footprints present in both, so a few moved parts do not shift
+/// the ones that stayed.
+pub(super) fn centroid_offset(
+    kicad_fps: &[KicadFootprint],
+    current_map: &BTreeMap<String, Placement>,
+) -> (f64, f64) {
+    let (mut xs, mut ys) = (Vec::new(), Vec::new());
+    for fp in kicad_fps {
+        if let Some(&(cur_p, _, _)) = current_map.get(&fp.designator) {
+            xs.push(fp.x - cur_p[0]);
+            ys.push(fp.y + cur_p[1]);
+        }
+    }
+    (median(&mut xs), median(&mut ys))
+}
+
+/// Returns the median of `values`, or zero when empty.
+fn median(values: &mut [f64]) -> f64 {
+    if values.is_empty() {
+        return 0.0;
+    }
+    values.sort_by(f64::total_cmp);
+    let mid = values.len() / 2;
+    match values.len() % 2 {
+        0 => (values[mid - 1] + values[mid]) / 2.0,
+        _ => values[mid],
     }
 }

@@ -6,7 +6,7 @@ use serde_json::Value;
 
 pub use super::report::format_diff_report;
 
-use super::placements::{current_placements, rotation_delta, Placement};
+use super::placements::{centroid_offset, current_placements, rotation_delta, Placement};
 use super::sexpr::KicadFootprint;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -29,6 +29,16 @@ pub struct PlacementDiff {
     pub kicad_rot: f64,
     pub kicad_layer: String,
     pub kind: DiffKind,
+}
+
+impl PlacementDiff {
+    /// Whether the part exists on both sides and its placement differs.
+    pub fn is_placement_change(&self) -> bool {
+        matches!(
+            self.kind,
+            DiffKind::Moved { .. } | DiffKind::Rotated { .. } | DiffKind::Flipped { .. }
+        )
+    }
 }
 
 #[derive(Debug, Default)]
@@ -76,33 +86,6 @@ pub fn compare_kicad_with_circuit(kicad_fps: &[KicadFootprint], elements: &[Valu
     report.diffs.sort_by(|a, b| a.designator.cmp(&b.designator));
     report.has_drift = report.modified_count > 0 || report.unmatched_count > 0;
     report
-}
-
-/// Returns the offset aligning the KiCad centroid with the Circuit JSON centroid of the
-/// footprints present in both, with Y flipped between the two frames.
-fn centroid_offset(
-    kicad_fps: &[KicadFootprint],
-    current_map: &std::collections::BTreeMap<String, Placement>,
-) -> (f64, f64) {
-    let mut common_count = 0;
-    let (mut sum_kicad_x, mut sum_kicad_y, mut sum_cur_x, mut sum_cur_y) = (0.0, 0.0, 0.0, 0.0);
-    for fp in kicad_fps {
-        if let Some(&(cur_p, _, _)) = current_map.get(&fp.designator) {
-            common_count += 1;
-            sum_kicad_x += fp.x;
-            sum_kicad_y += fp.y;
-            sum_cur_x += cur_p[0];
-            sum_cur_y += cur_p[1];
-        }
-    }
-    if common_count == 0 {
-        return (0.0, 0.0);
-    }
-    let n = common_count as f64;
-    (
-        sum_kicad_x / n - sum_cur_x / n,
-        sum_kicad_y / n + sum_cur_y / n,
-    )
 }
 
 /// Compares one KiCad footprint, normalized into the Circuit JSON frame, with its placement.
