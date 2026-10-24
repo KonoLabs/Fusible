@@ -7,6 +7,21 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.14.2] - 2026-10-24
+
+### Changed
+
+- `PARTS & COSTS` is a page of its own: opening it hides the viewers, the view tabs, the dock, and the side panel, and the table uses the whole width.
+- The link field and its open button sit on one line, with the search links below.
+- Inputs, the currency select, and buttons on that page share one 32px height, and number fields have no spinners.
+- The page hides its scroll bar; it still scrolls.
+- `fusible dev` moves to the next free port, up to 20 ports higher, when the asked one is taken, and prints the port it uses.
+
+### Fixed
+
+- The table headers of `PARTS & COSTS` line up with the text of their columns.
+- The supplier field no longer spills into the link column.
+
 ## [0.14.1] - 2026-10-24
 
 ### Changed

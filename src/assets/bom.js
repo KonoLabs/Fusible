@@ -46,8 +46,8 @@
 
   function linkCell(line) {
     if (line.kind === 'print') return '';
-    const open = safeUrl(line.url) ? `<a href="${escapeHtml(line.url)}" target="_blank" rel="noopener noreferrer">OPEN</a>` : '';
-    return `${input('url', line.url, 'class="bom-wide" placeholder="https://"')} ${open}<div class="bom-refs">${finder(line)}</div>`;
+    const open = safeUrl(line.url) ? `<a class="btn icon-only" href="${escapeHtml(line.url)}" target="_blank" rel="noopener noreferrer" title="Open link" aria-label="Open link"><iconify-icon icon="pixelarticons:external-link"></iconify-icon></a>` : '';
+    return `<div class="bom-link">${input('url', line.url, 'placeholder="https://"')}${open}</div><div class="bom-refs">${finder(line)}</div>`;
   }
 
   function rowHtml(line) {
@@ -231,8 +231,10 @@
   }
 
   function hide() {
+    if (!document.body.classList.contains('bom-open')) return;
     document.body.classList.remove('bom-open');
     view().hidden = true;
+    window.dispatchEvent(new Event('resize'));
   }
 
   document.addEventListener('DOMContentLoaded', () => {

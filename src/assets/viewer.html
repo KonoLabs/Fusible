@@ -409,17 +409,29 @@
     }
     #bom-view {
       position: absolute;
-      inset: 56px var(--gutter) 64px var(--gutter);
+      inset: var(--gutter) var(--gutter) 64px var(--gutter);
       z-index: 15;
       display: none;
       flex-direction: column;
       overflow: auto;
       background: var(--surface);
       box-shadow: var(--shadow);
-      scrollbar-width: thin;
+      scrollbar-width: none;
+    }
+    #bom-view::-webkit-scrollbar {
+      display: none;
     }
     body.bom-open #bom-view:not([hidden]) {
       display: flex;
+    }
+    body.bom-open #viewport-grid,
+    body.bom-open .view-host,
+    body.bom-open #studio-status,
+    body.bom-open .floating-views,
+    body.bom-open .floating-dock,
+    body.bom-open #hover-tooltip,
+    body.bom-open #sidebar {
+      display: none !important;
     }
     .bom-head {
       display: flex;
@@ -511,6 +523,9 @@
       background: var(--bg);
       color: var(--green);
     }
+    .bom-settings .bom-num {
+      width: 88px;
+    }
     .bom-settings label {
       display: flex;
       flex-direction: column;
@@ -546,6 +561,16 @@
     .bom-table td.bom-r {
       text-align: right;
     }
+    .bom-table th:nth-child(2),
+    .bom-table th:nth-child(4),
+    .bom-table th:nth-child(5),
+    .bom-table th:nth-child(6) {
+      padding-left: 18px;
+      padding-right: 18px;
+    }
+    .bom-table th:nth-child(7) {
+      padding-right: 10px;
+    }
     .bom-table th:nth-child(1) { width: 32px; }
     .bom-table th:nth-child(2) { width: 64px; }
     .bom-table th:nth-child(4) { width: 110px; }
@@ -578,12 +603,27 @@
     .bom-table tr[data-id] td:first-child {
       text-align: center;
     }
-    .bom-table td input.bom-wide {
+    .bom-table td input:not([type="checkbox"]) {
+      width: 100%;
       min-width: 0;
+    }
+    #bom-view input[type="number"] {
+      appearance: textfield;
+      -moz-appearance: textfield;
+    }
+    #bom-view input[type="number"]::-webkit-inner-spin-button,
+    #bom-view input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
     }
     #bom-view input[type="checkbox"] {
       accent-color: var(--green);
       cursor: pointer;
+    }
+    #bom-view input:not([type="checkbox"]),
+    #bom-view select,
+    .bom-settings .btn {
+      height: 32px;
     }
     #bom-view input:not([type="checkbox"]) {
       background: var(--surface);
@@ -606,7 +646,6 @@
     }
     .bom-num {
       width: 100%;
-      max-width: 80px;
       text-align: right;
     }
     .bom-wide {
@@ -615,6 +654,22 @@
     }
     .bom-name {
       color: var(--text);
+    }
+    .bom-link {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .bom-link input {
+      flex: 1;
+      min-width: 0;
+    }
+    .bom-link .btn.icon-only {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      background: var(--surface);
+      color: var(--blue);
     }
     .bom-refs {
       margin-top: 3px;

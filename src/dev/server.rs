@@ -1,9 +1,10 @@
 use std::thread;
 
-use tiny_http::{Request, Response, Server};
+use tiny_http::{Request, Response};
 
 use super::api;
 use super::assets::static_response;
+use super::bind::bind;
 use super::bodies;
 use super::bom;
 use super::firmware;
@@ -117,11 +118,12 @@ fn refresh_all(state: &State) {
 
 pub fn run_dev_server(
     boards: Vec<BoardTarget>,
-    port: u16,
+    asked: u16,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let addr = format!("127.0.0.1:{port}");
-    let server =
-        Server::http(&addr).map_err(|e| format!("cannot bind dev server to {addr}: {e}"))?;
+    let (server, port) = bind(asked)?;
+    if port != asked {
+        println!("ℹ Port {asked} is in use, using {port} instead.");
+    }
     let state = State::new(&boards);
     load_bundle(&state);
     if state.bundle.lock().is_ok_and(|bundle| bundle.is_none()) {

@@ -2,6 +2,7 @@ mod api;
 mod assets;
 mod authored;
 mod authored_cache;
+mod bind;
 mod bodies;
 mod body;
 mod bom;
@@ -30,6 +31,8 @@ mod authored_cache_tests;
 mod authored_support;
 #[cfg(test)]
 mod authored_tests;
+#[cfg(test)]
+mod bind_tests;
 #[cfg(test)]
 mod body_tests;
 #[cfg(test)]
