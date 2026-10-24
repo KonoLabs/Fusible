@@ -8,7 +8,7 @@
 
 1. **The Fuse Contract (Exit Codes)**:
    - `0` — **Fuse intact**: circuit is electrically sound, rules pass, command succeeded.
-   - `1` — **Fuse blown**: one or more electrical violations detected (`unconnected_net`, `ghost_net`, `shorted_nets`, `malformed_element`, `trace_clearance`, `pin_mux`). Artifact exports and codegen are blocked.
+   - `1` — **Fuse blown**: one or more electrical violations detected (`unconnected_net`, `ghost_net`, `shorted_nets`, `malformed_element`, `trace_clearance`, `pin_mux`, `harness_mismatch`). Artifact exports and codegen are blocked.
    - `2` — **Tool error**: IO failure, unreadable/malformed JSON, runner missing, or CLI syntax error.
 2. **Fail-Closed Rule Design**: If a net or component cannot be definitively proven connected, report it. Never assume floating traces or unlinked ports are valid without explicit net aliases.
 3. **Rust Core / External Toolchain Separation**:
@@ -96,6 +96,7 @@ Commit messages MUST adhere to [Conventional Commits](https://www.conventionalco
   - `--skip-lint`: Bypasses electrical rule checking (for drafts only).
 - `fusible body [TARGET]`: Builds physical bodies. A body is authored (`source:`, optional `build:` command) or generated (`generate: enclosure`, fuse-gated). TARGET is a body name or a board.
 - `fusible bom [TARGET] [-f table|csv|json] [-o PATH]`: Bill of materials from the placed components, the bodies as prints, and `bom.yml` (prices, picks, manual parts). Never blows the fuse.
+- `links:` (`src/config/types.rs`, `src/commands/{links,harness}.rs`): board-to-board wires. `check_manifest_links` in `src/commands/check.rs` runs `harness_mismatch` after the boards, only when every board was checked. A missing part, missing pin, or floating pin fails closed.
 - `fusible doctor [--install] [--json]`: Inspects bun/node/npm/tsci toolchains and optionally provisions `tscircuit`. `--json` prints `{"bun","node","tsci"}` (`{path, version}` or null) and exits 0. Env `FUSIBLE_BUN` overrides the bun lookup everywhere; without a `tsci`, the runner falls back to `bun x --bun tsci`.
 - `fusible init [--name <NAME>] [--currency <CODE>]`: Generates a clean `fusible.yml` project manifest. `--currency` also writes `bom.yml`.
 - Studio `SYNC` panel (`src/assets/git.js`, `src/dev/git_*.rs`): git for non-developers. Every git call goes through `Git::run` in `src/dev/git_run.rs` (real binary, no shell, 30 s deadline, `GIT_TERMINAL_PROMPT=0`, no credential reads). `GET /api/git`, `POST /api/git/{save,update,resolve}` share the `/api/run` same-origin and JSON guard. UI wording: Sync, Save, Get updates, Saves; never commit, push, pull, rebase, or stage outside error details. During a rebase, `--ours` is the other person's side, so Keep mine is `--theirs` (see `git_resolve::flag`). Tests build two clones of a bare repo in a temp dir (`git_support.rs`).
