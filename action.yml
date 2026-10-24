@@ -1,0 +1,112 @@
+name: Fusible check
+description: Run the Fusible electrical linter on a tscircuit project and fail the job when the fuse blows.
+author: saravenpi
+branding:
+  icon: zap
+  color: green
+
+inputs:
+  target:
+    description: Board name, Circuit JSON, or TSX file to check. Empty checks every board of fusible.yml.
+    required: false
+    default: ""
+  version:
+    description: Fusible release to install, such as 0.17.0, or latest.
+    required: false
+    default: latest
+  working-directory:
+    description: Directory the check runs in.
+    required: false
+    default: "."
+  install-deps:
+    description: Run bun install when a package.json sits in the working directory or next to the target.
+    required: false
+    default: "true"
+
+outputs:
+  fuse:
+    description: intact (exit 0), blown (exit 1), or error (exit 2).
+    value: ${{ steps.check.outputs.fuse }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install fusible
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        FUSIBLE_VERSION: ${{ inputs.version }}
+        RUNNER_OS_NAME: ${{ runner.os }}
+        RUNNER_ARCH_NAME: ${{ runner.arch }}
+      run: |
+        case "$RUNNER_OS_NAME" in
+          Linux) os=linux ;;
+          macOS) os=darwin ;;
+          Windows) os=windows ;;
+          *) echo "::error::unsupported runner OS $RUNNER_OS_NAME"; exit 2 ;;
+        esac
+        case "$RUNNER_ARCH_NAME" in
+          X64) arch=amd64 ;;
+          ARM64) arch=arm64 ;;
+          *) echo "::error::unsupported runner arch $RUNNER_ARCH_NAME"; exit 2 ;;
+        esac
+        if [ "$FUSIBLE_VERSION" = "latest" ]; then
+          tag="$(gh release view --repo KonoLabs/Fusible --json tagName -q .tagName)"
+        else
+          tag="v${FUSIBLE_VERSION#v}"
+        fi
+        version="${tag#v}"
+        ext=tar.gz
+        if [ "$os" = "windows" ]; then ext=zip; fi
+        asset="fusible_${version}_${os}_${arch}.${ext}"
+        dir="$RUNNER_TEMP/fusible"
+        mkdir -p "$dir"
+        gh release download "$tag" --repo KonoLabs/Fusible --pattern "$asset" --dir "$dir" --clobber
+        if [ "$ext" = "zip" ]; then
+          7z x -y -o"$dir" "$dir/$asset" > /dev/null
+        else
+          tar -xzf "$dir/$asset" -C "$dir"
+        fi
+        echo "$dir" >> "$GITHUB_PATH"
+        echo "Installed fusible $version ($os/$arch)"
+
+    - uses: oven-sh/setup-bun@v2
+
+    - name: Install dependencies
+      if: inputs.install-deps == 'true'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        FUSIBLE_TARGET: ${{ inputs.target }}
+      run: |
+        dirs="."
+        if [ -n "$FUSIBLE_TARGET" ] && [ -f "$FUSIBLE_TARGET" ]; then
+          dirs="$dirs $(dirname "$FUSIBLE_TARGET")"
+        fi
+        for d in $(printf '%s\n' $dirs | sort -u); do
+          if [ -f "$d/package.json" ]; then
+            (cd "$d" && bun install)
+          fi
+        done
+
+    - name: Check the fuse
+      id: check
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        FUSIBLE_TARGET: ${{ inputs.target }}
+      run: |
+        set +e
+        if [ -n "$FUSIBLE_TARGET" ]; then
+          fusible check "$FUSIBLE_TARGET"
+        else
+          fusible check
+        fi
+        code=$?
+        case "$code" in
+          0) fuse=intact ;;
+          1) fuse=blown ;;
+          *) fuse=error ;;
+        esac
+        echo "fuse=$fuse" >> "$GITHUB_OUTPUT"
+        exit "$code"

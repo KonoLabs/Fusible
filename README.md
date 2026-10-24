@@ -303,6 +303,24 @@ runs `bun x --bun tsci`.
 
 CI can tell a bad design (1) from a broken setup (2).
 
+## CI
+
+The repository is also a GitHub Action. It installs a release binary, sets up
+bun, runs `fusible check`, and fails the job when the fuse blows:
+
+```yaml
+- uses: actions/checkout@v7
+- id: fuse
+  uses: KonoLabs/Fusible@v0.17.0
+  with:
+    target: ""        # optional board name or file; empty checks every board
+    version: latest   # or a version such as 0.17.0
+```
+
+Other inputs: `working-directory` (default `.`) and `install-deps` (default
+`true`, runs `bun install` where a `package.json` sits). The `fuse` output is
+`intact`, `blown`, or `error`, from exit codes 0, 1, and 2.
+
 ## Layout of the source
 
 ```

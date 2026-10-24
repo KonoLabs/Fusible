@@ -102,5 +102,5 @@ Fusible unifies the hardware development workflow by wrapping tscircuit commands
 
 ## 5. Phase 2: Turnkey Automation
 
-- [ ] **Turnkey CI GitHub Action (`fusible-action`)**:
+- [x] **Turnkey CI GitHub Action (`fusible-action`)**:
   - Automated PR checking in CI to prevent defective hardware or breaking pin drifts from reaching main.
