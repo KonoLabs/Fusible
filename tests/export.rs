@@ -145,7 +145,11 @@ fn subcommand_export_docs_without_chromium_warns_and_writes_svg_only() {
 
     assert_eq!(out.status.code(), Some(0));
     assert!(out_dir.join("schematic.svg").exists());
-    assert!(!out_dir.join("schematic.pdf").exists());
+    assert!(
+        !out_dir.join("schematic.pdf").exists(),
+        "{}",
+        String::from_utf8_lossy(&out.stdout)
+    );
     assert!(String::from_utf8_lossy(&out.stdout).contains("No Chromium found"));
 }
 
