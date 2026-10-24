@@ -6,6 +6,7 @@ use std::sync::Arc;
 use std::thread;
 
 use super::assets::load_studio_bundle;
+use super::kicad_sync::evaluate;
 use super::pipeline::execute_pipeline;
 use super::state::{Health, Slot, State};
 
@@ -38,6 +39,7 @@ pub(super) fn refresh(slot: &Slot, state: &State) {
         state.hub.broadcast(&json_str);
         println!("✓ Circuit updated in {:.1}s", start.elapsed().as_secs_f32());
     }
+    evaluate(slot, state);
     load_bundle(state);
 }
 

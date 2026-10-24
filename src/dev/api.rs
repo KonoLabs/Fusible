@@ -59,6 +59,11 @@ pub(super) fn project(request: Request, state: &State) {
     respond_json(request, 200, project_json(state, cfg.as_ref(), root));
 }
 
+/// Serves the KiCad status of every board that has a KiCad file.
+pub(super) fn kicad(request: Request, state: &State) {
+    respond_json(request, 200, state.kicad.json());
+}
+
 /// Serves the recent runs with their logs.
 pub(super) fn runs(request: Request, state: &State) {
     respond_json(request, 200, state.runs.snapshot());

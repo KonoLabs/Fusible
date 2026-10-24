@@ -3,6 +3,7 @@
 use std::sync::{Arc, Mutex};
 
 use super::hub::ClientHub;
+use super::kicad_status::KicadStates;
 use super::runs::Runs;
 use super::state::Slot;
 use crate::commands::target::BoardTarget;
@@ -13,6 +14,7 @@ pub(super) struct State {
     pub bundle: Arc<Mutex<Option<String>>>,
     pub slots: Arc<Vec<Slot>>,
     pub runs: Runs,
+    pub kicad: KicadStates,
 }
 
 impl State {
@@ -22,6 +24,7 @@ impl State {
             bundle: Arc::default(),
             slots: Arc::new(boards.iter().map(Slot::new).collect()),
             runs: Runs::default(),
+            kicad: KicadStates::default(),
         }
     }
 

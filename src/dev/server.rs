@@ -10,6 +10,7 @@ use super::bom;
 use super::firmware;
 use super::guard::{is_allowed_host, is_same_origin};
 use super::hub::stream_events;
+use super::kicad_watch::start_kicad_watchers;
 use super::limiter::handlers;
 use super::refresh::{load_bundle, rebuild_trigger, refresh, watch_dir};
 use super::run_api;
@@ -69,6 +70,7 @@ fn handle(request: Request, state: &State, port: u16) {
         "/api/bom" => bom::serve(request, state, port),
         "/api/runs" => api::runs(request, state),
         p if p.starts_with("/api/bodies/") => bodies::serve(request, p),
+        "/api/kicad" => api::kicad(request, state),
         "/api/firmware" => firmware::serve(request, state),
         "/api/run" => run_api::start_run(request, state, port),
         "/events" => subscribe(request, state),
@@ -142,6 +144,7 @@ Install a GitHub release binary, or run `bun install && bun run build` in studio
             start_file_watcher(&watch_dir(&slot.entry), trigger)
         })
         .collect::<Result<Vec<_>, _>>()?;
+    let _kicad = start_kicad_watchers(&state);
     for request in server.incoming_requests() {
         dispatch(request, &state, port);
     }
