@@ -7,7 +7,7 @@ use miette::Diagnostic;
 use thiserror::Error;
 
 use crate::config::FusibleConfig;
-use crate::tscircuit::detect::find_binary_in_path;
+use crate::tscircuit::detect::{find_binary_in_path, resolve_program};
 use crate::tscircuit::Runner;
 
 /// Errors that can occur during toolchain inspection or automated installation.
@@ -166,14 +166,13 @@ fn install_tscircuit(has_bun: bool, has_npm: bool) -> Result<(), DoctorError> {
     };
 
     println!("   Executing: {prog} {}", args.join(" "));
-    let status =
-        Command::new(prog)
-            .args(args)
-            .status()
-            .map_err(|source| DoctorError::InstallFailed {
-                command: format!("{prog} {}", args.join(" ")),
-                source,
-            })?;
+    let status = Command::new(resolve_program(prog))
+        .args(args)
+        .status()
+        .map_err(|source| DoctorError::InstallFailed {
+            command: format!("{prog} {}", args.join(" ")),
+            source,
+        })?;
 
     if !status.success() {
         return Err(DoctorError::InstallNonZero {

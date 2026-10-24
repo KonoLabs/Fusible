@@ -91,8 +91,25 @@ pub(crate) fn is_executable(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
-/// Verifies whether a given path is an executable file on non-Unix systems.
+/// Verifies whether a given path is a launchable file on non-Unix systems.
+///
+/// Extensionless files such as the shell shims in `node_modules/.bin` cannot
+/// be started by `CreateProcess`, so only launchable extensions count.
 #[cfg(not(unix))]
 pub(crate) fn is_executable(path: &Path) -> bool {
     path.is_file()
+        && path.extension().is_some_and(|ext| {
+            ["exe", "cmd", "bat", "com"]
+                .iter()
+                .any(|known| ext.eq_ignore_ascii_case(known))
+        })
+}
+
+/// Resolves `name` against PATH so Windows finds `.cmd` shims such as `npm`.
+///
+/// Falls back to the bare name, which lets the spawn report the failure.
+pub(crate) fn resolve_program(name: &str) -> PathBuf {
+    std::env::var_os("PATH")
+        .and_then(|path| find_binary_in_path(name, &path))
+        .unwrap_or_else(|| PathBuf::from(name))
 }

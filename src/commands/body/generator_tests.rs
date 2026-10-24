@@ -1,11 +1,10 @@
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::time::{Duration, Instant};
 
 use super::generator::wait_or_kill;
 
-fn spawn(script: &str) -> std::process::Child {
-    Command::new("sh")
-        .args(["-c", script])
+fn spawn(unix: &str, windows: &str) -> std::process::Child {
+    crate::test_shell::shell(unix, windows)
         .stdout(Stdio::null())
         .spawn()
         .unwrap()
@@ -13,7 +12,7 @@ fn spawn(script: &str) -> std::process::Child {
 
 #[test]
 fn a_script_that_runs_too_long_is_killed() {
-    let mut child = spawn("sleep 30");
+    let mut child = spawn("sleep 30", "ping -n 31 127.0.0.1 >nul");
     let start = Instant::now();
     assert!(wait_or_kill(&mut child, Duration::from_millis(200)).is_none());
     assert!(start.elapsed() < Duration::from_secs(5));
@@ -22,7 +21,7 @@ fn a_script_that_runs_too_long_is_killed() {
 
 #[test]
 fn a_script_that_finishes_in_time_reports_its_status() {
-    let mut child = spawn("exit 3");
+    let mut child = spawn("exit 3", "exit 3");
     let status = wait_or_kill(&mut child, Duration::from_secs(10)).unwrap();
     assert_eq!(status.code(), Some(3));
 }

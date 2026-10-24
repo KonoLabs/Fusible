@@ -56,11 +56,26 @@ fn unsupported_types_and_oversized_files_are_422() {
 fn messages_do_not_show_where_files_live() {
     let root = Path::new("/home/me/project");
     let cache = Path::new("/home/me/.cache/fusible/body-1");
-    let raw = "source file \"/home/me/project/bodies/a.step\" failed in /home/me/.cache/fusible/body-1/authored";
-    let shown = scrub(raw, root, cache);
+    let source = root.join("bodies").join("a.step");
+    let generated = cache.join("authored");
+    let raw = format!(
+        "source file \"{}\" failed in {}",
+        source.display(),
+        generated.display()
+    );
+    let shown = scrub(&raw, root, cache);
+    let relative = Path::new("bodies").join("a.step");
+    let inside = Path::new("<cache>").join("authored");
     assert_eq!(
         shown,
-        "source file \"bodies/a.step\" failed in <cache>/authored"
+        format!(
+            "source file \"{}\" failed in {}",
+            relative.display(),
+            inside.display()
+        )
     );
-    assert_eq!(scrub("in /home/me/project", root, cache), "in .");
+    assert_eq!(
+        scrub(&format!("in {}", root.display()), root, cache),
+        "in ."
+    );
 }

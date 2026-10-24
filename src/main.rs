@@ -20,6 +20,8 @@ pub mod parser;
 pub mod router;
 pub mod silicon;
 pub mod svg;
+#[cfg(test)]
+mod test_shell;
 pub mod tscircuit;
 
 use std::process::ExitCode;

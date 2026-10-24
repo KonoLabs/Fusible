@@ -1,10 +1,17 @@
 //! Prints the schematic SVG to PDF with a locally installed Chromium.
 
+mod url;
+
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
+use url::file_url;
+
+#[cfg(not(windows))]
 const PATH_BROWSERS: [&str; 3] = ["chromium", "chromium-browser", "google-chrome"];
+#[cfg(windows)]
+const PATH_BROWSERS: [&str; 3] = ["chromium.exe", "chrome.exe", "msedge.exe"];
 const PRINT_TIMEOUT: Duration = Duration::from_secs(60);
 
 /// Returns the newest Chromium binary in the Playwright cache under `home`.
@@ -40,11 +47,34 @@ fn find_on_path(names: &[&str]) -> Option<PathBuf> {
     })
 }
 
-/// Finds a Chromium: Playwright cache first, then `chromium` and `google-chrome` on `PATH`.
+/// Returns the Chrome and Edge installs that exist under the Windows program directories.
+fn windows_browsers() -> Option<PathBuf> {
+    let installs = [
+        ("ProgramFiles", r"Google\Chrome\Application\chrome.exe"),
+        ("ProgramFiles(x86)", r"Google\Chrome\Application\chrome.exe"),
+        ("LocalAppData", r"Google\Chrome\Application\chrome.exe"),
+        ("ProgramFiles", r"Microsoft\Edge\Application\msedge.exe"),
+        (
+            "ProgramFiles(x86)",
+            r"Microsoft\Edge\Application\msedge.exe",
+        ),
+    ];
+    installs.iter().find_map(|(var, rest)| {
+        let candidate = PathBuf::from(std::env::var_os(var)?).join(rest);
+        candidate.is_file().then_some(candidate)
+    })
+}
+
+/// Finds a Chromium: Playwright cache first, then a browser on `PATH`, then the Windows installs.
 fn find_chromium() -> Option<PathBuf> {
     let home = std::env::var_os("HOME").map(PathBuf::from);
-    home.and_then(|home| playwright_chromium(&home))
-        .or_else(|| find_on_path(&PATH_BROWSERS))
+    let found = home
+        .and_then(|home| playwright_chromium(&home))
+        .or_else(|| find_on_path(&PATH_BROWSERS));
+    if cfg!(windows) {
+        return found.or_else(windows_browsers);
+    }
+    found
 }
 
 /// Waits up to [`PRINT_TIMEOUT`] for `child` to exit successfully, killing it otherwise.
@@ -62,22 +92,6 @@ fn finished_in_time(child: &mut Child) -> bool {
     let _ = child.kill();
     let _ = child.wait();
     false
-}
-
-/// Returns the `file://` URL of `path`, percent-encoding every byte that is
-/// not unreserved, so `#`, `?`, `%` and spaces stay part of the path.
-fn file_url(path: &Path) -> String {
-    let encoded: String = path
-        .to_string_lossy()
-        .bytes()
-        .map(|b| match b {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' | b'/' => {
-                char::from(b).to_string()
-            }
-            other => format!("%{other:02X}"),
-        })
-        .collect();
-    format!("file://{encoded}")
 }
 
 /// Runs `chromium` headless to print `svg` into `pdf`.
@@ -116,18 +130,4 @@ pub(super) fn print_svg_to_pdf(svg: &Path, pdf: &Path) -> bool {
         );
     }
     written
-}
-
-#[cfg(test)]
-mod tests {
-    use super::file_url;
-    use std::path::Path;
-
-    #[test]
-    fn file_url_escapes_reserved_characters() {
-        assert_eq!(
-            file_url(Path::new("/tmp/a b#c?d%e/s.svg")),
-            "file:///tmp/a%20b%23c%3Fd%25e/s.svg"
-        );
-    }
 }

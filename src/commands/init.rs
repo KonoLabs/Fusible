@@ -8,6 +8,8 @@ use std::process::Command;
 use miette::Diagnostic;
 use thiserror::Error;
 
+use crate::tscircuit::detect::resolve_program;
+
 /// Error raised when initialization cannot be completed.
 #[derive(Debug, Error, Diagnostic)]
 #[error("cannot initialize project: {message}")]
@@ -127,7 +129,7 @@ fn install_hardware_deps(hw_dir: &Path) {
     println!("📦 Installing hardware dependencies...");
     let runners = ["bun", "npm"];
     for runner in runners {
-        let mut cmd = Command::new(runner);
+        let mut cmd = Command::new(resolve_program(runner));
         cmd.arg("install").current_dir(hw_dir);
         if let Ok(mut child) = cmd.spawn() {
             let _ = child.wait();

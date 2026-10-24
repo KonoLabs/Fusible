@@ -38,7 +38,7 @@ fn read_line(reader: &mut impl BufRead, buf: &mut Vec<u8>) -> std::io::Result<bo
     Ok(read > 0)
 }
 
-fn pump(
+pub(super) fn pump(
     stream: impl Read + Send + 'static,
     on_line: impl Fn(&str) + Send + 'static,
 ) -> JoinHandle<()> {
