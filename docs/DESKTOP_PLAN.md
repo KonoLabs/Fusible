@@ -234,12 +234,51 @@ Files: under `../Vitrine/`: `src/routes/fusible/+page.svelte`, `src/routes/fusib
 
 Done when: `bun run build` passes, both pages work at 375 px and desktop widths, and every download link resolves (they 404 until F ships once; test against a fork's release or check the URL shape).
 
+### H. Sync panel (git for non-developers)
+
+Wave two. Starts after A to D are merged, because it edits the dev server and the studio sidebar.
+
+Files: `src/dev/git*.rs` (new, small files), `src/dev/server.rs` routes, `src/assets/git.js` (new), `src/assets/viewer.html` sidebar entry, `src/commands/git/` if a CLI twin is wanted (not required).
+
+1. The panel appears in the left sidebar only when the project root is inside a git work tree. It is called "Sync" in the UI. The word "commit" appears nowhere; the word "git" only in Settings and error details.
+2. Plumbing: run the real `git` binary through a single `run_git(args)` helper with a 30 s timeout and no shell. Never read a credential. `GIT_TERMINAL_PROMPT=0` so a missing credential fails fast with a readable message instead of hanging.
+3. API (same-origin guarded like `/api/run`, JSON POST for writes):
+   - `GET /api/git`: `{ available, branch, upstream, ahead, behind, changes: [{path, kind}], last_saves: [{id, author, when, message, files}], conflicts: [path] }`.
+   - `POST /api/git/save` `{message}`: stage all, commit, `pull --rebase --autostash`, push. Returns the new status or a human error.
+   - `POST /api/git/update`: `pull --rebase --autostash`.
+   - `POST /api/git/resolve` `{path, keep: "mine" | "theirs"}`: for files in conflict.
+4. Studio UI: status line, message box, Save button, Get updates button, last 20 saves, conflict cards that name the file and the other author and offer Keep mine / Keep theirs. After any update that changes `.kicad_pcb`, `.kicad_sch` or `hardware/**`, trigger a rebuild (the file watcher already does this; verify it fires).
+5. If `git` is missing (Windows): the panel shows "Install Git to sync your work" with a link to the official download page and a Re-check button. Do not bundle Git in this wave. If the repo has no remote, Save commits only and says "Saved on this computer. Add a remote to share."
+6. Desktop: `toolchain_status` also reports the git version, and the Settings Toolchain section shows it.
+7. Tests: build throwaway repos in a temp dir (two clones of a bare repo) to cover save, update with remote changes, a same-file conflict with keep mine and keep theirs, no remote, and git missing (PATH emptied).
+
+Done when: two clones of one bare repo can exchange work from two studio instances with no terminal, including a conflict on a `.kicad_pcb`.
+
+### I. KiCad watch and sync
+
+Wave two, parallel with H. Different files from H.
+
+Files: `src/kicad/*`, `src/commands/sync.rs`, `src/dev/kicad_watch*.rs` (new), `fusible.yml` config for the KiCad file location (`src/config/`).
+
+Scope is option 2 plus 3 from the discussion: KiCad owns placement, the TSX owns the netlist. A full KiCad-to-TSX converter is out of scope.
+
+1. Manifest: a board may name its KiCad file, `kicad: hardware/board.kicad_pcb`. Without it, a single `.kicad_pcb` next to the entry is used.
+2. Watch it while the studio runs. On a settled change (the existing debouncer), run the sync logic in place: read the footprints, compare with the circuit, write the position updates back into the TSX the way `fusible sync` does today, then let the normal rebuild run.
+3. Never lose her work: before writing the TSX, copy the previous file to `.fusible/backup/<name>-<timestamp>.tsx`, keep the last 10.
+4. If the KiCad file adds, removes, or renames a part or changes a net, do not guess. Show it in the studio as a "KiCad differs from the design" notice with the list, and do not write anything for those items. Positions are the only auto-synced data.
+5. Fix the known gap from `HANDOFF.md`: `compare_kicad_with_circuit` treats unparseable Circuit JSON as empty (`src/commands/diff.rs`, `src/commands/sync.rs`). Fail closed with an error before the watcher relies on it.
+6. Studio: a small status chip "KiCad: in sync / 3 differences / error" near the board health pill, and a SYNC event on the existing SSE stream.
+7. Tests: a fixture `.kicad_pcb` with moved footprints updates the TSX; a renamed part is reported and not written; backup rotation keeps 10; invalid Circuit JSON is an error.
+
+Done when: with the studio open on FieldCam, moving a footprint in KiCad and saving updates the TSX position, rebuilds the board, and the chip returns to "in sync" within a few seconds.
+
 ## Out of scope
 
 - Multiple projects open at once, tabs, or multiple windows.
 - Editing TSX inside the app. She edits in her own editor; the studio hot-reloads.
 - A code-signing setup, until decision 2 changes.
 - Auto-update, until phase 4.
+- Bundling Git on Windows, and a KiCad-to-TSX converter (parts, nets).
 - Linux ARM and Windows ARM builds.
 
 ## Phase 4 (after the first desktop release)
