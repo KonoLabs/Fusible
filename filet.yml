@@ -5,6 +5,10 @@ ignore:
   - dist
   - src/assets/studio.bundle.js
   - studio/bun.lock
+  - desktop/ui/dist
+  - desktop/src-tauri/target
+  - desktop/src-tauri/gen
+  - desktop/src-tauri/binaries
 
 extensions: [.rs, .ts]
 
