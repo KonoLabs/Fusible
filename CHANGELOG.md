@@ -7,6 +7,16 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-10-24
+
+### Fixed
+
+- `GET /api/project` returns board, firmware and body paths with forward slashes on Windows.
+- The desktop workflow builds the desktop pages itself, extracts the bun archive with the system `tar` on Windows, and installs per-arch macOS sidecars before the universal merge. It can attach installers to an existing tag through a `tag` input.
+- The desktop UI build resolves its paths natively, so it runs on Windows.
+- Clippy errors that only the Windows target reported.
+- Windows test suite: authored manifests quote paths safely, fake `bun` and `tsci` are `.cmd` shims, and the export tests find Chrome under `ProgramFiles`.
+
 ## [0.15.0] - 2026-10-24
 
 ### Added
