@@ -1,6 +1,7 @@
 use std::path::Path;
 use std::time::Duration;
 
+use super::stamps::Stamps;
 use notify_debouncer_mini::notify::RecommendedWatcher;
 use notify_debouncer_mini::notify::RecursiveMode;
 use notify_debouncer_mini::{new_debouncer, DebounceEventResult, Debouncer};
@@ -57,16 +58,20 @@ pub fn start_file_watcher(
     };
     let given = watch_path.to_path_buf();
     let root = watch_path.canonicalize().unwrap_or_else(|_| given.clone());
+    let mut stamps = Stamps::new();
     let mut debouncer = new_debouncer(
         Duration::from_millis(300),
         move |res: DebounceEventResult| {
-            if let Ok(events) = res {
-                let relevant = events
-                    .iter()
-                    .any(|e| is_relevant_change(base_for(&root, &given, &e.path), &e.path));
-                if relevant {
-                    on_change();
-                }
+            let Ok(events) = res else {
+                return;
+            };
+            let written: Vec<bool> = events
+                .iter()
+                .filter(|e| is_relevant_change(base_for(&root, &given, &e.path), &e.path))
+                .map(|e| stamps.is_written(&e.path))
+                .collect();
+            if written.contains(&true) {
+                on_change();
             }
         },
     )?;

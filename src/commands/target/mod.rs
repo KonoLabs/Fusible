@@ -43,6 +43,8 @@ pub struct BoardTarget {
     /// Pin binding files of every firmware bound to this board.
     pub pins_rs: Vec<PathBuf>,
     pub port: Option<u16>,
+    /// The KiCad board file named by the manifest, if any.
+    pub kicad: Option<PathBuf>,
     /// Root of the board's generated artifacts.
     pub out_dir: PathBuf,
 }
@@ -129,6 +131,7 @@ fn named_board(
         firmware: firmware_for(cfg, Some(name)),
         pins_rs: pins_for(cfg, Some(name)),
         port: board.port,
+        kicad: board.kicad.clone(),
         out_dir: match cfg.boards.len() {
             0 | 1 => out_dir,
             _ => out_dir.join(name),

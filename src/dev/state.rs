@@ -40,6 +40,7 @@ struct Snapshot {
 pub(super) struct Slot {
     pub name: Option<String>,
     pub entry: PathBuf,
+    pub kicad: Option<PathBuf>,
     pub body: BodyCache,
     latest: Arc<Mutex<Snapshot>>,
 }
@@ -49,6 +50,7 @@ impl Slot {
         Self {
             name: board.name.clone(),
             entry: board.entry.clone(),
+            kicad: board.kicad.clone(),
             body: BodyCache::default(),
             latest: Arc::default(),
         }

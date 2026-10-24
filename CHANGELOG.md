@@ -18,6 +18,15 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 - `fusible init --currency CODE` writes `bom.yml` with that currency. It accepts the 12 currencies the studio offers and rejects any other before writing a file.
 - `fusible doctor --json` prints `{"bun", "node", "tsci"}`, each a `{path, version}` object or null, and exits 0 when tools are missing.
 - Studio `SYNC` panel for teams that keep the project in git, with no terminal: `SAVE`, `GET UPDATES`, the last 20 saves, and a card per conflicting file with `KEEP MINE` and `KEEP THEIRS`. It appears only inside a git work tree, rebuilds the boards after updates that touch project files, says so when there is no remote, and offers a download link and `RE-CHECK` when `git` is missing. Backed by `GET /api/git` and `POST /api/git/save`, `/update`, `/resolve`, guarded like `/api/run`.
+- The studio watches the KiCad board file of each board. When you save in KiCad, the moved parts are written into the plain-number `pcbX`, `pcbY` and `pcbRotation` props of your TSX and the board rebuilds. Each TSX file is copied to `.fusible/backup/` first, keeping 10 copies.
+- A `KICAD: in sync / n differences / error` chip next to the fuse badge, `GET /api/kicad`, and a `sync` event on the SSE stream. Added, removed or renamed parts and rewired nets are listed as "KiCad differs from the design" and never written.
+- `kicad:` key on a board in `fusible.yml` names its `.kicad_pcb`; without it the single board file beside the entry or in `kicad/` is used.
+- `fusible init` adds `.fusible/` to the `.gitignore` it writes.
+
+### Changed
+
+- `fusible sync` aligns the KiCad and design frames with the median offset instead of the centroid, so one moved part no longer shifts the others. It writes only parts that moved, rotated or flipped, not unchanged parts or parts only KiCad has.
+- The dev server's file watcher ignores events where a file's modification time and size did not change. On Linux a rebuild that read its sources could trigger itself.
 
 ### Fixed
 

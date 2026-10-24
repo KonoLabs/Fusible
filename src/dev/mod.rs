@@ -22,6 +22,9 @@ mod git_share;
 mod git_status;
 mod guard;
 pub mod hub;
+mod kicad_status;
+mod kicad_sync;
+mod kicad_watch;
 mod limiter;
 pub mod pipeline;
 mod project;
@@ -33,6 +36,7 @@ mod run_status;
 mod runs;
 pub mod server;
 mod shared;
+mod stamps;
 mod state;
 pub mod watcher;
 
@@ -69,6 +73,8 @@ mod guard_tests;
 #[cfg(test)]
 mod hub_tests;
 #[cfg(test)]
+mod kicad_watch_tests;
+#[cfg(test)]
 mod limiter_tests;
 #[cfg(test)]
 mod panel_scripts_tests;
@@ -76,6 +82,8 @@ mod panel_scripts_tests;
 mod run_exec_tests;
 #[cfg(test)]
 mod runs_tests;
+#[cfg(test)]
+mod stamps_tests;
 #[cfg(test)]
 mod state_tests;
 #[cfg(test)]

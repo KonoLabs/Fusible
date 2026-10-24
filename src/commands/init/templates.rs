@@ -2,7 +2,7 @@
 
 /// Default `.gitignore` for a new project.
 pub(super) const GITIGNORE: &str =
-    "node_modules/\ndist/\n.tscircuit/\ntarget/\n*.kicad_prl\n*.bak\n";
+    "node_modules/\ndist/\n.tscircuit/\n.fusible/\ntarget/\n*.kicad_prl\n*.bak\n";
 
 /// Default `hardware/tsconfig.json`.
 pub(super) const TSCONFIG_JSON: &str = r#"{

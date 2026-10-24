@@ -1,5 +1,6 @@
 //! Footprint placement extraction from a parsed KiCad board S-expression.
 
+use super::pads::{parse_pad, KicadPad};
 use super::sexpr::Sexpr;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -9,6 +10,7 @@ pub struct KicadFootprint {
     pub y: f64,
     pub rotation: f64,
     pub layer: String,
+    pub pads: Vec<KicadPad>,
 }
 
 pub fn extract_footprints(sexpr: &Sexpr) -> Vec<KicadFootprint> {
@@ -41,6 +43,7 @@ fn parse_footprint_node(list: &[Sexpr]) -> Option<KicadFootprint> {
         y: 0.0,
         rotation: 0.0,
         layer: "top".to_string(),
+        pads: Vec::new(),
     };
 
     for sub in list.iter().filter_map(Sexpr::as_list) {
@@ -50,6 +53,7 @@ fn parse_footprint_node(list: &[Sexpr]) -> Option<KicadFootprint> {
         match tag {
             "at" => apply_at(&mut fp, sub),
             "layer" => apply_layer(&mut fp, sub),
+            "pad" => fp.pads.extend(parse_pad(sub)),
             "property" | "fp_text" => {
                 if let Some(reference) = reference_field(tag, sub) {
                     designator = reference;

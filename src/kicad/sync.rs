@@ -6,6 +6,8 @@ use serde_json::{json, Value};
 
 use super::diff::{DiffReport, PlacementDiff};
 
+/// Writes the moved, rotated or flipped parts into `manual-edits.json`; parts only one side has
+/// and unchanged parts are left alone.
 pub fn apply_kicad_sync(
     report: &DiffReport,
     manual_edits_path: &Path,
@@ -19,7 +21,7 @@ pub fn apply_kicad_sync(
 
     let mut updated_count = 0;
     for diff in &report.diffs {
-        if let Some(pos) = diff.kicad_pos {
+        if let (true, Some(pos)) = (diff.is_placement_change(), diff.kicad_pos) {
             upsert_placement(placements, diff, pos);
             updated_count += 1;
         }

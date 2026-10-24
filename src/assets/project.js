@@ -296,6 +296,7 @@
   function handle(data) {
     if (data.event === 'log') return appendLog(data.run, data.line), true;
     if (data.event === 'run') return applyRunEvent(data), true;
+    if (data.event === 'sync') return window.Kicad.apply(data), true;
     const board = data.board || '';
     state.boards[board] = data;
     noteHealth(board, data);
