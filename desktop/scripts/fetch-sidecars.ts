@@ -46,25 +46,61 @@ async function download(url: string, to: string): Promise<void> {
   writeFileSync(to, new Uint8Array(await res.arrayBuffer()));
 }
 
-async function fetchBun(triple: string): Promise<void> {
+async function downloadBun(triple: string, work: string): Promise<string> {
   const target = BUN_TARGETS[triple];
   if (!target) throw new Error(`no bun build is pinned for ${triple}`);
-  const work = mkdtempSync(join(tmpdir(), "fusible-bun-"));
-  const archive = join(work, "bun.zip");
+  const archive = join(work, `bun-${target}.zip`);
   const base = `https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}`;
   await download(`${base}/bun-${target}.zip`, archive);
   unzip(archive, work);
-  installExecutable(join(work, `bun-${target}`, `bun${exe}`), "bun", triple);
+  return join(work, `bun-${target}`, `bun${exe}`);
+}
+
+async function fetchBun(triple: string): Promise<void> {
+  const work = mkdtempSync(join(tmpdir(), "fusible-bun-"));
+  installExecutable(await downloadBun(triple, work), "bun", triple);
   rmSync(work, { recursive: true, force: true });
 }
 
-function copyFusible(triple: string): void {
-  const built = join(root, "target", "release", `fusible${exe}`);
+function builtFusible(triple: string | null): string {
+  const dir = triple ? join(root, "target", triple, "release") : join(root, "target", "release");
+  const built = join(dir, `fusible${exe}`);
   if (!existsSync(built)) throw new Error(`${built} is missing, run cargo build --release first`);
-  installExecutable(built, "fusible", triple);
+  return built;
 }
 
-const triple = hostTriple();
-copyFusible(triple);
-await fetchBun(triple);
-console.log(`sidecars for ${triple} are in ${binaries}`);
+function copyFusible(triple: string): void {
+  installExecutable(builtFusible(null), "fusible", triple);
+}
+
+function lipo(inputs: string[], name: string): void {
+  mkdirSync(binaries, { recursive: true });
+  const to = join(binaries, `${name}-universal-apple-darwin`);
+  const done = Bun.spawnSync(["lipo", "-create", ...inputs, "-output", to], { stdout: "inherit", stderr: "inherit" });
+  if (done.exitCode !== 0) throw new Error(`lipo failed for ${name}`);
+  chmodSync(to, 0o755);
+}
+
+async function universalMacos(): Promise<void> {
+  const triples = ["aarch64-apple-darwin", "x86_64-apple-darwin"];
+  const work = mkdtempSync(join(tmpdir(), "fusible-bun-"));
+  const buns: string[] = [];
+  for (const triple of triples) {
+    const dir = join(work, triple);
+    mkdirSync(dir);
+    buns.push(await downloadBun(triple, dir));
+  }
+  lipo(triples.map(builtFusible), "fusible");
+  lipo(buns, "bun");
+  rmSync(work, { recursive: true, force: true });
+  console.log(`universal sidecars are in ${binaries}`);
+}
+
+if (process.argv.includes("--universal-macos")) {
+  await universalMacos();
+} else {
+  const triple = hostTriple();
+  copyFusible(triple);
+  await fetchBun(triple);
+  console.log(`sidecars for ${triple} are in ${binaries}`);
+}

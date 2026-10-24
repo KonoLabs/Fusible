@@ -9,6 +9,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ### Added
 
+- Fusible Studio desktop app (`desktop/`): a Tauri shell with a Projects page (cards, new project, open folder, recent) and a Settings page, which runs `fusible dev --desktop` per project. The desktop workflow publishes `Fusible-Studio-windows-x64-setup.exe`, `Fusible-Studio-macos-universal.dmg`, and `Fusible-Studio-linux-x64.AppImage` and `.deb` to each release. The installers ship `bun`; they are not code-signed yet.
 - Windows builds: the release workflow publishes `fusible_<version>_windows_amd64.zip` (with `fusible.exe`) next to the Linux and macOS archives, and lists it in `checksums.txt`. CI runs format, clippy, and tests on `windows-latest`.
 - `.gitattributes` keeps text files on LF, so a Windows checkout compiles and tests the same bytes.
 - `fusible dev --desktop` for the desktop shell: it prints one `FUSIBLE_READY {"url","port"}` line once the server is bound, exits with code 0 when stdin closes, and serves the studio with `window.FUSIBLE_DESKTOP` set. Only then the dock shows a `PROJECTS` button that calls the shell's `open_projects` command.

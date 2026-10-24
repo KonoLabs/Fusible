@@ -1,0 +1,151 @@
+name: desktop
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  versions:
+    name: version check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Crate, app, and tag versions agree
+        shell: bash
+        run: |
+          crate=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          shell_crate=$(sed -n 's/^version = "\(.*\)"/\1/p' desktop/src-tauri/Cargo.toml | head -1)
+          app=$(sed -n 's/^ *"version": "\(.*\)",/\1/p' desktop/src-tauri/tauri.conf.json | head -1)
+          echo "crate=$crate shell=$shell_crate app=$app"
+          test "$crate" = "$shell_crate"
+          test "$crate" = "$app"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then test "v$crate" = "${GITHUB_REF_NAME}"; fi
+
+  bundle:
+    name: ${{ matrix.name }}
+    needs: versions
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows-x64
+            runner: windows-latest
+            rust_targets: x86_64-pc-windows-msvc
+            tauri_args: ""
+            bundle_dir: desktop/src-tauri/target/release/bundle
+          - name: macos-universal
+            runner: macos-latest
+            rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
+            tauri_args: --target universal-apple-darwin
+            bundle_dir: desktop/src-tauri/target/universal-apple-darwin/release/bundle
+          - name: linux-x64
+            runner: ubuntu-22.04
+            rust_targets: x86_64-unknown-linux-gnu
+            tauri_args: ""
+            bundle_dir: desktop/src-tauri/target/release/bundle
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install Linux libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libayatana-appindicator3-dev patchelf libssl-dev
+
+      - name: Build studio bundle
+        working-directory: studio
+        run: |
+          bun install --frozen-lockfile
+          bun run build
+
+      - name: Build fusible
+        if: runner.os != 'macOS'
+        run: cargo build --release --locked
+
+      - name: Build fusible for both Apple targets
+        if: runner.os == 'macOS'
+        run: |
+          cargo build --release --locked --target aarch64-apple-darwin
+          cargo build --release --locked --target x86_64-apple-darwin
+
+      - name: Fetch sidecars
+        if: runner.os != 'macOS'
+        run: bun run desktop/scripts/fetch-sidecars.ts
+
+      - name: Fetch universal sidecars
+        if: runner.os == 'macOS'
+        run: bun run desktop/scripts/fetch-sidecars.ts --universal-macos
+
+      - name: Smoke the bundled sidecars
+        if: runner.os != 'macOS'
+        run: |
+          for bin in desktop/src-tauri/binaries/fusible-* desktop/src-tauri/binaries/bun-*; do
+            "$bin" --version
+          done
+
+      - name: Build the app
+        working-directory: desktop/src-tauri
+        run: bunx @tauri-apps/cli@2 build ${{ matrix.tauri_args }}
+
+      - name: Name the installers
+        run: |
+          mkdir -p out
+          bundle="${{ matrix.bundle_dir }}"
+          case "${{ matrix.name }}" in
+            windows-x64)
+              cp "$bundle"/nsis/*-setup.exe out/Fusible-Studio-windows-x64-setup.exe ;;
+            macos-universal)
+              cp "$bundle"/dmg/*.dmg out/Fusible-Studio-macos-universal.dmg ;;
+            linux-x64)
+              cp "$bundle"/appimage/*.AppImage out/Fusible-Studio-linux-x64.AppImage
+              cp "$bundle"/deb/*.deb out/Fusible-Studio-linux-x64.deb ;;
+          esac
+          ls -l out
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: desktop-${{ matrix.name }}
+          path: out/*
+          retention-days: 1
+
+  publish:
+    name: attach to the release
+    needs: bundle
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: out
+          merge-multiple: true
+
+      - name: Upload installers and checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd out
+          sha256sum Fusible-Studio-* > desktop-checksums.txt
+          cat desktop-checksums.txt
+          gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes || true
+          gh release upload "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber \
+            Fusible-Studio-* desktop-checksums.txt
