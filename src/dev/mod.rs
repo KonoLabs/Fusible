@@ -6,6 +6,7 @@ mod bind;
 mod bodies;
 mod body;
 mod bom;
+mod desktop;
 mod firmware;
 mod guard;
 pub mod hub;
@@ -37,6 +38,8 @@ mod bind_tests;
 mod body_tests;
 #[cfg(test)]
 mod bom_tests;
+#[cfg(test)]
+mod desktop_tests;
 #[cfg(test)]
 mod firmware_tests;
 #[cfg(test)]

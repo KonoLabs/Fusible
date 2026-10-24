@@ -8,7 +8,9 @@ use thiserror::Error;
 
 use crate::config::FusibleConfig;
 use crate::tscircuit::detect::find_binary_in_path;
-use crate::tscircuit::Runner;
+use crate::tscircuit::{bun_path, Runner};
+
+pub mod json;
 
 /// Errors that can occur during toolchain inspection or automated installation.
 #[derive(Debug, Error, Diagnostic)]
@@ -43,9 +45,7 @@ pub enum DoctorError {
 
 fn report_prerequisites() -> (bool, bool) {
     let path_var = std::env::var_os("PATH");
-    let has_bun = path_var
-        .as_deref()
-        .and_then(|p| find_binary_in_path("bun", p));
+    let has_bun = bun_path();
     let has_node = path_var
         .as_deref()
         .and_then(|p| find_binary_in_path("node", p));
@@ -140,7 +140,13 @@ fn report_runner(install: bool, has_bun: bool, has_npm: bool) -> Result<(), Doct
 }
 
 /// Runs the environment diagnostics and optionally installs missing tools.
-pub fn run(install: bool) -> Result<(), DoctorError> {
+///
+/// With `as_json` it prints only the machine-readable toolchain report and never fails on missing tools.
+pub fn run(install: bool, as_json: bool) -> Result<(), DoctorError> {
+    if as_json {
+        println!("{}", json::report());
+        return Ok(());
+    }
     println!("🩺 Fusible Toolchain Doctor\n");
     let (has_bun, has_npm) = report_prerequisites();
     report_manifest();
@@ -157,17 +163,15 @@ fn print_status(name: &str, path: Option<&Path>) {
 }
 
 fn install_tscircuit(has_bun: bool, has_npm: bool) -> Result<(), DoctorError> {
-    let (prog, args): (&str, &[&str]) = if has_bun {
-        ("bun", &["add", "-g", "tscircuit"])
-    } else if has_npm {
-        ("npm", &["install", "-g", "tscircuit"])
-    } else {
-        return Err(DoctorError::NoPackageManager);
+    let (prog, args): (String, &[&str]) = match (bun_path(), has_bun, has_npm) {
+        (Some(bun), true, _) => (bun.display().to_string(), &["add", "-g", "tscircuit"]),
+        (_, _, true) => ("npm".into(), &["install", "-g", "tscircuit"]),
+        _ => return Err(DoctorError::NoPackageManager),
     };
 
     println!("   Executing: {prog} {}", args.join(" "));
     let status =
-        Command::new(prog)
+        Command::new(&prog)
             .args(args)
             .status()
             .map_err(|source| DoctorError::InstallFailed {

@@ -26,7 +26,12 @@ pub enum DevError {
 /// Starts the Fusible development server and interactive dark-theme web viewer.
 ///
 /// Without a target it serves every board of the manifest in one studio.
-pub fn run(file: Option<PathBuf>, port: Option<u16>, legacy: bool) -> Result<i32, DevError> {
+pub fn run(
+    file: Option<PathBuf>,
+    port: Option<u16>,
+    legacy: bool,
+    desktop: bool,
+) -> Result<i32, DevError> {
     let boards = match resolve_boards(file) {
         Err(TargetError::Missing) => vec![fallback_board()],
         other => other?,
@@ -46,7 +51,8 @@ pub fn run(file: Option<PathBuf>, port: Option<u16>, legacy: bool) -> Result<i32
         "⚡ Starting Fusible Studio dev server for {}...",
         names.join(", ")
     );
-    crate::dev::run_dev_server(boards, port_num).map_err(|e| DevError::Server(e.to_string()))?;
+    crate::dev::run_dev_server(boards, port_num, desktop)
+        .map_err(|e| DevError::Server(e.to_string()))?;
 
     Ok(0)
 }

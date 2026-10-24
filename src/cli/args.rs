@@ -198,6 +198,10 @@ pub struct InitArgs {
     #[arg(long)]
     pub mcu: Option<String>,
 
+    /// Currency of the new bom.yml (EUR, USD, GBP, CHF, CAD, AUD, JPY, CNY, SEK, NOK, DKK, PLN)
+    #[arg(long, value_name = "CODE")]
+    pub currency: Option<String>,
+
     /// Skip installing hardware npm/bun dependencies
     #[arg(long)]
     pub no_install: bool,

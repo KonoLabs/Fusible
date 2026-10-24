@@ -51,6 +51,7 @@ fn init_creates_manifest_in_temp_dir() {
         Some(fixture.path.clone()),
         Some("custom-device".into()),
         Some("esp32-s3".into()),
+        None,
         true,
     );
     assert!(res.is_ok());
@@ -62,6 +63,6 @@ fn init_creates_manifest_in_temp_dir() {
     assert!(content.contains("name: custom-device"));
     assert!(content.contains("mcu: esp32-s3"));
 
-    let res2 = init::run(Some(fixture.path.clone()), None, None, true);
+    let res2 = init::run(Some(fixture.path.clone()), None, None, None, true);
     assert!(res2.is_err());
 }

@@ -14,8 +14,8 @@ use crate::router::RouteOptions;
 use crate::{fail, tool_exit, EXIT_TOOL_ERROR, EXIT_VIOLATIONS};
 
 /// Runs the dev server and forwards its exit code.
-pub fn dev(file: Option<PathBuf>, port: Option<u16>, legacy: bool) -> ExitCode {
-    match commands::dev::run(file, port, legacy) {
+pub fn dev(file: Option<PathBuf>, port: Option<u16>, legacy: bool, desktop: bool) -> ExitCode {
+    match commands::dev::run(file, port, legacy, desktop) {
         Ok(code) => ExitCode::from(u8::try_from(code).unwrap_or(EXIT_TOOL_ERROR)),
         Err(err) => fail(err, EXIT_TOOL_ERROR),
     }
