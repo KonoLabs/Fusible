@@ -1,6 +1,6 @@
 [package]
 name = "fusible"
-version = "0.14.1"
+version = "0.14.2"
 edition = "2021"
 description = "Electronic linter: a fuse that blows to block firmware code generation"
 license = "MIT"
