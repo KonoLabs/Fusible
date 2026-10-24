@@ -135,6 +135,9 @@ fn subcommand_export_docs_without_chromium_warns_and_writes_svg_only() {
     let out = fusible()
         .env("HOME", &dir.path)
         .env("PATH", "")
+        .env_remove("ProgramFiles")
+        .env_remove("ProgramFiles(x86)")
+        .env_remove("LocalAppData")
         .args(["export", "examples/circuit.json", "--preset", "docs", "-o"])
         .arg(&out_dir)
         .output()
@@ -148,15 +151,21 @@ fn subcommand_export_docs_without_chromium_warns_and_writes_svg_only() {
 
 #[test]
 fn subcommand_export_docs_prints_pdf_when_chromium_is_installed() {
-    let home = std::env::var_os("HOME")
-        .map(std::path::PathBuf::from)
-        .unwrap();
-    let cached = std::fs::read_dir(home.join(".cache/ms-playwright"))
-        .into_iter()
-        .flatten()
-        .flatten()
-        .any(|e| e.file_name().to_string_lossy().starts_with("chromium-"));
-    if !cached {
+    let cached = std::env::var_os("HOME").is_some_and(|home| {
+        std::fs::read_dir(std::path::Path::new(&home).join(".cache/ms-playwright"))
+            .into_iter()
+            .flatten()
+            .flatten()
+            .any(|e| e.file_name().to_string_lossy().starts_with("chromium-"))
+    });
+    let windows_chrome = cfg!(windows)
+        && std::env::var_os("ProgramFiles").is_some_and(|dir| {
+            std::path::Path::new(&dir)
+                .join(r"Google\Chrome\Application\chrome.exe")
+                .is_file()
+        });
+    let installed = cached || windows_chrome;
+    if !installed {
         return;
     }
     let dir = TestDir::new("export_pdf");
