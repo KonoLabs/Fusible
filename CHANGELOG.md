@@ -7,6 +7,17 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.14.3] - 2026-10-24
+
+### Changed
+
+- `fusible bom` and the studio `PARTS & COSTS` page create `bom.yml` next to `fusible.yml` (the project root) the first time they read it, with `currency: EUR` and the default filament price. Before, the file only appeared after the first edit in the studio.
+- `PARTS & COSTS` drops the LCSC, DigiKey, and Mouser search links under each link field, so every row lines up.
+
+### Fixed
+
+- The `g` unit of a 3D print weight sits next to its field.
+
 ## [0.14.2] - 2026-10-24
 
 ### Changed

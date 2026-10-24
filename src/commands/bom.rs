@@ -45,11 +45,16 @@ fn report(args: &BomArgs) -> Result<Report, BomCommandError> {
     }
     let (manifest, cfg) = FusibleConfig::nearest().unzip();
     let names: Vec<&str> = boards.iter().filter_map(|b| b.name.as_deref()).collect();
-    let manifest = manifest.unwrap_or_else(|| "fusible.yml".into());
-    let root = manifest.parent().unwrap_or(Path::new("."));
+    let file = match &manifest {
+        Some(manifest) => BomFile::load_or_create(&bom::bom_path(manifest))?,
+        None => BomFile::default(),
+    };
+    let root = manifest
+        .as_deref()
+        .and_then(Path::parent)
+        .unwrap_or(Path::new("."));
     let bodies = cfg.map_or_else(Vec::new, |c| bom::bodies_of(&c, &names, root));
-    let path = bom::bom_path(&manifest);
-    Ok(bom::build(parts, &bodies, &BomFile::load(&path)?))
+    Ok(bom::build(parts, &bodies, &file))
 }
 
 /// Prints or writes the bill of materials.

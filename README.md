@@ -291,7 +291,7 @@ fusible bom main -f csv -o parts.csv     # one board, as CSV
 fusible bom -f json                      # the full report for scripts
 ```
 
-Fusible lists the components placed on each board, grouped by kind, value, and part number, and adds each body of the manifest as a 3D print. Prices, picks, and extra parts live in `bom.yml` next to `fusible.yml`; the Studio `PARTS & COSTS` view edits the same file.
+Fusible lists the components placed on each board, grouped by kind, value, and part number, and adds each body of the manifest as a 3D print. Prices, picks, and extra parts live in `bom.yml` next to `fusible.yml`, created on the first read; the Studio `PARTS & COSTS` view edits the same file.
 
 ```yaml
 currency: EUR

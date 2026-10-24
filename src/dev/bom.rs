@@ -89,7 +89,7 @@ fn read(request: Request, state: &State) {
     let Some((manifest, _)) = FusibleConfig::nearest() else {
         return respond_json(request, 200, reply(state, &BomFile::default(), false));
     };
-    match BomFile::load(&bom::bom_path(&manifest)) {
+    match BomFile::load_or_create(&bom::bom_path(&manifest)) {
         Ok(file) => respond_json(request, 200, reply(state, &file, true)),
         Err(err) => respond_json(request, 422, error_body(&err.to_string())),
     }

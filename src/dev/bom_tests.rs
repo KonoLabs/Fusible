@@ -14,3 +14,16 @@ fn a_saved_bom_round_trips_and_a_bad_one_writes_nothing() {
     assert_eq!(save(&path, unknown).unwrap_err().0, 400);
     std::fs::remove_dir_all(&dir).unwrap();
 }
+
+#[test]
+fn a_missing_bom_is_created_with_a_currency() {
+    let dir = std::env::temp_dir().join(format!("fusible-bom-new-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("bom.yml");
+    let file = crate::bom::BomFile::load_or_create(&path).unwrap();
+    assert_eq!(file.currency.as_deref(), Some("EUR"));
+    assert!(std::fs::read_to_string(&path)
+        .unwrap()
+        .contains("currency: EUR"));
+    std::fs::remove_dir_all(&dir).unwrap();
+}

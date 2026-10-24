@@ -10,6 +10,7 @@ use super::BomError;
 const FILE_NAME: &str = "bom.yml";
 const MAX_QUANTITY: u32 = 1_000_000;
 const DEFAULT_PRICE_PER_KG: f64 = 25.0;
+const DEFAULT_CURRENCY: &str = "EUR";
 
 /// Where `bom.yml` lives for the manifest at `manifest`.
 pub fn bom_path(manifest: &Path) -> PathBuf {
@@ -18,15 +19,10 @@ pub fn bom_path(manifest: &Path) -> PathBuf {
 
 /// Print cost settings.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[serde(default, deny_unknown_fields)]
 pub struct PrintSettings {
     /// Filament price per kilogram, in the BOM currency.
-    #[serde(default = "default_price_per_kg")]
     pub price_per_kg: f64,
-}
-
-fn default_price_per_kg() -> f64 {
-    DEFAULT_PRICE_PER_KG
 }
 
 impl Default for PrintSettings {
@@ -121,6 +117,18 @@ impl BomFile {
         })?;
         file.validate()?;
         Ok(file)
+    }
+
+    /// Reads `path`, writing a starter file first when none exists yet.
+    pub fn load_or_create(path: &Path) -> Result<Self, BomError> {
+        if !path.exists() {
+            let starter = Self {
+                currency: Some(DEFAULT_CURRENCY.into()),
+                ..Self::default()
+            };
+            starter.save(path)?;
+        }
+        Self::load(path)
     }
 
     /// Writes the file through a temporary sibling so a crash never leaves half a BOM.

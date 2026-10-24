@@ -1,10 +1,5 @@
 (() => {
   const state = { data: null, error: '', timer: null, seq: 0 };
-  const FIND = [
-    ['LCSC', 'https://www.lcsc.com/search?q='],
-    ['DIGIKEY', 'https://www.digikey.com/en/products/result?keywords='],
-    ['MOUSER', 'https://www.mouser.com/c/?q='],
-  ];
   const view = () => document.getElementById('bom-view');
   const safeUrl = (url) => (/^https?:\/\//i.test(url || '') ? url : '');
   const price = (n) => (n == null ? '-' : n.toFixed(2));
@@ -24,15 +19,10 @@
     return `<input data-f="${field}" value="${escapeHtml(String(shown))}" ${attrs}>`;
   }
 
-  function finder(line) {
-    const query = encodeURIComponent(line.mpn || line.description);
-    return FIND.map(([label, base]) => `<a href="${base}${query}" target="_blank" rel="noopener noreferrer">${label}</a>`).join(' · ');
-  }
-
   function costCell(line) {
     if (line.kind === 'print') {
-      const guess = line.estimated ? ` placeholder="~${line.grams}" title="Estimated from the model. Type a weight to override."` : ' placeholder="g"';
-      return `${input('grams', line.estimated ? null : line.grams, `type="number" min="0" step="1" class="bom-num"${guess}`)} g`;
+      const guess = line.estimated ? ` placeholder="~${line.grams}" title="Estimated from the model. Type a weight to override."` : '';
+      return `<div class="bom-unit">${input('grams', line.estimated ? null : line.grams, `type="number" min="0" step="1" class="bom-num"${guess}`)}<span>g</span></div>`;
     }
     const guess = line.estimated ? ` placeholder="~${price(line.unit_price)}" title="Estimated price. Type one to override."` : '';
     return input('unit_price', line.estimated ? null : line.unit_price, `type="number" min="0" step="0.01" class="bom-num"${guess}`);
@@ -47,7 +37,7 @@
   function linkCell(line) {
     if (line.kind === 'print') return '';
     const open = safeUrl(line.url) ? `<a class="btn icon-only" href="${escapeHtml(line.url)}" target="_blank" rel="noopener noreferrer" title="Open link" aria-label="Open link"><iconify-icon icon="pixelarticons:external-link"></iconify-icon></a>` : '';
-    return `<div class="bom-link">${input('url', line.url, 'placeholder="https://"')}${open}</div><div class="bom-refs">${finder(line)}</div>`;
+    return `<div class="bom-link">${input('url', line.url, 'placeholder="https://"')}${open}</div>`;
   }
 
   function rowHtml(line) {
