@@ -66,8 +66,12 @@ pub fn search_command(kind: &RunnerKind, query: &[String]) -> Command {
 
 /// Constructs a base `Command` with the binary configured.
 pub fn base_command(kind: &RunnerKind) -> Command {
-    let program: &Path = match kind {
-        RunnerKind::Local(p) | RunnerKind::Global(p) => p,
-    };
-    Command::new(program)
+    match kind {
+        RunnerKind::Local(p) | RunnerKind::Global(p) => Command::new(p),
+        RunnerKind::Bun(bun) => {
+            let mut cmd = Command::new(bun);
+            cmd.args(["x", "--bun", "tsci"]);
+            cmd
+        }
+    }
 }

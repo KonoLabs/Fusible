@@ -1,5 +1,6 @@
 //! Subcommand: `fusible init` — scaffold a complete Fusible & tscircuit project.
 
+mod currency;
 mod templates;
 
 use std::path::{Path, PathBuf};
@@ -8,6 +9,7 @@ use std::process::Command;
 use miette::Diagnostic;
 use thiserror::Error;
 
+use crate::tscircuit::bun_path;
 use crate::tscircuit::detect::resolve_program;
 
 /// Error raised when initialization cannot be completed.
@@ -31,9 +33,11 @@ pub fn run(
     path: Option<PathBuf>,
     name: Option<String>,
     mcu: Option<String>,
+    currency: Option<String>,
     no_install: bool,
 ) -> Result<(), InitError> {
     let base_dir = path.unwrap_or_else(|| PathBuf::from("."));
+    let currency = currency.as_deref().map(currency::parse).transpose()?;
     prepare_base_dir(&base_dir)?;
 
     let project_name = name.unwrap_or_else(|| default_project_name(&base_dir));
@@ -43,6 +47,10 @@ pub fn run(
         templates::manifest(&project_name, &mcu_chip),
     )
     .map_err(|e| InitError::new(format!("failed to write fusible.yml: {e}")))?;
+
+    if let Some(currency) = currency {
+        currency::write_bom(&base_dir, currency)?;
+    }
 
     let hw_dir = base_dir.join("hardware");
     scaffold_hardware(&hw_dir, &project_name)?;
@@ -127,9 +135,9 @@ fn write_new(path: &Path, content: &str) -> Result<(), InitError> {
 /// Runs `install` with the first available package manager in `hw_dir`.
 fn install_hardware_deps(hw_dir: &Path) {
     println!("📦 Installing hardware dependencies...");
-    let runners = ["bun", "npm"];
-    for runner in runners {
-        let mut cmd = Command::new(resolve_program(runner));
+    let bun = bun_path().unwrap_or_else(|| resolve_program("bun"));
+    for runner in [bun, resolve_program("npm")] {
+        let mut cmd = Command::new(runner);
         cmd.arg("install").current_dir(hw_dir);
         if let Ok(mut child) = cmd.spawn() {
             let _ = child.wait();

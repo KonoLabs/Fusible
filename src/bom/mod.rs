@@ -3,6 +3,9 @@
 //! Prices and picks live in `bom.yml` next to `fusible.yml`. Fusible detects the electronic
 //! parts, and the file only holds what the circuit cannot know.
 
+mod currency;
+#[cfg(test)]
+mod currency_tests;
 mod detect;
 mod error;
 mod estimate;
@@ -17,6 +20,7 @@ mod stl_tests;
 mod tests;
 mod value;
 
+pub use currency::{normalize as normalize_currency, rate_from_eur, CURRENCIES};
 pub use detect::{detect, Part};
 pub use error::BomError;
 pub use estimate::Body;

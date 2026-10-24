@@ -57,7 +57,12 @@ fn main() -> ExitCode {
 /// Dispatches one subcommand and returns its exit code.
 fn run_command(command: Commands) -> ExitCode {
     match command {
-        Commands::Dev { file, port, legacy } => dispatch::dev(file, port, legacy),
+        Commands::Dev {
+            file,
+            port,
+            legacy,
+            desktop,
+        } => dispatch::dev(file, port, legacy, desktop),
         Commands::Check { file, mcu, pins_rs } => dispatch::check(file, mcu, pins_rs),
         Commands::Build { file } => dispatch::build(file),
         Commands::Export(args) => dispatch::export(args),
@@ -66,8 +71,14 @@ fn run_command(command: Commands) -> ExitCode {
         Commands::Route(args) => dispatch::route(args),
         Commands::Diff { kicad_pcb, file } => dispatch::diff(kicad_pcb, file),
         Commands::Sync(args) => dispatch::sync(args),
-        Commands::Doctor { install } => tool_exit(commands::doctor::run(install)),
-        Commands::Init(a) => tool_exit(commands::init::run(a.path, a.name, a.mcu, a.no_install)),
+        Commands::Doctor { install, json } => tool_exit(commands::doctor::run(install, json)),
+        Commands::Init(a) => tool_exit(commands::init::run(
+            a.path,
+            a.name,
+            a.mcu,
+            a.currency,
+            a.no_install,
+        )),
         Commands::Add { packages } => tool_exit(commands::add::run(&packages)),
         Commands::Install { dir } => tool_exit(commands::install::run(dir)),
         Commands::Search { query } => tool_exit(commands::search::run(&query)),

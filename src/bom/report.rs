@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 
 use serde::Serialize;
 
+use super::currency::rate_from_eur;
 use super::estimate::{unit_price, Body};
 use super::file::{BomFile, PartEntry, PrintEntry};
 use super::Part;
@@ -53,6 +54,8 @@ pub struct Totals {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Report {
     pub currency: String,
+    /// The currency of the `~` estimates: `currency`, or `EUR` when it has no rate.
+    pub estimate_currency: String,
     pub price_per_kg: f64,
     pub lines: Vec<Line>,
     pub totals: Totals,
@@ -94,14 +97,16 @@ fn line(id: &str, kind: Kind, entry: &PartEntry) -> Line {
     }
 }
 
-fn detected_line(part: Part, entry: &PartEntry) -> Line {
+fn detected_line(part: Part, entry: &PartEntry, rate: f64) -> Line {
     let quantity = u32::try_from(part.designators.len()).unwrap_or(u32::MAX);
     let fallback = [Some(part.kind.clone()), part.value.clone()];
     let named = fallback.into_iter().flatten().collect::<Vec<_>>().join(" ");
     let base = line(&part.id, Kind::Component, entry);
     let guess = match entry.unit_price {
         Some(_) => None,
-        None => unit_price(&part.kind, part.value.as_deref(), part.mpn.as_deref()),
+        None => {
+            unit_price(&part.kind, part.value.as_deref(), part.mpn.as_deref()).map(|p| p * rate)
+        }
     };
     Line {
         unit_price: entry.unit_price.or(guess),
@@ -153,32 +158,46 @@ fn totals(lines: &mut [Line]) -> Totals {
     sums
 }
 
-/// Builds the report of `parts` and `bodies` with the prices and picks of `file`.
-pub fn build(parts: Vec<Part>, bodies: &[Body], file: &BomFile) -> Report {
-    let merged = merge(parts);
+fn collect_lines(
+    merged: BTreeMap<String, Part>,
+    bodies: &[Body],
+    file: &BomFile,
+    rate: f64,
+) -> Vec<Line> {
     let manual = file
         .parts
         .iter()
-        .filter(|(id, _)| !merged.contains_key(*id));
-    let manual: Vec<Line> = manual
+        .filter(|(id, _)| !merged.contains_key(*id))
         .map(|(id, entry)| line(id, Kind::Manual, entry))
-        .collect();
+        .collect::<Vec<_>>();
     let default = PartEntry::default();
     let detected = merged.into_iter().map(|(id, part)| {
         let entry = file.parts.get(&id).unwrap_or(&default);
-        detected_line(part, entry)
+        detected_line(part, entry, rate)
     });
     let printed = bodies.iter().map(|body| {
         let entry = file.prints.get(&body.name).cloned().unwrap_or_default();
         print_line(body, &entry, file.print.price_per_kg)
     });
-    let mut lines: Vec<Line> = detected.chain(manual).chain(printed).collect();
+    detected.chain(manual).chain(printed).collect()
+}
+
+/// Builds the report of `parts` and `bodies` with the prices and picks of `file`.
+pub fn build(parts: Vec<Part>, bodies: &[Body], file: &BomFile) -> Report {
+    let currency = file
+        .currency
+        .clone()
+        .unwrap_or_else(|| DEFAULT_CURRENCY.into());
+    let rate = rate_from_eur(&currency);
+    let mut lines = collect_lines(merge(parts), bodies, file, rate.unwrap_or(1.0));
     let totals = totals(&mut lines);
+    let estimate_currency = match rate {
+        Some(_) => currency.clone(),
+        None => DEFAULT_CURRENCY.into(),
+    };
     Report {
-        currency: file
-            .currency
-            .clone()
-            .unwrap_or_else(|| DEFAULT_CURRENCY.into()),
+        currency,
+        estimate_currency,
         price_per_kg: file.print.price_per_kg,
         lines,
         totals,

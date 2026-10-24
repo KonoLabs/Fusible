@@ -55,6 +55,7 @@ Initialize a new hardware + firmware project:
 
 ```sh
 fusible init --name sensor-node
+fusible init --name sensor-node --currency USD   # also writes bom.yml
 ```
 
 This creates a minimal `fusible.yml`:
@@ -141,6 +142,7 @@ fusible dev                       # launches native Fusible Studio on port 3020,
 fusible dev sensor                # same studio, opened on one board
 fusible view --port 3030          # custom port
 fusible dev --legacy              # fallback to legacy tsci dev server
+fusible dev --desktop             # for the desktop shell: prints FUSIBLE_READY {json}, exits when stdin closes
 ```
 
 Features:
@@ -281,7 +283,10 @@ Inspects local toolchain health (`bun`, `node`, `npm`, `npx`, `tsci`) and verifi
 ```sh
 fusible doctor
 fusible doctor --install
+fusible doctor --json             # {"bun", "node", "tsci"} as JSON, exit 0 even when tools are missing
 ```
+
+Set `FUSIBLE_BUN=/path/to/bun` to make every bun call (init, bodies, doctor) use that binary. When no `tsci` is found, Fusible runs `bun x --bun tsci` instead.
 
 ### Parts and costs
 

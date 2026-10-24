@@ -1,6 +1,6 @@
 use super::*;
 
-const CIRCUIT: &str = r#"[
+pub(super) const CIRCUIT: &str = r#"[
   {"type":"source_component","source_component_id":"sc1","name":"R1",
    "ftype":"simple_resistor","resistance":10000},
   {"type":"source_component","source_component_id":"sc2","name":"R2",
@@ -13,7 +13,7 @@ const CIRCUIT: &str = r#"[
   {"type":"pcb_component","source_component_id":"sc3"}
 ]"#;
 
-fn file(yaml: &str) -> BomFile {
+pub(super) fn file(yaml: &str) -> BomFile {
     serde_yaml::from_str(yaml).unwrap()
 }
 

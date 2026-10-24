@@ -8,6 +8,7 @@ const VIEWER_HTML: &str = include_str!("../assets/viewer.html");
 const PROJECT_JS: &str = include_str!("../assets/project.js");
 const BOM_JS: &str = include_str!("../assets/bom.js");
 const FIRMWARE_JS: &str = include_str!("../assets/firmware.js");
+const DESKTOP_JS: &str = include_str!("../assets/desktop.js");
 const DRAWER_JS: &str = include_str!("../assets/drawer.js");
 const FONT_DATA: &[u8] = include_bytes!("../assets/undefined-medium.otf");
 const FAVICON_SVG: &str = concat!(
@@ -49,10 +50,36 @@ pub(super) fn http_response(status: u16, content_type: &str, body: Vec<u8>) -> H
         .with_status_code(status)
 }
 
+/// Returns the viewer page; under the desktop shell it carries the flag and the Projects button.
+fn viewer_html(desktop: bool) -> String {
+    if !desktop {
+        return VIEWER_HTML.into();
+    }
+    VIEWER_HTML
+        .replacen(
+            "<head>",
+            "<head>\n  <script>window.FUSIBLE_DESKTOP = true;</script>",
+            1,
+        )
+        .replacen(
+            "</body>",
+            &format!("<script>{DESKTOP_JS}</script>\n</body>"),
+            1,
+        )
+}
+
 /// Serves the embedded viewer, font, favicon and studio bundle; `None` for other paths.
-pub(super) fn static_response(path: &str, bundle: Option<String>) -> Option<HttpResponse> {
+pub(super) fn static_response(
+    path: &str,
+    bundle: Option<String>,
+    desktop: bool,
+) -> Option<HttpResponse> {
     let response = match path {
-        "/" | "/index.html" => http_response(200, "text/html; charset=utf-8", VIEWER_HTML.into()),
+        "/" | "/index.html" => http_response(
+            200,
+            "text/html; charset=utf-8",
+            viewer_html(desktop).into_bytes(),
+        ),
         "/studio.bundle.js" => bundle_response(bundle),
         "/project.js" => http_response(
             200,

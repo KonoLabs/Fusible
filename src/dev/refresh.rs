@@ -19,6 +19,16 @@ pub(super) fn load_bundle(state: &State) {
     }
 }
 
+/// Tells the user on stderr when this build has no studio bundle to serve.
+pub(super) fn warn_if_bundle_missing(state: &State) {
+    if state.bundle.lock().is_ok_and(|bundle| bundle.is_none()) {
+        eprintln!(
+            "⚠ This fusible build has no studio bundle: schematic, PCB and 3D fall back to native previews. \
+Install a GitHub release binary, or run `bun install && bun run build` in studio/ and rebuild."
+        );
+    }
+}
+
 /// Rebuilds `slot`, stores the result as one snapshot, and broadcasts it.
 ///
 /// The snapshot is stored before the broadcast, so a client that subscribes in between

@@ -86,3 +86,23 @@ fn runner_error_diagnostics() {
     );
     assert!(not_found.help().is_some());
 }
+
+#[test]
+fn bun_runner_runs_tsci_through_bun_x() {
+    let kind = RunnerKind::Bun(PathBuf::from("/opt/fusible/bun"));
+    let cmd = build_command(&kind, Path::new("circuit.tsx"));
+
+    assert_eq!(cmd.get_program(), "/opt/fusible/bun");
+    let args: Vec<_> = cmd.get_args().collect();
+    assert_eq!(
+        args,
+        &[
+            "x",
+            "--bun",
+            "tsci",
+            "build",
+            "circuit.tsx",
+            "--ignore-errors"
+        ]
+    );
+}

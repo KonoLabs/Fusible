@@ -7,11 +7,12 @@ use super::assets::static_response;
 use super::bind::bind;
 use super::bodies;
 use super::bom;
+use super::desktop::{announce_ready, exit_on_stdin_eof};
 use super::firmware;
 use super::guard::{is_allowed_host, is_same_origin};
 use super::hub::stream_events;
 use super::limiter::handlers;
-use super::refresh::{load_bundle, rebuild_trigger, refresh, watch_dir};
+use super::refresh::{load_bundle, rebuild_trigger, refresh, warn_if_bundle_missing, watch_dir};
 use super::run_api;
 use super::state::{Slot, State};
 use super::watcher::start_file_watcher;
@@ -74,7 +75,7 @@ fn handle(request: Request, state: &State, port: u16) {
         "/events" => subscribe(request, state),
         _ => {
             let bundle = state.bundle.lock().ok().and_then(|lock| lock.clone());
-            let response = static_response(&path, bundle)
+            let response = static_response(&path, bundle, state.desktop)
                 .unwrap_or_else(|| Response::from_string("Not Found").with_status_code(404));
             let _ = request.respond(response);
         }
@@ -116,22 +117,27 @@ fn refresh_all(state: &State) {
     }
 }
 
+/// Serves the studio until the process ends.
+///
+/// With `desktop` it prints `FUSIBLE_READY {json}` once bound, serves the desktop viewer, and
+/// exits when stdin closes.
 pub fn run_dev_server(
     boards: Vec<BoardTarget>,
     asked: u16,
+    desktop: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let (server, port) = bind(asked)?;
     if port != asked {
         println!("ℹ Port {asked} is in use, using {port} instead.");
     }
-    let state = State::new(&boards);
-    load_bundle(&state);
-    if state.bundle.lock().is_ok_and(|bundle| bundle.is_none()) {
-        eprintln!(
-            "⚠ This fusible build has no studio bundle: schematic, PCB and 3D fall back to native previews. \
-Install a GitHub release binary, or run `bun install && bun run build` in studio/ and rebuild."
-        );
+    let mut state = State::new(&boards);
+    state.desktop = desktop;
+    if desktop {
+        announce_ready(port);
+        exit_on_stdin_eof();
     }
+    load_bundle(&state);
+    warn_if_bundle_missing(&state);
     refresh_all(&state);
     println!("⚡ Fusible Dev Server running at http://localhost:{port} (press Ctrl+C to quit)");
     let _watchers = state

@@ -53,6 +53,10 @@ pub enum Commands {
         /// Use legacy tsci dev server instead of native Fusible Studio
         #[arg(long)]
         legacy: bool,
+
+        /// Run under the desktop shell: print a ready line, exit when stdin closes
+        #[arg(long)]
+        desktop: bool,
     },
 
     /// Run the electronic linter on a circuit file or monorepo project
@@ -141,5 +145,9 @@ pub enum Commands {
         /// Automatically install tscircuit runner if missing
         #[arg(long)]
         install: bool,
+
+        /// Print the toolchain as JSON and exit 0 even when tools are missing
+        #[arg(long)]
+        json: bool,
     },
 }

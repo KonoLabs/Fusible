@@ -5,6 +5,7 @@
 //! global binaries, and on-demand runners via `bun` and `npx`.
 
 mod build;
+mod bun;
 pub mod command;
 pub mod detect;
 pub mod error;
@@ -17,6 +18,7 @@ mod tests;
 
 use std::path::{Path, PathBuf};
 
+pub use bun::bun_path;
 pub use command::{
     add_command, build_command, dev_command, export_command, install_command, search_command,
 };
@@ -31,6 +33,8 @@ pub enum RunnerKind {
     Local(PathBuf),
     /// Globally installed executable on PATH (`tsci` or `tscircuit`).
     Global(PathBuf),
+    /// `bun x --bun tsci`, used when no `tsci` is installed but bun is.
+    Bun(PathBuf),
 }
 
 impl RunnerKind {
@@ -39,6 +43,7 @@ impl RunnerKind {
         match self {
             Self::Local(p) => format!("local executable ({})", p.display()),
             Self::Global(p) => format!("global executable ({})", p.display()),
+            Self::Bun(p) => format!("bun x tsci via {}", p.display()),
         }
     }
 }

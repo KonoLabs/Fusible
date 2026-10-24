@@ -11,6 +11,11 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 - Windows builds: the release workflow publishes `fusible_<version>_windows_amd64.zip` (with `fusible.exe`) next to the Linux and macOS archives, and lists it in `checksums.txt`. CI runs format, clippy, and tests on `windows-latest`.
 - `.gitattributes` keeps text files on LF, so a Windows checkout compiles and tests the same bytes.
+- `fusible dev --desktop` for the desktop shell: it prints one `FUSIBLE_READY {"url","port"}` line once the server is bound, exits with code 0 when stdin closes, and serves the studio with `window.FUSIBLE_DESKTOP` set. Only then the dock shows a `PROJECTS` button that calls the shell's `open_projects` command.
+- `FUSIBLE_BUN` names the bun binary for `fusible init`, the body generator, the KiCad import, and `fusible doctor`. Before, each looked up `bun` on PATH on its own.
+- When no `tsci` is installed, runner detection falls back to `bun x --bun tsci`.
+- `fusible init --currency CODE` writes `bom.yml` with that currency. It accepts the 12 currencies the studio offers and rejects any other before writing a file.
+- `fusible doctor --json` prints `{"bun", "node", "tsci"}`, each a `{path, version}` object or null, and exits 0 when tools are missing.
 
 ### Fixed
 
@@ -18,6 +23,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 - On Windows, `fusible init` and `fusible doctor --install` resolve `npm` through `PATH`, so the `npm.cmd` shim starts.
 - On Windows, the dev file watcher compares changes against the path it was given as well as its canonical form, so edits under a `\\?\` prefix still reload.
 - On Windows, the schematic PDF export builds a `file:///C:/...` URL and also looks for Chrome and Edge in the standard install directories.
+- Price estimates follow the currency of `bom.yml` instead of staying in euros under another label. A fixed rate table covers the 12 studio currencies. Prices you type and the filament price per kg are never converted. A currency outside the table keeps euro estimates, and the report says so.
 
 ## [0.14.3] - 2026-10-24
 
