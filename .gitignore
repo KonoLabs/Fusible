@@ -4,3 +4,7 @@ dist/
 node_modules/
 src/assets/studio.bundle.js
 graft/
+desktop/ui/dist/
+desktop/src-tauri/target/
+desktop/src-tauri/gen/
+desktop/src-tauri/binaries/
