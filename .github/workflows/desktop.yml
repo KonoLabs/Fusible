@@ -5,6 +5,11 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to attach the installers to (empty builds without publishing)"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -79,6 +84,12 @@ jobs:
           bun install --frozen-lockfile
           bun run build
 
+      - name: Build the desktop pages
+        working-directory: desktop/ui
+        run: |
+          bun install --frozen-lockfile
+          bun run build
+
       - name: Build fusible
         if: runner.os != 'macOS'
         run: cargo build --release --locked
@@ -132,7 +143,7 @@ jobs:
   publish:
     name: attach to the release
     needs: bundle
-    if: github.ref_type == 'tag'
+    if: github.ref_type == 'tag' || inputs.tag != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v8
@@ -143,15 +154,16 @@ jobs:
       - name: Upload installers and checksums
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           cd out
           sha256sum Fusible-Studio-* > desktop-checksums.txt
           cat desktop-checksums.txt
-          gh release create "$GITHUB_REF_NAME" \
+          gh release create "$RELEASE_TAG" \
             --repo "$GITHUB_REPOSITORY" \
-            --title "$GITHUB_REF_NAME" \
+            --title "$RELEASE_TAG" \
             --generate-notes || true
-          gh release upload "$GITHUB_REF_NAME" \
+          gh release upload "$RELEASE_TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --clobber \
             Fusible-Studio-* desktop-checksums.txt
