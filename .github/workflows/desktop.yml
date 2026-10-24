@@ -59,6 +59,12 @@ jobs:
         with:
           targets: ${{ matrix.rust_targets }}
 
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            desktop/src-tauri -> target
+
       - uses: oven-sh/setup-bun@v2
 
       - name: Install Linux libraries

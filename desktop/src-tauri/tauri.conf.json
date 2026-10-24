@@ -37,6 +37,9 @@
       "icons/icon.ico"
     ],
     "externalBin": ["binaries/fusible", "binaries/bun"],
+    "macOS": {
+      "signingIdentity": "-"
+    },
     "windows": {
       "nsis": {
         "installMode": "currentUser"
