@@ -31,6 +31,10 @@ jobs:
             target: x86_64-unknown-linux-gnu
             os_name: linux
             arch: amd64
+          - runner: windows-latest
+            target: x86_64-pc-windows-msvc
+            os_name: windows
+            arch: amd64
     steps:
       - uses: actions/checkout@v7
 
@@ -41,6 +45,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
 
       - name: Build studio bundle
+        shell: bash
         working-directory: studio
         run: |
           bun install --frozen-lockfile
@@ -50,17 +55,23 @@ jobs:
         run: cargo build --release --locked --target ${{ matrix.target }}
 
       - name: Package
+        shell: bash
         run: |
           version="${GITHUB_REF_NAME#v}"
-          archive="fusible_${version}_${{ matrix.os_name }}_${{ matrix.arch }}.tar.gz"
-          tar -czf "$archive" -C "target/${{ matrix.target }}/release" fusible
+          base="fusible_${version}_${{ matrix.os_name }}_${{ matrix.arch }}"
           mkdir -p dist
-          mv "$archive" dist/
+          if [ "${{ matrix.os_name }}" = "windows" ]; then
+            (cd "target/${{ matrix.target }}/release" && 7z a -tzip "$GITHUB_WORKSPACE/dist/$base.zip" fusible.exe)
+          else
+            tar -czf "dist/$base.tar.gz" -C "target/${{ matrix.target }}/release" fusible
+          fi
 
       - uses: actions/upload-artifact@v7
         with:
           name: fusible-${{ matrix.os_name }}-${{ matrix.arch }}
-          path: dist/*.tar.gz
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
           retention-days: 1
 
   release:
@@ -75,7 +86,7 @@ jobs:
       - name: Generate checksums
         run: |
           cd dist
-          sha256sum *.tar.gz > checksums.txt
+          sha256sum *.tar.gz *.zip > checksums.txt
           cat checksums.txt
 
       - name: Publish release
@@ -86,11 +97,11 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --title "$GITHUB_REF_NAME" \
             --generate-notes \
-            dist/*.tar.gz dist/checksums.txt || \
+            dist/*.tar.gz dist/*.zip dist/checksums.txt || \
           gh release upload "$GITHUB_REF_NAME" \
             --repo "$GITHUB_REPOSITORY" \
             --clobber \
-            dist/*.tar.gz dist/checksums.txt
+            dist/*.tar.gz dist/*.zip dist/checksums.txt
 
   publish-crate:
     name: crates.io
