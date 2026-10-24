@@ -41,6 +41,13 @@ pub(super) fn project_json(state: &State, cfg: Option<&FusibleConfig>, root: &Pa
     .to_string()
 }
 
+fn shown(path: &Path, root: &Path) -> String {
+    path.strip_prefix(root)
+        .unwrap_or(path)
+        .to_string_lossy()
+        .replace('\\', "/")
+}
+
 fn board_items(state: &State, root: &Path) -> Vec<Value> {
     state
         .slots
@@ -49,7 +56,7 @@ fn board_items(state: &State, root: &Path) -> Vec<Value> {
             let health = slot.health();
             json!({
                 "name": slot.name,
-                "entry": slot.entry.strip_prefix(root).unwrap_or(&slot.entry),
+                "entry": shown(&slot.entry, root),
                 "fuse_blown": health.fuse_blown,
                 "violations": health.violations,
                 "pending": !slot.is_ready(),
@@ -62,7 +69,7 @@ fn firmware_item(name: &str, fw: &FirmwareConfig, root: &Path) -> Value {
     json!({
         "name": name,
         "board": fw.board,
-        "path": fw.path.as_deref().map(|p| p.strip_prefix(root).unwrap_or(p)),
+        "path": fw.path.as_deref().map(|p| shown(p, root)),
         "framework": fw.framework,
         "buildable": fw.build_cmd.is_some(),
     })
@@ -74,10 +81,7 @@ fn body_item(name: &str, body: &BodyConfig, root: &Path) -> Value {
     } else {
         "generated"
     };
-    let source = body
-        .source
-        .as_deref()
-        .map(|p| p.strip_prefix(root).unwrap_or(p));
+    let source = body.source.as_deref().map(|p| shown(p, root));
     let exists = body.source.as_deref().map(Path::is_file);
     json!({
         "name": name,
