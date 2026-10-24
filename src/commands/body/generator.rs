@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 use super::generator_setup::prepare_generator;
 use super::spec::Spec;
 use super::BodyError;
-use crate::tscircuit::detect::find_binary_in_path;
+use crate::tscircuit::bun_path;
 
 const SCRIPT_TIMEOUT: Duration = Duration::from_secs(120);
 const MAX_STDERR: u64 = 64 * 1024;
@@ -36,9 +36,7 @@ pub(super) fn run_generator(spec: &Spec) -> Result<(), BodyError> {
 ///
 /// Bun is killed when it runs longer than [`SCRIPT_TIMEOUT`].
 pub(super) fn run_script(script: &str, payload: &[u8]) -> Result<(), BodyError> {
-    let bun = std::env::var_os("PATH")
-        .and_then(|p| find_binary_in_path("bun", &p))
-        .ok_or(BodyError::BunMissing)?;
+    let bun = bun_path().ok_or(BodyError::BunMissing)?;
     let dir = generator_dir();
     prepare_generator(&bun, &dir)?;
     let mut child = Command::new(&bun)

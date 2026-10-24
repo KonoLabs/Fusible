@@ -3,6 +3,7 @@
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
+use crate::tscircuit::bun::resolve_bun;
 use crate::tscircuit::error::RunnerError;
 use crate::tscircuit::{Runner, RunnerKind};
 
@@ -13,6 +14,7 @@ use crate::tscircuit::{Runner, RunnerKind};
 /// 2. Local `./hardware/node_modules/.bin/tsci` or `./hardware/node_modules/.bin/tscircuit`
 /// 3. Global `tsci` on PATH
 /// 4. Global `tscircuit` on PATH
+/// 5. `bun x --bun tsci`, with bun from `FUSIBLE_BUN` or PATH
 pub fn detect_runner(current_dir: &Path, path_var: Option<&OsStr>) -> Result<Runner, RunnerError> {
     if let Some(local_path) = find_local_tsci(current_dir) {
         return Ok(Runner::new(RunnerKind::Local(local_path)));
@@ -26,7 +28,11 @@ pub fn detect_runner(current_dir: &Path, path_var: Option<&OsStr>) -> Result<Run
         }
     }
 
-    Err(RunnerError::NotFound)
+    let env_bun = std::env::var_os("FUSIBLE_BUN");
+    match resolve_bun(env_bun.as_deref(), path_var) {
+        Some(bun) => Ok(Runner::new(RunnerKind::Bun(bun))),
+        None => Err(RunnerError::NotFound),
+    }
 }
 
 /// Checks for local tsci/tscircuit relative to the given directory or hardware subdirectory.

@@ -8,12 +8,12 @@ use crate::tscircuit::detect::detect_runner;
 use crate::tscircuit::error::RunnerError;
 use crate::tscircuit::RunnerKind;
 
-struct TempDirGuard {
-    path: PathBuf,
+pub(super) struct TempDirGuard {
+    pub(super) path: PathBuf,
 }
 
 impl TempDirGuard {
-    fn new(prefix: &str) -> Self {
+    pub(super) fn new(prefix: &str) -> Self {
         let unique = format!(
             "{prefix}_{}_{}",
             std::process::id(),
@@ -34,7 +34,7 @@ impl Drop for TempDirGuard {
     }
 }
 
-fn create_executable(path: &Path) {
+pub(super) fn create_executable(path: &Path) {
     if let Some(parent) = path.parent() {
         create_dir_all(parent).unwrap();
     }

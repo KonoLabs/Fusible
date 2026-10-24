@@ -113,8 +113,9 @@ fn assemble_node_path() -> Result<std::ffi::OsString, String> {
 /// Runs `script` with bun, falling back to node.
 fn run_script_with_runners(script: &str, node_path: &std::ffi::OsStr) -> Result<(), String> {
     let mut last_error = "neither bun nor node is installed".to_string();
-    for runner_bin in ["bun", "node"] {
-        let out = std::process::Command::new(runner_bin)
+    let bun = super::bun_path().unwrap_or_else(|| PathBuf::from("bun"));
+    for runner_bin in [bun, PathBuf::from("node")] {
+        let out = std::process::Command::new(&runner_bin)
             .arg("-e")
             .arg(script)
             .env("NODE_PATH", node_path)
@@ -123,7 +124,8 @@ fn run_script_with_runners(script: &str, node_path: &std::ffi::OsStr) -> Result<
             Ok(out) if out.status.success() => return Ok(()),
             Ok(out) => {
                 last_error = format!(
-                    "{runner_bin} could not run kicad-to-circuit-json: {}",
+                    "{} could not run kicad-to-circuit-json: {}",
+                    runner_bin.display(),
                     String::from_utf8_lossy(&out.stderr).trim()
                 )
             }
