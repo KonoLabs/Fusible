@@ -9,7 +9,9 @@ use std::collections::BTreeMap;
 
 use serde::Deserialize;
 
-use super::types::{BoardConfig, BodyConfig, EnclosureConfig, FirmwareConfig, LinkConfig};
+use super::types::{
+    AssemblyConfig, BoardConfig, BodyConfig, EnclosureConfig, FirmwareConfig, LinkConfig,
+};
 use super::FusibleConfig;
 
 /// Board name given to the legacy `hardware:` section.
@@ -30,6 +32,8 @@ pub(super) struct RawConfig {
     bodies: BTreeMap<String, BodyConfig>,
     #[serde(default)]
     links: BTreeMap<String, LinkConfig>,
+    #[serde(default)]
+    assembly: Option<AssemblyConfig>,
     #[serde(default)]
     hardware: Option<BoardConfig>,
     #[serde(default)]
@@ -66,6 +70,7 @@ impl RawConfig {
             firmware,
             bodies,
             links: self.links,
+            assembly: self.assembly,
         })
     }
 }

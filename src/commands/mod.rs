@@ -1,6 +1,7 @@
 //! CLI subcommands implementation.
 
 pub mod add;
+pub mod assembly;
 pub mod body;
 pub mod bom;
 pub mod build;

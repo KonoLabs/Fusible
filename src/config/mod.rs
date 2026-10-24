@@ -3,6 +3,8 @@
 //! Provides types for project configuration, discovery via ancestor directory
 //! traversal, parsing via `serde_yaml`, and starter templates for `fusible init`.
 
+#[cfg(test)]
+mod assembly_tests;
 mod discovery;
 pub mod error;
 #[cfg(test)]
@@ -27,7 +29,8 @@ pub use error::ConfigError;
 use raw::RawConfig;
 pub use raw::LEGACY_BOARD;
 pub use types::{
-    BoardConfig, BodyConfig, EnclosureConfig, FirmwareConfig, LinkConfig, PinId, WireConfig,
+    AssemblyConfig, BoardConfig, BodyConfig, EnclosureConfig, FirmwareConfig, LinkConfig, PinId,
+    PlacementConfig, WireConfig,
 };
 pub use validate::GENERATORS;
 
@@ -44,6 +47,7 @@ pub struct FusibleConfig {
     pub firmware: BTreeMap<String, FirmwareConfig>,
     pub bodies: BTreeMap<String, BodyConfig>,
     pub links: BTreeMap<String, LinkConfig>,
+    pub assembly: Option<AssemblyConfig>,
 }
 
 impl FusibleConfig {
@@ -91,6 +95,9 @@ impl FusibleConfig {
         for body in self.bodies.values_mut() {
             rebase(&mut body.source);
             rebase(&mut body.enclosure.out_dir);
+        }
+        if let Some(assembly) = self.assembly.as_mut() {
+            rebase(&mut assembly.out_dir);
         }
         self
     }

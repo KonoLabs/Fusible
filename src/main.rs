@@ -67,6 +67,7 @@ fn run_command(command: Commands) -> ExitCode {
         Commands::Build { file } => dispatch::build(file),
         Commands::Export(args) => dispatch::export(args),
         Commands::Body(args) => dispatch::body(args),
+        Commands::Assembly(args) => dispatch::assembly(args),
         Commands::Bom(args) => tool_exit(commands::bom::run(args)),
         Commands::Route(args) => dispatch::route(args),
         Commands::Diff { kicad_pcb, file } => dispatch::diff(kicad_pcb, file),

@@ -255,6 +255,36 @@ fusible body kit sensor                   # reference kit in bodies/kit/sensor/
 - `kit` writes `kit.json` for people who model from scratch: the board `outline` and `thickness`, every `hole`, every component footprint (with `z` and `height` when the part has a 3D model), a `keep_out` box per modeled part (`z0` to `z1`), and the wall `openings` where a component reaches an edge. The `notch` block holds the generator's constants. Units are mm in the PCB frame. `board.step` is added for TSX entries when a runner is installed.
 - `eject` and `kit` are reserved. A body with either name is rejected.
 
+### `assembly`: boards and bodies in one model
+
+```yaml
+assembly:
+  out_dir: dist          # default: dist
+  format: glb            # glb, step, or all; default: glb
+  parts:
+    main:   { at: [0, 0, 0] }
+    sensor: { at: [0, 0, 12], rotate: [0, 0, 90] }
+    enclosure: {}        # a body follows the board it is modeled on
+```
+
+```sh
+fusible assembly             # writes dist/assembly.glb
+fusible asm -f all -o out    # assembly.glb and assembly.step in out/
+```
+
+Units are mm. `rotate` is in degrees around the fixed X, then Y, then Z axes,
+and applies before `at`. A body with a board (its `board:`, or the only board
+for a generated body) sits on that board, and its own `at` and `rotate` are
+added on top. That board must be a part too. A body without a board needs an
+`at`. A board left out of `parts` is not drawn.
+
+The command is fuse-gated: every board it draws, and every board a generated
+body is fitted to, passes `check` first (`--skip-lint` skips it). A board needs
+its `.tsx` entry and a tscircuit runner, which exports its STEP model. A
+generated body is rebuilt for the assembly; an authored body is read from its
+`source:` (STEP or STL) after its `build:` runs. The models of each part land in
+`dist/assembly/`. Like `body`, it needs `bun` and `occt-wasm`.
+
 ### `bom`: parts and costs
 
 ```sh

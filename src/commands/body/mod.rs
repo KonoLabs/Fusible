@@ -22,6 +22,7 @@ mod kit_levels;
 mod layout;
 mod settings;
 mod spec;
+mod step;
 mod yaml_lines;
 
 #[cfg(test)]
@@ -53,12 +54,13 @@ use crate::gerber::PcbModel;
 pub(crate) use convert::convert_to_glb;
 pub use eject::eject;
 pub use error::BodyError;
-pub(crate) use generator::generator_dir;
 use generator::run_generator;
+pub(crate) use generator::{generator_dir, run_script};
 use jobs::{select_jobs, Job};
 pub use kit::kit;
 use settings::{preview_settings, resolve_settings, Settings};
 use spec::{build_spec, preview_from, Output, Spec};
+pub(crate) use step::generate_step;
 
 const FORMATS: &[&str] = &["step", "stl", "glb", "brep"];
 const DEFAULT_WALL: f64 = 2.0;
@@ -119,7 +121,8 @@ pub fn run(
     Ok(())
 }
 
-fn build_authored(name: &str, body: &BodyConfig, root: &Path) -> Result<(), BodyError> {
+/// Runs the `build:` command of an authored body from `root`, then checks that its `source` exists.
+pub(crate) fn build_authored(name: &str, body: &BodyConfig, root: &Path) -> Result<(), BodyError> {
     let path = body.source.clone().unwrap_or_default();
     if let Some(command) = &body.build {
         println!("🛠️  Building body `{name}`: \"{command}\"...");

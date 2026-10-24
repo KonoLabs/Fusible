@@ -7,7 +7,7 @@ pub use body::body;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use crate::cli::{ExportArgs, RouteArgs, SyncArgs};
+use crate::cli::{AssemblyArgs, ExportArgs, RouteArgs, SyncArgs};
 use crate::commands;
 use crate::commands::check::CheckError;
 use crate::router::RouteOptions;
@@ -53,6 +53,17 @@ pub fn export(args: ExportArgs) -> ExitCode {
     match commands::export::run(file, preset.as_deref(), &format, output, skip_lint) {
         Ok(()) => ExitCode::SUCCESS,
         Err(commands::export::ExportError::Check(CheckError::FuseBlown(blown))) => {
+            fail(blown, EXIT_VIOLATIONS)
+        }
+        Err(err) => fail(err, EXIT_TOOL_ERROR),
+    }
+}
+
+/// Builds the fuse-gated assembly model.
+pub fn assembly(args: AssemblyArgs) -> ExitCode {
+    match commands::assembly::run(args.format, args.output, args.skip_lint) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(commands::assembly::AssemblyError::Check(CheckError::FuseBlown(blown))) => {
             fail(blown, EXIT_VIOLATIONS)
         }
         Err(err) => fail(err, EXIT_TOOL_ERROR),

@@ -1,5 +1,6 @@
 //! Named manifest sections: boards, firmware, and bodies.
 
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use serde::Deserialize;
@@ -85,6 +86,33 @@ pub struct EnclosureConfig {
     /// Add screw bosses under every `pcb_hole` of the board.
     #[serde(default)]
     pub mounting: Option<bool>,
+}
+
+/// Where one board or body sits in the assembly: a translation in mm and rotations in degrees.
+///
+/// Rotations turn around the fixed X, then Y, then Z axes, and apply before the translation.
+#[derive(Debug, Clone, Deserialize, Default, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct PlacementConfig {
+    #[serde(default)]
+    pub at: Option<[f64; 3]>,
+    #[serde(default)]
+    pub rotate: Option<[f64; 3]>,
+}
+
+/// Boards and bodies placed in one coordinate frame and exported as one model.
+#[derive(Debug, Clone, Deserialize, Default, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct AssemblyConfig {
+    /// Directory receiving `assembly.<format>`.
+    #[serde(default, alias = "out-dir")]
+    pub out_dir: Option<PathBuf>,
+    /// Export format: `glb`, `step`, or `all`.
+    #[serde(default)]
+    pub format: Option<String>,
+    /// Board and body names, each with its placement.
+    #[serde(default)]
+    pub parts: BTreeMap<String, PlacementConfig>,
 }
 
 /// A pin of a connector, written as a number (`1`) or a name (`GND`).

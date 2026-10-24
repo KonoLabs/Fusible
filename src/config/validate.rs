@@ -2,7 +2,7 @@
 
 use std::collections::BTreeSet;
 
-use super::types::{BodyConfig, LinkConfig};
+use super::types::{AssemblyConfig, BodyConfig, LinkConfig};
 use super::FusibleConfig;
 
 /// Generators a body can name in `generate:`.
@@ -26,6 +26,41 @@ pub(super) fn validate(cfg: &FusibleConfig) -> Result<(), String> {
     }
     for (name, link) in &cfg.links {
         link_ends(cfg, name, link)?;
+    }
+    if let Some(assembly) = &cfg.assembly {
+        assembly_parts(cfg, assembly)?;
+    }
+    Ok(())
+}
+
+fn assembly_parts(cfg: &FusibleConfig, assembly: &AssemblyConfig) -> Result<(), String> {
+    if assembly.parts.is_empty() {
+        return Err("`assembly` has no parts; list the boards and bodies to place".into());
+    }
+    for (name, placement) in &assembly.parts {
+        if cfg.boards.contains_key(name) {
+            continue;
+        }
+        let Some(body) = cfg.bodies.get(name) else {
+            return Err(format!(
+                "assembly part `{name}` is not a board or a body of this project"
+            ));
+        };
+        match cfg.body_board(body) {
+            _ if placement.at.is_some() => {}
+            None => {
+                return Err(format!(
+                    "assembly part `{name}` is a body without a board; give it an `at` position or a `board:`"
+                ))
+            }
+            Some(board) if !assembly.parts.contains_key(board) => {
+                return Err(format!(
+                    "assembly part `{name}` sits on board `{board}`, which is not in the assembly; \
+                     add `{board}` to the parts or give `{name}` an `at` position"
+                ))
+            }
+            Some(_) => {}
+        }
     }
     Ok(())
 }

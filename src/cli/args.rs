@@ -27,6 +27,21 @@ pub struct ExportArgs {
     pub skip_lint: bool,
 }
 
+#[derive(Debug, Args, PartialEq)]
+pub struct AssemblyArgs {
+    /// Output format: glb, step, or all [default: glb]
+    #[arg(short = 'f', long)]
+    pub format: Option<String>,
+
+    /// Output directory [default: dist]
+    #[arg(short = 'o', long)]
+    pub output: Option<PathBuf>,
+
+    /// Skip electrical rule verification before building the assembly
+    #[arg(long)]
+    pub skip_lint: bool,
+}
+
 /// Output format of `fusible bom`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
 pub enum BomFormat {

@@ -35,7 +35,7 @@ pub(super) fn run_generator(spec: &Spec) -> Result<(), BodyError> {
 /// Runs the embedded script `script` under bun with `payload` on stdin; stdout is discarded.
 ///
 /// Bun is killed when it runs longer than [`SCRIPT_TIMEOUT`].
-pub(super) fn run_script(script: &str, payload: &[u8]) -> Result<(), BodyError> {
+pub(crate) fn run_script(script: &str, payload: &[u8]) -> Result<(), BodyError> {
     let bun = bun_path().ok_or(BodyError::BunMissing)?;
     let dir = generator_dir();
     prepare_generator(&bun, &dir)?;

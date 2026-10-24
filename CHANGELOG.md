@@ -10,6 +10,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 ### Added
 
 - The repository is a GitHub Action (`uses: KonoLabs/Fusible@vX.Y.Z`). It installs a release binary, sets up bun, runs `fusible check`, and fails the job when the fuse blows. Inputs: `target`, `version`, `working-directory`, `install-deps`. The `fuse` output is `intact`, `blown`, or `error`.
+- `assembly:` in `fusible.yml` places boards and bodies in one frame with `at` (mm) and `rotate` (degrees around X, then Y, then Z). `fusible assembly` (alias `asm`) writes `dist/assembly.glb` and/or `dist/assembly.step`, one named part per board and body. A body follows the board it is modeled on. It is fuse-gated, and it fails closed on a part that is neither a board nor a body, a body with no board and no `at`, and a board without a `.tsx` entry.
 
 ## [0.16.0] - 2026-10-24
 
