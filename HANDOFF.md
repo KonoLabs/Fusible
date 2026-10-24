@@ -19,7 +19,7 @@ Ordered by risk to the fuse contract (exit 0 must mean the design is sound).
 
 1. **Nets do not merge.** When one trace joins ports already on two different nets, `src/netlist/builder.rs` keeps two nets. Use union-find. This can hide a short or a floating net.
 2. **MCU selection by substring.** `select_mcu_component` in `src/codegen/pins.rs` picks any component whose name contains `mcu`, so a capacitor named `C_MCU` can become the MCU. Prefer the `mcu.chip` target and the `simple_chip` ftype.
-3. **KiCad diff accepts invalid JSON.** `compare_kicad_with_circuit` treats unparseable Circuit JSON as an empty circuit. Fixing it changes signatures in `src/commands/diff.rs` and `src/commands/sync.rs`.
+3. ~~KiCad diff accepts invalid JSON.~~ Fixed: `diff` and `sync` exit 2 on bad Circuit JSON (`tests/subcommands.rs`), and the studio watch uses `compare_board`, which fails closed.
 4. **STM32G431 pin table is partial.** Unlisted `Pxn` pins now fail as "unknown pin", which is safe but blocks real STM32 boards. Complete `src/silicon/database/stm32.rs` from the datasheet.
 5. **Validate Gerbers with a real viewer.** All Gerber fixes were checked against the Ucamco spec, never rendered. Add `gerbv` (or similar) to CI on a fixture board, or upload one export to a fab's online viewer.
 6. **Gerber gaps.** Polygon pads are rejected. Rounded-rect pads are drawn square. Silkscreen text never reaches `F_Silk.gbr`.

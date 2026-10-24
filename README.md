@@ -186,6 +186,14 @@ fusible sync path/to/board.kicad_pcb --write
 fusible sync path/to/board.kicad_pcb --dry-run
 ```
 
+While the studio runs, it also watches the board's KiCad file. KiCad owns placement, the TSX owns parts and nets:
+
+- Name the file per board with `kicad: hardware/kicad/board.kicad_pcb` in `fusible.yml`. Without it, the studio uses the single `.kicad_pcb` beside the entry file or in a `kicad/` folder next to it.
+- When you save in KiCad, the studio rewrites the plain-number `pcbX`, `pcbY` and `pcbRotation` props of the moved parts in your TSX, then rebuilds. A prop written as an expression (`pcbX={base + 2}`), a part without those props, or a flip to the other side is left alone and listed as a difference.
+- Before it writes a TSX file, the studio copies it to `.fusible/backup/<board>-<file>-<timestamp>.tsx` and keeps the last 10 per file. `fusible init` adds `.fusible/` to `.gitignore`.
+- Added, removed or renamed parts and changed nets are never written. The studio shows a `KICAD: n DIFFERENCES` chip next to the fuse badge; click it for the list. `KICAD: ERROR` means the KiCad file or the Circuit JSON could not be read.
+- The studio pushes each change of that state as a `sync` event on `/events`, and serves it at `GET /api/kicad`.
+
 ### 5. Build (`build`)
 
 Evaluates the boards, lints electrical rules, generates typed firmware pin bindings (`pins.rs`), and compiles firmware only if every board keeps the fuse intact:
