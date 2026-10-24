@@ -1,7 +1,9 @@
 import { loadAll } from "./actions";
 import { clear } from "./dom";
+import { openFolderFlow } from "./folder";
 import { installKeys } from "./keys";
 import { closeMenu } from "./menu";
+import { openNewProject } from "./newProject";
 import { projectsView } from "./projects";
 import { settingsView } from "./settings";
 import { onChange, state, update } from "./store";
@@ -25,7 +27,18 @@ function render(): void {
   restoreFocus(path);
 }
 
+function menuAction(): boolean {
+  const action = location.hash;
+  if (action !== "#new" && action !== "#open") return false;
+  history.replaceState(null, "", location.pathname);
+  update({ view: "projects" });
+  if (action === "#new") openNewProject();
+  else void openFolderFlow();
+  return true;
+}
+
 function route(): void {
+  if (menuAction()) return;
   const view = location.hash === "#settings" ? "settings" : "projects";
   if (view === state.view && state.loaded) return;
   update({ view });

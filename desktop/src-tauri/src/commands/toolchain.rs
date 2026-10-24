@@ -27,5 +27,17 @@ pub async fn toolchain_status<R: Runtime>(app: AppHandle<R>) -> Result<Value, St
     let mut report: Value = serde_json::from_slice(&output.stdout)
         .map_err(|_| String::from_utf8_lossy(&output.stderr).trim().to_string())?;
     report["bundled_bun"] = bundled_bun_version(&app).await;
+    report["fusible_version"] = fusible_version(&app, &cwd).await;
     Ok(report)
+}
+
+async fn fusible_version<R: Runtime>(app: &AppHandle<R>, cwd: &std::path::Path) -> Value {
+    let output = match sidecar::fusible(app, cwd) {
+        Ok(command) => command.args(["--version"]).output().await.ok(),
+        Err(_) => None,
+    };
+    output
+        .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_string())
+        .and_then(|text| text.split_whitespace().last().map(str::to_string))
+        .map_or(Value::Null, Value::from)
 }
