@@ -34,6 +34,14 @@ impl Drop for TempDirGuard {
     }
 }
 
+fn shim(name: &str) -> String {
+    if cfg!(windows) {
+        format!("{name}.cmd")
+    } else {
+        name.to_string()
+    }
+}
+
 fn create_executable(path: &Path) {
     if let Some(parent) = path.parent() {
         create_dir_all(parent).unwrap();
@@ -52,11 +60,11 @@ fn create_executable(path: &Path) {
 #[test]
 fn detects_local_node_modules_tsci_first() {
     let temp = TempDirGuard::new("fusible_detect_local");
-    let local_bin = temp.path.join("node_modules/.bin/tsci");
+    let local_bin = temp.path.join("node_modules/.bin").join(shim("tsci"));
     create_executable(&local_bin);
 
     let global_dir = temp.path.join("global");
-    create_executable(&global_dir.join("tsci"));
+    create_executable(&global_dir.join(shim("tsci")));
 
     let path_os = std::env::join_paths([&global_dir]).unwrap();
     let runner = detect_runner(&temp.path, Some(&path_os)).expect("runner detected");
@@ -68,7 +76,7 @@ fn detects_local_node_modules_tsci_first() {
 fn detects_global_tsci_when_local_absent() {
     let temp = TempDirGuard::new("fusible_detect_global");
     let global_dir = temp.path.join("global");
-    let global_bin = global_dir.join("tsci");
+    let global_bin = global_dir.join(shim("tsci"));
     create_executable(&global_bin);
 
     let path_os = std::env::join_paths([&global_dir]).unwrap();
@@ -81,7 +89,7 @@ fn detects_global_tsci_when_local_absent() {
 fn detects_global_tscircuit_when_tsci_absent() {
     let temp = TempDirGuard::new("fusible_detect_tscircuit");
     let global_dir = temp.path.join("global");
-    let global_bin = global_dir.join("tscircuit");
+    let global_bin = global_dir.join(shim("tscircuit"));
     create_executable(&global_bin);
 
     let path_os = std::env::join_paths([&global_dir]).unwrap();
