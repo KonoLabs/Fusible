@@ -60,7 +60,8 @@
     const cell = (label, value, cls = '') => `<div class="${cls}"><span>${label}</span><b>${price(value)} ${unit}</b></div>`;
     const missing = t.unpriced ? `<div class="bom-warn">${t.unpriced} PICKED LINE(S) HAVE NO PRICE YET</div>` : '';
     const guessed = t.estimated ? `<div class="bom-warn bom-note">${t.estimated} PICKED LINE(S) USE AN ESTIMATE (~). TYPE A PRICE TO REPLACE IT.</div>` : '';
-    return `<div class="bom-sum">${cell('ELECTRONICS', t.electronics)}${cell('3D PRINTS', t.printed)}${cell('OTHER PARTS', t.manual)}${cell('TOTAL', t.total, 'bom-grand')}</div>${missing}${guessed}`;
+    const rate = report.estimate_currency !== report.currency ? `<div class="bom-warn bom-note">ESTIMATES ARE IN ${escapeHtml(report.estimate_currency)}: NO RATE FOR ${escapeHtml(report.currency)}.</div>` : '';
+    return `<div class="bom-sum">${cell('ELECTRONICS', t.electronics)}${cell('3D PRINTS', t.printed)}${cell('OTHER PARTS', t.manual)}${cell('TOTAL', t.total, 'bom-grand')}</div>${missing}${guessed}${t.estimated ? rate : ''}`;
   }
 
   const GROUPS = [['component', 'ELECTRONICS'], ['print', '3D PRINTS'], ['manual', 'OTHER PARTS']];
@@ -87,7 +88,7 @@
 
   function settingsHtml(data) {
     return `<div class="bom-settings">
-      <label>CURRENCY <select id="bom-currency" title="Only the label changes. Prices are not converted.">${currencyOptions(data.report.currency)}</select></label>
+      <label>CURRENCY <select id="bom-currency" title="Your prices are never converted. Estimates (~) follow the currency.">${currencyOptions(data.report.currency)}</select></label>
       <label>FILAMENT PER KG <input id="bom-kg" type="number" min="0" step="0.5" value="${data.report.price_per_kg}" class="bom-num"></label>
       <label class="bom-add">ADD A PART <input id="bom-new" placeholder="M3 screw" class="bom-wide"></label>
       <button class="btn" id="bom-add">ADD</button>

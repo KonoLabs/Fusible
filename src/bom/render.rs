@@ -67,6 +67,12 @@ pub fn table(report: &Report) -> String {
             t.estimated
         ));
     }
+    if t.estimated > 0 && report.estimate_currency != report.currency {
+        out.push(format!(
+            "estimates are in {}: no rate for {}",
+            report.estimate_currency, report.currency
+        ));
+    }
     out.join("\n") + "\n"
 }
 
