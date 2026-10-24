@@ -35,5 +35,5 @@ export function shortenPath(path: string, max = 42): string {
   const tail = parts.slice(-2).join(sep);
   const head = parts[0] === "" ? sep + (parts[1] ?? "") : parts[0];
   const short = `${head}${sep}...${sep}${tail}`;
-  return short.length <= max ? short : `...${sep}${tail}`.slice(-max);
+  return short.length <= max ? short : `...${sep}${tail}`;
 }

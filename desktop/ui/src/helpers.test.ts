@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { countsLabel } from "./labels";
 import { finalPath, shortenPath, suggestName } from "./path";
+import { toolchainReport } from "./report";
 import { relativeTime } from "./time";
 import { validateName, validatePort } from "./validate";
 
@@ -48,6 +49,16 @@ describe("relativeTime", () => {
   });
   test("accepts epoch seconds", () => {
     expect(relativeTime(String(Math.floor(now / 1000) - 7200), now)).toBe("Opened 2 hours ago");
+  });
+});
+
+describe("toolchainReport", () => {
+  test("lists found and missing tools", () => {
+    const text = toolchainReport({ bun: { path: "/b/bun", version: "1.2.0" }, node: null, tsci: null }, "0.1.0");
+    expect(text).toContain("Fusible Studio 0.1.0");
+    expect(text).toContain("bun: 1.2.0 (/b/bun)");
+    expect(text).toContain("node: not found");
+    expect(text).toContain("bundled bun: none");
   });
 });
 
