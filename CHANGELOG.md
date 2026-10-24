@@ -7,6 +7,18 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-10-24
+
+### Added
+
+- `links:` in `fusible.yml` declares board-to-board wiring: a connector of one board cabled to a connector of another, with one entry per wire. The `harness_mismatch` rule blows the fuse when a connector or pin does not exist, a pin is wired to nothing, or the nets at the two ends differ. `net:` and `nets: [A, B]` state the expected names. It runs in `fusible check` and `fusible build` once every board is checked.
+- `fusible body kit` writes `z` and `height` for each component that has a 3D model, a `keep_out` list of boxes (`component`, `layer`, `x`, `y`, `w`, `h`, `z0`, `z1`), and a warning for parts without a model.
+- The `BODIES` tab draws the outline of the board next to a selected authored body that names a `board:`.
+
+### Changed
+
+- The README is rewritten around the project file, the studio, and the desktop app.
+
 ## [0.15.3] - 2026-10-24
 
 ### Fixed
