@@ -41,7 +41,7 @@ export function showAuthored(tab: Tab, model: AuthoredModel): void {
   if (tab.authoredModel === model) return;
   tab.authored?.dispose();
   tab.authoredModel = model;
-  tab.authored = buildAuthoredDisplay(model.geometries);
+  tab.authored = buildAuthoredDisplay(model.geometries, model.outline);
 }
 
 /** Drops the authored body display of the tab. */

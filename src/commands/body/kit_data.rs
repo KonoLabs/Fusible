@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use serde::Serialize;
 
 use super::edges::edge_contacts;
+use super::kit_levels::{component_heights, keep_out, level_of, warnings, KitKeepOut};
 use super::spec::open_ring;
 use super::{BodyError, CLEARANCE, DEFAULT_BOARD_THICKNESS, EDGE_TOLERANCE, NOTCH_MARGIN};
 use crate::gerber::layers::{PcbComponentElm, PcbPoint};
@@ -28,6 +29,10 @@ pub(super) struct KitComponent {
     pub w: f64,
     pub h: f64,
     pub touches_edge: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub z: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub height: Option<f64>,
 }
 
 /// A wall opening: the part of a board edge a component reaches, as the generator cuts it.
@@ -74,6 +79,7 @@ pub(super) struct Kit {
     pub thickness: f64,
     pub holes: Vec<KitHole>,
     pub components: Vec<KitComponent>,
+    pub keep_out: Vec<KitKeepOut>,
     pub openings: Vec<KitOpening>,
     pub notch: KitNotch,
     pub warnings: Vec<String>,
@@ -144,6 +150,7 @@ fn entry(
     c: &PcbComponentElm,
     outline: &[PcbPoint],
     names: &HashMap<String, String>,
+    heights: &HashMap<String, (f64, f64)>,
 ) -> Option<(KitComponent, Vec<KitOpening>)> {
     let (center, w, h) = (c.center?, c.width?, c.height?);
     let name = label(c, names);
@@ -159,7 +166,10 @@ fn entry(
             to: k.span[1],
         })
         .collect();
+    let level = level_of(c, heights);
     let component = KitComponent {
+        z: level.map(|(z, _)| z),
+        height: level.map(|(_, h)| h),
         layer: c.layer.clone().unwrap_or_else(|| "top".into()),
         touches_edge: !contacts.is_empty(),
         x: center.x,
@@ -174,6 +184,7 @@ fn entry(
 /// Builds the kit of the board in `json`; `board` is the manifest name written to the file.
 pub(super) fn build_kit(json: &str, board: Option<String>) -> Result<Kit, BodyError> {
     let names = component_names(json)?;
+    let heights = component_heights(json)?;
     let model = PcbModel::parse(json);
     let elm = model.boards.first().ok_or(BodyError::NoBoard)?;
     let outline = open_ring(elm.outline_points());
@@ -184,8 +195,10 @@ pub(super) fn build_kit(json: &str, board: Option<String>) -> Result<Kit, BodyEr
     let entries = model
         .components
         .iter()
-        .filter_map(|c| entry(c, &outline, &names));
+        .filter_map(|c| entry(c, &outline, &names, &heights));
     let (components, openings): (Vec<_>, Vec<_>) = entries.unzip();
+    let keep_out = keep_out(&components);
+    let unmeasured = components.len() - keep_out.len();
     Ok(Kit {
         board,
         units: "mm",
@@ -194,17 +207,9 @@ pub(super) fn build_kit(json: &str, board: Option<String>) -> Result<Kit, BodyEr
         thickness: elm.thickness.unwrap_or(DEFAULT_BOARD_THICKNESS),
         holes,
         components,
+        keep_out,
         openings: openings.into_iter().flatten().collect(),
         notch: KitNotch::of_the_generator(),
-        warnings: hole_warnings(skipped),
+        warnings: warnings(skipped, unmeasured),
     })
-}
-
-fn hole_warnings(skipped: usize) -> Vec<String> {
-    match skipped {
-        0 => Vec::new(),
-        n => vec![format!(
-            "{n} hole(s) have no diameter and are not in the kit"
-        )],
-    }
 }

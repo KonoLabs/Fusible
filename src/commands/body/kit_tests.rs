@@ -10,7 +10,9 @@ const BOARD: &str = r#"[
   {"type":"pcb_component","pcb_component_id":"pc1","source_component_id":"sc1",
    "center":{"x":18,"y":0},"width":6,"height":8,"layer":"top"},
   {"type":"pcb_component","pcb_component_id":"pc2","source_component_id":"sc2",
-   "center":{"x":0,"y":0},"width":2,"height":1,"layer":"bottom"}
+   "center":{"x":0,"y":0},"width":2,"height":1,"layer":"bottom"},
+  {"type":"cad_component","pcb_component_id":"pc1","position":{"x":18,"y":0,"z":3.5},"size":{"x":6,"y":8,"z":4.0}},
+  {"type":"cad_component","pcb_component_id":"pc2","position":{"x":0,"y":0,"z":-0.5},"size":{"x":2,"y":1,"z":1}}
 ]"#;
 
 #[test]
@@ -93,6 +95,7 @@ fn kit_serializes_the_documented_keys() {
         "thickness",
         "holes",
         "components",
+        "keep_out",
         "openings",
         "notch",
         "warnings",
@@ -111,4 +114,40 @@ fn kit_without_a_board_outline_is_an_error() {
         build_kit(two_points, None),
         Err(BodyError::NoBoard)
     ));
+}
+
+#[test]
+fn components_carry_their_height_and_a_keep_out_volume() {
+    let kit = build_kit(BOARD, None).unwrap();
+    let j1 = &kit.components[0];
+    assert_eq!((j1.z, j1.height), (Some(1.5), Some(4.0)));
+    assert_eq!(kit.keep_out.len(), 2);
+    let keep = &kit.keep_out[0];
+    assert_eq!(
+        (keep.component.as_str(), keep.layer.as_str()),
+        ("J1", "top")
+    );
+    assert_eq!((keep.x, keep.y, keep.w, keep.h), (18.0, 0.0, 6.0, 8.0));
+    assert_eq!((keep.z0, keep.z1), (1.5, 5.5));
+    let value = serde_json::to_value(&kit).unwrap();
+    assert_eq!(value["components"][0]["height"], 4.0);
+    assert_eq!(value["keep_out"][1]["z1"], 0.0);
+}
+
+#[test]
+fn components_without_a_model_are_listed_in_a_warning_not_in_keep_out() {
+    let board = r#"[
+      {"type":"pcb_board","width":40,"height":30,"center":{"x":0,"y":0}},
+      {"type":"pcb_component","pcb_component_id":"pc1","center":{"x":0,"y":0},"width":2,"height":1}
+    ]"#;
+    let kit = build_kit(board, None).unwrap();
+    assert!(kit.keep_out.is_empty());
+    assert_eq!(kit.components[0].height, None);
+    assert!(
+        kit.warnings[0].contains("1 component(s)"),
+        "{:?}",
+        kit.warnings
+    );
+    let value = serde_json::to_value(&kit).unwrap();
+    assert!(value["components"][0].get("height").is_none());
 }

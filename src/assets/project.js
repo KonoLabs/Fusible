@@ -112,7 +112,7 @@
 
   function applyBody(kind, item) {
     if (!window.Tscircuit) return;
-    window.Tscircuit.setMechanicalBody(kind === 'body' ? item.name : null, kind === 'body' ? item.kind : '');
+    window.Tscircuit.setMechanicalBody(kind === 'body' ? item.name : null, kind === 'body' ? item.kind : '', kind === 'body' ? item.board || '' : '');
   }
 
   function rememberItem() {

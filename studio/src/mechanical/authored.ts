@@ -1,11 +1,13 @@
 import type * as THREE from "three";
 import { fetchAuthored } from "./authoredFetch";
+import { fetchOutline } from "./boardOutline";
 import { errorMessage } from "./gltf";
 
 export interface AuthoredModel {
   key: string;
   name: string;
   geometries: THREE.BufferGeometry[];
+  outline: [number, number][];
 }
 
 export type AuthoredState =
@@ -19,6 +21,7 @@ type Listener = (state: AuthoredState) => void;
 const listeners = new Set<Listener>();
 const consumers = new Set<string>();
 let selected: string | null = null;
+let selectedBoard = "";
 let nonce = 0;
 let requested: string | null = null;
 let state: AuthoredState = { status: "idle" };
@@ -36,13 +39,14 @@ function emit(next: AuthoredState): void {
 function refresh(): void {
   if (selected === null || !consumers.size) return;
   const name = selected;
-  const key = `${name}|${nonce}`;
+  const board = selectedBoard;
+  const key = `${name}|${board}|${nonce}`;
   if (requested === key) return;
   requested = key;
   emit({ status: "loading" });
-  fetchAuthored(name, nonce).then(
-    (geometries) => {
-      if (requested === key) emit({ status: "ready", model: { key, name, geometries } });
+  Promise.all([fetchAuthored(name, nonce), fetchOutline(board)]).then(
+    ([geometries, outline]) => {
+      if (requested === key) emit({ status: "ready", model: { key, name, geometries, outline } });
       else geometries.forEach((geometry) => geometry.dispose());
     },
     (reason: unknown) => {
@@ -52,8 +56,9 @@ function refresh(): void {
 }
 
 /** Selects the authored body shown by the bodies tab; any other selection (or `null`) clears it. */
-export function setMechanicalBody(name: string | null, kind: string): void {
+export function setMechanicalBody(name: string | null, kind: string, board = ""): void {
   selected = name !== null && kind === "authored" ? name : null;
+  selectedBoard = selected === null ? "" : board;
   nonce++;
   requested = null;
   if (selected === null) emit({ status: "idle" });

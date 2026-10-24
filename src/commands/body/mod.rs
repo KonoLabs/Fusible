@@ -18,6 +18,7 @@ mod generator_setup;
 mod jobs;
 mod kit;
 mod kit_data;
+mod kit_levels;
 mod layout;
 mod settings;
 mod spec;
