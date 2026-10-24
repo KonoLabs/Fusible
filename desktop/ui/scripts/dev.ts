@@ -1,7 +1,7 @@
 import { watch } from "node:fs";
 import { build } from "./build";
 
-const root = new URL("..", import.meta.url).pathname;
+const root = `${import.meta.dir}/../`;
 process.env.FUSIBLE_UI_DEV = "1";
 await build();
 

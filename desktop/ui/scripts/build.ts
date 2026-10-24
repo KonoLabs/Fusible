@@ -1,6 +1,6 @@
 import { cpSync, mkdirSync, rmSync } from "node:fs";
 
-const root = new URL("..", import.meta.url).pathname;
+const root = `${import.meta.dir}/../`;
 const dist = `${root}dist`;
 
 export async function build(): Promise<void> {

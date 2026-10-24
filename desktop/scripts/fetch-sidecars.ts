@@ -55,6 +55,10 @@ async function universalMacos(): Promise<void> {
     mkdirSync(dir);
     buns.push(await downloadBun(triple, dir));
   }
+  triples.forEach((triple, i) => {
+    installExecutable(builtFusible(triple), "fusible", triple);
+    installExecutable(buns[i], "bun", triple);
+  });
   lipo(triples.map(builtFusible), "fusible");
   lipo(buns, "bun");
   rmSync(work, { recursive: true, force: true });
