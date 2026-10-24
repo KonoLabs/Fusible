@@ -10,6 +10,8 @@ mod placements;
 mod report;
 pub mod sexpr;
 pub mod sync;
+mod tsx;
+mod tsx_tag;
 
 #[cfg(test)]
 mod backup_tests;
@@ -25,6 +27,8 @@ mod locate_tests;
 mod sexpr_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tsx_tests;
 
 pub use backup::{backup_file, BACKUP_KEEP};
 pub use diff::{

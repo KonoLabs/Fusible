@@ -5,8 +5,14 @@ use super::kicad_status::KicadStates;
 use super::kicad_sync::{evaluate, sync_slot};
 use super::kicad_watch::start_kicad_watcher;
 use super::state::State;
-use super::watcher::is_relevant_change;
 use crate::commands::target::BoardTarget;
+
+const TSX: &str = r#"<board>
+  <resistor name="R1" pcbX={0} pcbY={0} />
+  <resistor name="R2" pcbX={3} pcbY={0} />
+  <resistor name="R3" pcbX={6} pcbY={0} />
+</board>
+"#;
 
 const CIRCUIT: &str = r#"[
   {"type":"source_component","source_component_id":"a","name":"R1"},
@@ -62,18 +68,18 @@ fn wait_for(what: &str, mut done: impl FnMut() -> bool) {
 fn saving_the_kicad_file_syncs_once_and_does_not_loop() {
     let dir = project("watch");
     write_pcb(&dir, 106.0, "");
-    let edits = dir.join("manual-edits.json");
-    std::fs::write(&edits, r#"{ "pcb_placements": [], "edit_events": [] }"#).unwrap();
+    let tsx = dir.join("index.tsx");
+    std::fs::write(&tsx, TSX).unwrap();
     let state = state_for(&dir);
     let _watcher = start_kicad_watcher(&state.slots[0], &state).expect("a board file is watched");
     write_pcb(&dir, 130.0, "");
     wait_for("the sync", || {
-        std::fs::read_to_string(&edits).is_ok_and(|text| text.contains("R3"))
+        std::fs::read_to_string(&tsx).is_ok_and(|text| text.contains(r#"name="R3" pcbX={30}"#))
     });
-    let written = std::fs::metadata(&edits).unwrap().modified().unwrap();
+    let written = std::fs::metadata(&tsx).unwrap().modified().unwrap();
     std::thread::sleep(Duration::from_millis(2000));
     assert_eq!(
-        std::fs::metadata(&edits).unwrap().modified().unwrap(),
+        std::fs::metadata(&tsx).unwrap().modified().unwrap(),
         written
     );
     let backups = std::fs::read_dir(dir.join(".fusible/backup")).unwrap();
@@ -96,7 +102,7 @@ fn a_difference_is_reported_to_the_studio_and_nothing_is_written() {
     assert!(message.contains("R9 added in KiCad"), "{message}");
     assert!(message.contains(r#""state":"differs""#), "{message}");
     sync_slot(&state.slots[0], &state);
-    assert!(!dir.join("manual-edits.json").exists());
+    assert!(!dir.join(".fusible").exists());
 }
 
 #[test]
@@ -107,12 +113,4 @@ fn unparseable_circuit_json_is_an_error_status() {
     state.slots[0].set_source(Some(r#"[{"type": "source_component""#));
     evaluate(&state.slots[0], &state);
     assert!(state.kicad.json().contains(r#""state":"error""#));
-}
-
-#[test]
-fn the_edits_file_triggers_a_rebuild_and_kicad_lock_files_do_not() {
-    let dir = Path::new("/p/hardware");
-    assert!(is_relevant_change(dir, &dir.join("manual-edits.json")));
-    assert!(!is_relevant_change(dir, &dir.join("package.json")));
-    assert!(!is_relevant_change(dir, &dir.join("board.kicad_pcb.lck")));
 }

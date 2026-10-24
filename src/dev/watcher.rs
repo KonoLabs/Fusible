@@ -34,9 +34,6 @@ pub(super) fn is_relevant_change(watch_dir: &Path, path: &Path) -> bool {
     if file_name == "circuit.json" || file_name.ends_with(".circuit.json") {
         return false;
     }
-    if file_name == "manual-edits.json" {
-        return true;
-    }
     path.extension()
         .and_then(|ext| ext.to_str())
         .is_some_and(|ext| WATCHED_EXTENSIONS.contains(&ext))

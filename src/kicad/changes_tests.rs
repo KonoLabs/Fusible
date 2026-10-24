@@ -1,5 +1,5 @@
 use super::live::{compare_board, sync_positions};
-use super::live_tests::{circuit, scratch, write_board};
+use super::live_tests::{circuit, scratch, write_board, write_tsx};
 
 #[test]
 fn a_renamed_part_is_reported_and_not_written() {
@@ -8,11 +8,12 @@ fn a_renamed_part_is_reported_and_not_written() {
         &dir,
         &[("R1", 100.0, "A"), ("R2", 103.0, "B"), ("R9", 106.0, "C")],
     );
-    let edits = dir.join("manual-edits.json");
+    let tsx = write_tsx(&dir, &["R1", "R2", "R3"]);
+    let before = std::fs::read_to_string(&tsx).unwrap();
     let comparison = compare_board(&pcb, &circuit(&["R1", "R2", "R3"])).unwrap();
-    let moved = sync_positions(&comparison, &edits, &dir.join("b"), "main").unwrap();
+    let moved = sync_positions(&comparison, &dir, &dir.join("b"), "main").unwrap();
     assert!(moved.is_empty());
-    assert!(!edits.exists());
+    assert_eq!(std::fs::read_to_string(&tsx).unwrap(), before);
     assert_eq!(comparison.differences, ["R3 renamed to R9 in KiCad"]);
 }
 
@@ -23,12 +24,13 @@ fn an_added_part_is_reported_and_not_written() {
         &dir,
         &[("R1", 100.0, "A"), ("R2", 103.0, "B"), ("R7", 160.0, "C")],
     );
-    let edits = dir.join("manual-edits.json");
+    let tsx = write_tsx(&dir, &["R1", "R2"]);
+    let before = std::fs::read_to_string(&tsx).unwrap();
     let comparison = compare_board(&pcb, &circuit(&["R1", "R2"])).unwrap();
     assert_eq!(comparison.differences, ["R7 added in KiCad"]);
-    let moved = sync_positions(&comparison, &edits, &dir.join("b"), "main").unwrap();
+    let moved = sync_positions(&comparison, &dir, &dir.join("b"), "main").unwrap();
     assert!(moved.is_empty());
-    assert!(!edits.exists());
+    assert_eq!(std::fs::read_to_string(&tsx).unwrap(), before);
 }
 
 #[test]

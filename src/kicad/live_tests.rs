@@ -45,26 +45,41 @@ pub(super) fn write_board(dir: &Path, parts: &[(&str, f64, &str)]) -> PathBuf {
     path
 }
 
+pub(super) fn write_tsx(dir: &Path, parts: &[&str]) -> PathBuf {
+    let tags: Vec<String> = parts
+        .iter()
+        .enumerate()
+        .map(|(i, n)| format!("<resistor name=\"{n}\" pcbX={{{}}} pcbY={{0}} />", i * 3))
+        .collect();
+    let path = dir.join("index.tsx");
+    std::fs::write(&path, format!("<board>\n{}\n</board>\n", tags.join("\n"))).unwrap();
+    path
+}
+
 #[test]
-fn moved_footprint_is_written_and_the_previous_edits_are_backed_up() {
+fn moved_footprint_is_written_to_the_tsx_and_the_previous_file_is_backed_up() {
     let dir = scratch("moved");
     let pcb = write_board(
         &dir,
         &[("R1", 100.0, "A"), ("R2", 103.0, "B"), ("R3", 130.0, "C")],
     );
-    let edits = dir.join("manual-edits.json");
-    std::fs::write(&edits, r#"{ "pcb_placements": [], "edit_events": [] }"#).unwrap();
+    let tsx = write_tsx(&dir, &["R1", "R2", "R3"]);
+    let before = std::fs::read_to_string(&tsx).unwrap();
     let comparison = compare_board(&pcb, &circuit(&["R1", "R2", "R3"])).unwrap();
     let backups = dir.join(".fusible/backup");
-    let moved = sync_positions(&comparison, &edits, &backups, "main").unwrap();
+    let moved = sync_positions(&comparison, &dir, &backups, "main").unwrap();
     assert_eq!(moved, ["R3"]);
-    assert!(std::fs::read_to_string(&edits).unwrap().contains("R3"));
-    assert_eq!(std::fs::read_dir(&backups).unwrap().count(), 1);
-    assert!(
-        comparison.differences.is_empty(),
-        "{:?}",
-        comparison.differences
+    let after = std::fs::read_to_string(&tsx).unwrap();
+    assert_eq!(
+        after,
+        before.replace("name=\"R3\" pcbX={6}", "name=\"R3\" pcbX={30}")
     );
+    let copies: Vec<_> = std::fs::read_dir(&backups).unwrap().flatten().collect();
+    assert_eq!(copies.len(), 1);
+    let copy = copies[0].path();
+    assert!(copy.extension().is_some_and(|e| e == "tsx"));
+    assert_eq!(std::fs::read_to_string(copy).unwrap(), before);
+    assert!(comparison.differences.is_empty());
 }
 
 #[test]

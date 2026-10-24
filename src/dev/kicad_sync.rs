@@ -1,6 +1,6 @@
 //! Keeping the design's placements and the studio's KiCad status current.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use super::kicad_status::KicadStatus;
 use super::refresh::watch_dir;
@@ -28,28 +28,30 @@ pub(super) fn evaluate(slot: &Slot, state: &State) {
     }
 }
 
-/// Writes the parts KiCad moved into the board's `manual-edits.json`, backing the old file up.
+/// Writes the parts KiCad moved into the board's TSX files, backing each changed file up.
 ///
-/// The edits file sits beside the entry, where the file watcher sees the write and rebuilds;
-/// that rebuild refreshes the status. Without a write the status is refreshed here.
+/// The slot's file watcher sees the TSX change and rebuilds; that rebuild refreshes the status.
+/// When nothing is written the status is refreshed here.
 pub(super) fn sync_slot(slot: &Slot, state: &State) {
     let Some(pcb) = kicad_path(slot) else {
         return;
     };
-    let edits = edits_path(&slot.entry);
     let name = backup_name(slot);
     let outcome = slot
         .source()
         .ok_or_else(|| "the board has not built yet".to_string())
         .and_then(|source| compare_board(&pcb, &source))
-        .and_then(|found| sync_positions(&found, &edits, state.kicad.backup_dir(), &name));
+        .and_then(|found| {
+            sync_positions(
+                &found,
+                &watch_dir(&slot.entry),
+                state.kicad.backup_dir(),
+                &name,
+            )
+        });
     match outcome {
-        Ok(moved) if !moved.is_empty() => {
-            println!(
-                "⇄ KiCad: synced {} into {}",
-                moved.join(", "),
-                edits.display()
-            );
+        Ok(written) if !written.is_empty() => {
+            println!("⇄ KiCad: moved {} in the TSX", written.join(", "));
         }
         Ok(_) => evaluate(slot, state),
         Err(message) => {
@@ -57,11 +59,6 @@ pub(super) fn sync_slot(slot: &Slot, state: &State) {
             evaluate(slot, state);
         }
     }
-}
-
-/// The `manual-edits.json` beside `entry`, which the board's TSX imports.
-fn edits_path(entry: &Path) -> PathBuf {
-    watch_dir(entry).join("manual-edits.json")
 }
 
 /// The file stem backups of `slot` are named after.

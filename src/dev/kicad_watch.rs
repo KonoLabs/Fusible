@@ -21,7 +21,7 @@ pub(super) fn start_kicad_watchers(state: &State) -> Vec<Debouncer<RecommendedWa
 /// Syncs `slot` whenever its KiCad file is saved; `None` when the board has no KiCad file.
 ///
 /// Only events on the board file itself count, so KiCad's lock and backup files and the
-/// sync's own writes to `manual-edits.json` never come back around.
+/// sync's own writes to the TSX never come back around.
 pub(super) fn start_kicad_watcher(
     slot: &Slot,
     state: &State,

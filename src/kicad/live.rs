@@ -2,11 +2,10 @@
 
 use std::path::Path;
 
-use super::backup::backup_file;
 use super::changes::design_differences;
-use super::diff::{compare_kicad_with_circuit, parse_circuit_elements, DiffReport};
+use super::diff::{compare_kicad_with_circuit, parse_circuit_elements, DiffReport, PlacementDiff};
 use super::sexpr::{extract_footprints, parse_sexpr};
-use super::sync::apply_kicad_sync;
+use super::tsx::rewrite_tree;
 
 /// A KiCad board compared with the design.
 pub struct Comparison {
@@ -46,20 +45,25 @@ pub fn compare_board(pcb: &Path, circuit_json: &str) -> Result<Comparison, Strin
     })
 }
 
-/// Writes the moved parts into `edits`, after copying its previous content to `backup_dir`.
+/// Writes the parts KiCad moved into the TSX files under `dir`, after copying each file it
+/// changes to `backup_dir`.
 ///
-/// Returns the designators written; nothing is touched when no part moved.
+/// Only plain-number `pcbX`, `pcbY` and `pcbRotation` props are rewritten. Returns the
+/// designators written; the other moved parts stay different until the TSX is edited.
 pub fn sync_positions(
     comparison: &Comparison,
-    edits: &Path,
+    dir: &Path,
     backup_dir: &Path,
     name: &str,
 ) -> Result<Vec<String>, String> {
-    let moved = comparison.moved();
-    if moved.is_empty() {
-        return Ok(moved);
+    let moved: Vec<&PlacementDiff> = comparison
+        .report
+        .diffs
+        .iter()
+        .filter(|d| d.is_placement_change())
+        .collect();
+    match moved.is_empty() {
+        true => Ok(Vec::new()),
+        false => rewrite_tree(dir, &moved, backup_dir, name),
     }
-    backup_file(edits, backup_dir, name)?;
-    apply_kicad_sync(&comparison.report, edits, false)?;
-    Ok(moved)
 }
