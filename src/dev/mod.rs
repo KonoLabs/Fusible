@@ -7,6 +7,18 @@ mod bodies;
 mod body;
 mod bom;
 mod firmware;
+mod git_api;
+mod git_error;
+mod git_log;
+mod git_open;
+mod git_ops;
+mod git_porcelain;
+mod git_proc;
+mod git_resolve;
+mod git_route;
+mod git_run;
+mod git_share;
+mod git_status;
 mod guard;
 pub mod hub;
 mod limiter;
@@ -39,6 +51,16 @@ mod body_tests;
 mod bom_tests;
 #[cfg(test)]
 mod firmware_tests;
+#[cfg(test)]
+mod git_conflict_tests;
+#[cfg(test)]
+mod git_parse_tests;
+#[cfg(test)]
+mod git_run_tests;
+#[cfg(test)]
+mod git_support;
+#[cfg(test)]
+mod git_tests;
 #[cfg(test)]
 mod guard_tests;
 #[cfg(test)]

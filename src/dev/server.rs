@@ -8,6 +8,7 @@ use super::bind::bind;
 use super::bodies;
 use super::bom;
 use super::firmware;
+use super::git_api;
 use super::guard::{is_allowed_host, is_same_origin};
 use super::hub::stream_events;
 use super::limiter::handlers;
@@ -71,6 +72,7 @@ fn handle(request: Request, state: &State, port: u16) {
         p if p.starts_with("/api/bodies/") => bodies::serve(request, p),
         "/api/firmware" => firmware::serve(request, state),
         "/api/run" => run_api::start_run(request, state, port),
+        p if git_api::owns(p) => git_api::serve(request, state, port),
         "/events" => subscribe(request, state),
         _ => {
             let bundle = state.bundle.lock().ok().and_then(|lock| lock.clone());
