@@ -5,6 +5,8 @@
 
 mod discovery;
 pub mod error;
+#[cfg(test)]
+mod kicad_tests;
 mod query;
 mod raw;
 #[cfg(test)]

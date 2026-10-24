@@ -19,6 +19,9 @@ pub struct BoardConfig {
     /// Target silicon identifier, e.g. `stm32g431` or `esp32-s3`.
     #[serde(default)]
     pub mcu: Option<String>,
+    /// The `.kicad_pcb` file KiCad edits for this board; the studio syncs its placements.
+    #[serde(default)]
+    pub kicad: Option<PathBuf>,
 }
 
 /// A firmware crate bound to one board, with its generated pin bindings and build command.

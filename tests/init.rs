@@ -25,6 +25,19 @@ fn subcommand_init_creates_valid_manifest() {
 }
 
 #[test]
+fn subcommand_init_ignores_the_fusible_work_folder() {
+    let fixture = TestDir::new("subcmd_init_gitignore");
+    let out = fusible()
+        .args(["init", "--name", "ignored", "--no-install"])
+        .current_dir(&fixture.path)
+        .output()
+        .expect("binary should run");
+    assert_eq!(out.status.code(), Some(0));
+    let ignore = std::fs::read_to_string(fixture.path.join(".gitignore")).unwrap();
+    assert!(ignore.lines().any(|line| line == ".fusible/"));
+}
+
+#[test]
 fn subcommand_init_with_path_and_mcu() {
     let fixture = TestDir::new("subcmd_init_path");
     let target = fixture.path.join("sensor_node");
