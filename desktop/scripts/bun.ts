@@ -14,7 +14,9 @@ export const BUN_TARGETS: Record<string, string> = {
 };
 
 function unzip(archive: string, into: string): void {
-  const cmd = process.platform === "win32" ? ["C:/Windows/System32/tar.exe", "-xf", archive, "-C", into] : ["unzip", "-q", archive, "-d", into];
+  const winTar = "C:/Windows/System32/tar.exe";
+  const cmd =
+    process.platform === "win32" ? [winTar, "-xf", archive, "-C", into] : ["unzip", "-q", archive, "-d", into];
   const done = Bun.spawnSync(cmd, { stdout: "inherit", stderr: "inherit" });
   if (done.exitCode !== 0) throw new Error(`could not extract ${archive}`);
 }
