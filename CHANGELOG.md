@@ -7,6 +7,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-10-24
+
 ### Changed
 
 - Redesigned the studio `PARTS & COSTS` view: no borders, summary tiles with the grand total highlighted, lines grouped by electronics, 3D prints, and other parts with a subtotal each, a sticky table header, and unpicked lines dimmed.
