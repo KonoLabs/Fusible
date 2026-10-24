@@ -1,5 +1,7 @@
 //! Shared helpers for the subcommand integration tests.
 
+#![allow(dead_code)]
+
 use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
 

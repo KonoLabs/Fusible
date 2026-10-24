@@ -48,7 +48,7 @@ impl Git {
         }
     }
 
-    #[cfg(test)]
+    #[cfg(all(test, unix))]
     pub(super) fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
         self

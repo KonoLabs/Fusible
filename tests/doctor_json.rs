@@ -2,7 +2,9 @@
 
 mod common;
 
-use common::{fusible, TestDir};
+use common::fusible;
+#[cfg(unix)]
+use common::TestDir;
 
 #[test]
 fn doctor_json_lists_bun_node_tsci_and_exits_zero_with_nothing_installed() {

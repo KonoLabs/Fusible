@@ -1,7 +1,9 @@
+#[cfg(unix)]
 use std::time::Duration;
 
 use super::git_open::{open, Opened};
 use super::git_route::{perform, Route};
+#[cfg(unix)]
 use super::git_run::{Git, Unrunnable};
 use super::git_support::Pair;
 

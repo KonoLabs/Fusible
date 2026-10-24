@@ -14,7 +14,7 @@ pub(super) enum Job {
     Generated {
         name: String,
         body: BodyConfig,
-        board: BoardTarget,
+        board: Box<BoardTarget>,
     },
 }
 
@@ -69,7 +69,7 @@ fn generated(name: &str, body: &BodyConfig, board: BoardTarget) -> Job {
     Job::Generated {
         name: name.to_string(),
         body: body.clone(),
-        board,
+        board: Box::new(board),
     }
 }
 
