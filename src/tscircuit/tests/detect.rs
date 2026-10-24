@@ -34,7 +34,7 @@ impl Drop for TempDirGuard {
     }
 }
 
-fn shim(name: &str) -> String {
+pub(super) fn shim(name: &str) -> String {
     if cfg!(windows) {
         format!("{name}.cmd")
     } else {
