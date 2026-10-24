@@ -7,6 +7,12 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.15.3] - 2026-10-24
+
+### Fixed
+
+- The body generator keeps occt-wasm in a cache keyed by the occt-wasm version, not the fusible version, so an upgrade no longer reinstalls it.
+
 ## [0.15.2] - 2026-10-24
 
 ### Fixed

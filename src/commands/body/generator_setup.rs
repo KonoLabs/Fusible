@@ -8,7 +8,7 @@ use super::BodyError;
 
 const GENERATOR_TS: &str = include_str!("../../assets/enclosure.ts");
 const CONVERT_TS: &str = include_str!("../../assets/convert.ts");
-const OCCT_WASM_VERSION: &str = "5.7.1";
+pub(super) const OCCT_WASM_VERSION: &str = "5.7.1";
 static PREPARE: Mutex<()> = Mutex::new(());
 
 fn package_json() -> String {

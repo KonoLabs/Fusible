@@ -6,7 +6,7 @@ use std::process::{Child, Command, ExitStatus, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use super::generator_setup::prepare_generator;
+use super::generator_setup::{prepare_generator, OCCT_WASM_VERSION};
 use super::spec::Spec;
 use super::BodyError;
 use crate::tscircuit::bun_path;
@@ -14,7 +14,7 @@ use crate::tscircuit::bun_path;
 const SCRIPT_TIMEOUT: Duration = Duration::from_secs(120);
 const MAX_STDERR: u64 = 64 * 1024;
 
-/// Returns the per-version cache directory that holds the generator and its dependencies.
+/// Returns the cache directory of the generator, keyed by the occt-wasm version so upgrades reuse the install.
 pub(crate) fn generator_dir() -> PathBuf {
     std::env::var_os("XDG_CACHE_HOME")
         .map(PathBuf::from)
@@ -22,7 +22,7 @@ pub(crate) fn generator_dir() -> PathBuf {
         .or_else(|| std::env::var_os("LOCALAPPDATA").map(PathBuf::from))
         .unwrap_or_else(std::env::temp_dir)
         .join("fusible")
-        .join(format!("body-{}", env!("CARGO_PKG_VERSION")))
+        .join(format!("body-occt-{OCCT_WASM_VERSION}"))
 }
 
 /// Pipes `spec` to the generator, which writes every file listed in `spec.outputs`.
