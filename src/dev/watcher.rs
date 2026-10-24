@@ -38,6 +38,14 @@ pub(super) fn is_relevant_change(watch_dir: &Path, path: &Path) -> bool {
         .is_some_and(|ext| WATCHED_EXTENSIONS.contains(&ext))
 }
 
+fn base_for<'a>(root: &'a Path, given: &'a Path, path: &Path) -> &'a Path {
+    if path.starts_with(root) {
+        root
+    } else {
+        given
+    }
+}
+
 pub fn start_file_watcher(
     watch_path: &Path,
     mut on_change: impl FnMut() + Send + 'static,
@@ -47,14 +55,16 @@ pub fn start_file_watcher(
     } else {
         watch_path
     };
-    let root = watch_path
-        .canonicalize()
-        .unwrap_or_else(|_| watch_path.to_path_buf());
+    let given = watch_path.to_path_buf();
+    let root = watch_path.canonicalize().unwrap_or_else(|_| given.clone());
     let mut debouncer = new_debouncer(
         Duration::from_millis(300),
         move |res: DebounceEventResult| {
             if let Ok(events) = res {
-                if events.iter().any(|e| is_relevant_change(&root, &e.path)) {
+                let relevant = events
+                    .iter()
+                    .any(|e| is_relevant_change(base_for(&root, &given, &e.path), &e.path));
+                if relevant {
                     on_change();
                 }
             }
