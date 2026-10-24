@@ -37,6 +37,7 @@
       margin: 0;
       padding: 0;
       font-weight: normal !important;
+      font-synthesis: none;
     }
     :root {
       --bg: #000000;
@@ -97,10 +98,6 @@
       bottom: var(--gutter);
       left: 50%;
       transform: translateX(-50%);
-    }
-    .floating-tree {
-      top: var(--gutter);
-      left: var(--gutter);
     }
     .floating-status {
       bottom: var(--gutter);
@@ -215,8 +212,12 @@
       gap: 2px;
     }
     @container viewport (max-width: 900px) {
-      .btn .btn-label,
       .board-name {
+        display: none;
+      }
+    }
+    @container viewport (max-width: 640px) {
+      .btn .btn-label {
         display: none;
       }
     }
@@ -414,97 +415,209 @@
       flex-direction: column;
       overflow: auto;
       background: var(--surface);
-      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      scrollbar-width: thin;
     }
     body.bom-open #bom-view:not([hidden]) {
       display: flex;
     }
     .bom-head {
-      padding: 14px 16px 6px;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 20px 24px 4px;
+    }
+    .bom-head .fw-title {
+      font-size: 14px;
+      letter-spacing: 0.08em;
     }
     .bom-sum {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px 24px;
-      padding: 8px 16px;
-      font-size: 11px;
-      letter-spacing: 0.05em;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      padding: 16px 24px 8px;
+    }
+    .bom-sum > div {
+      background: var(--bg);
+      padding: 14px 16px;
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      color: var(--text-subtle);
     }
     .bom-sum span {
       display: block;
-      font-size: 9px;
-      color: var(--text-subtle);
+      margin-bottom: 8px;
     }
     .bom-sum b {
       font-weight: normal;
+      font-size: 18px;
+      letter-spacing: 0.02em;
+      color: var(--text);
+    }
+    .bom-sum b i {
+      font-style: normal;
+      font-size: 10px;
+      color: var(--text-subtle);
+    }
+    .bom-sum > div.bom-grand {
+      background: rgba(134, 168, 129, 0.14);
+    }
+    .bom-sum > div.bom-grand b {
       color: var(--green);
     }
     .bom-warn {
-      padding: 0 16px;
+      margin: 8px 24px 0;
+      padding: 8px 12px;
       font-size: 10px;
       letter-spacing: 0.05em;
       color: var(--alert);
+      background: rgba(197, 84, 84, 0.1);
+    }
+    .bom-warn.bom-note {
+      color: var(--olive);
+      background: rgba(168, 179, 101, 0.1);
+    }
+    .bom-warn:empty {
+      display: none;
     }
     .bom-settings {
       display: flex;
       flex-wrap: wrap;
       align-items: flex-end;
-      gap: 8px 16px;
-      padding: 8px 16px 12px;
+      gap: 12px 20px;
+      padding: 16px 24px 8px;
       font-size: 9px;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.08em;
       color: var(--text-subtle);
+    }
+    .bom-settings input:not([type="checkbox"]) {
+      background: var(--bg) !important;
+    }
+    .bom-settings select {
+      background: var(--bg);
+      color: var(--text);
+      border: none;
+      font: inherit;
+      padding: 5px 8px;
+      cursor: pointer;
+    }
+    .bom-settings select:focus-visible {
+      outline: none;
+      box-shadow: inset 2px 0 0 var(--green);
+    }
+    .bom-settings .btn {
+      height: 28px;
+      background: var(--bg);
+      color: var(--green);
     }
     .bom-settings label {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 6px;
+    }
+    .bom-settings .bom-add {
+      flex: 1;
+      min-width: 200px;
     }
     .bom-scroll {
-      overflow-x: auto;
-      padding-bottom: 12px;
+      padding: 0 24px 24px;
     }
     .bom-table {
       width: 100%;
-      border-collapse: collapse;
+      border-collapse: separate;
+      border-spacing: 0 2px;
+      table-layout: fixed;
       font-size: 11px;
     }
     .bom-table th {
-      padding: 6px 8px;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      padding: 10px 10px;
       font-size: 9px;
       font-weight: normal;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.08em;
       text-align: left;
       color: var(--text-subtle);
-      border-bottom: 1px solid var(--border);
+      background: var(--surface);
     }
+    .bom-table th.bom-r,
+    .bom-table td.bom-r {
+      text-align: right;
+    }
+    .bom-table th:nth-child(1) { width: 32px; }
+    .bom-table th:nth-child(2) { width: 64px; }
+    .bom-table th:nth-child(4) { width: 110px; }
+    .bom-table th:nth-child(5) { width: 160px; }
+    .bom-table th:nth-child(6) { width: 100px; }
+    .bom-table th:nth-child(7) { width: 80px; }
+    .bom-table th:nth-child(8) { width: 30px; }
     .bom-table td {
-      padding: 6px 8px;
-      vertical-align: top;
-      border-bottom: 1px solid var(--border-subtle);
+      padding: 9px 10px;
+      vertical-align: middle;
+      background: var(--bg);
     }
-    .bom-table tr:hover td {
+    .bom-table tr.bom-group td {
+      padding: 18px 10px 6px;
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      color: var(--text-subtle);
+      background: transparent;
+    }
+    .bom-table tr.bom-group b {
+      font-weight: normal;
+      color: var(--green);
+    }
+    .bom-table tr[data-id]:hover td {
       background: var(--surface-hover);
     }
+    .bom-table tr.off td {
+      opacity: 0.4;
+    }
+    .bom-table tr[data-id] td:first-child {
+      text-align: center;
+    }
+    .bom-table td input.bom-wide {
+      min-width: 0;
+    }
+    #bom-view input[type="checkbox"] {
+      accent-color: var(--green);
+      cursor: pointer;
+    }
     #bom-view input:not([type="checkbox"]) {
-      background: var(--bg);
-      border: 1px solid var(--border);
+      background: var(--surface);
+      border: none;
       color: var(--text);
       font: inherit;
-      padding: 3px 6px;
+      padding: 5px 8px;
+    }
+    #bom-view input:not([type="checkbox"])::placeholder {
+      color: var(--text-subtle);
+      font-style: italic;
+    }
+    #bom-view input:not([type="checkbox"]):hover {
+      background: var(--surface-hover);
     }
     #bom-view input:focus-visible {
-      outline: 1px solid var(--green);
+      outline: none;
+      background: var(--surface-hover);
+      box-shadow: inset 2px 0 0 var(--green);
     }
     .bom-num {
-      width: 72px;
+      width: 100%;
+      max-width: 80px;
+      text-align: right;
     }
     .bom-wide {
       width: 100%;
       min-width: 140px;
     }
+    .bom-name {
+      color: var(--text);
+    }
     .bom-refs {
-      margin-top: 2px;
+      margin-top: 3px;
       font-size: 9px;
       letter-spacing: 0.05em;
       color: var(--text-subtle);
@@ -513,10 +626,22 @@
     .bom-refs a,
     .bom-table td a {
       color: var(--blue);
+      text-decoration: none;
+    }
+    .bom-refs a:hover,
+    .bom-table td a:hover {
+      text-decoration: underline;
     }
     .bom-total {
       white-space: nowrap;
+      text-align: right;
       color: var(--green);
+    }
+    .bom-empty {
+      padding: 32px 10px;
+      text-align: center;
+      color: var(--text-subtle);
+      letter-spacing: 0.08em;
     }
     .fw-head {
       padding: 14px 16px 10px;
@@ -1195,41 +1320,38 @@
         <button class="tab-btn" data-view="3d" onclick="switchView('3d')" title="3D view (3)"><iconify-icon icon="pixelarticons:globe"></iconify-icon><span>3D</span></button>
         <button class="tab-btn" data-view="mechanical" onclick="switchView('mechanical')" title="Bodies (4)"><iconify-icon icon="pixelarticons:box"></iconify-icon><span>BODIES</span></button>
         <span class="dock-divider panel-open"></span>
-        <button class="btn icon-only panel-open" onclick="toggleSidebar(true)" title="Show panel (\)" aria-label="Show panel"><iconify-icon icon="pixelarticons:layout-sidebar-right"></iconify-icon></button>
+        <button class="btn panel-open" onclick="toggleSidebar(true)" title="Show panel (\)" aria-label="Show panel"><iconify-icon icon="pixelarticons:layout-sidebar-right"></iconify-icon> <span class="btn-label">PANEL</span></button>
       </nav>
 
       <div class="floating floating-dock" role="toolbar" aria-label="View controls">
         <div class="controls" id="controls-2d">
-          <button class="btn icon-only" onclick="zoomBy(120)" title="Zoom out" aria-label="Zoom out"><iconify-icon icon="pixelarticons:zoom-out"></iconify-icon></button>
-          <button class="btn icon-only" onclick="zoomBy(-120)" title="Zoom in" aria-label="Zoom in"><iconify-icon icon="pixelarticons:zoom-in"></iconify-icon></button>
-          <button class="btn icon-only" onclick="renderView()" title="Reset view" aria-label="Reset view"><iconify-icon icon="pixelarticons:undo"></iconify-icon></button>
+          <button class="btn" onclick="zoomBy(120)" title="Zoom out" aria-label="Zoom out"><iconify-icon icon="pixelarticons:zoom-out"></iconify-icon> <span class="btn-label">ZOOM OUT</span></button>
+          <button class="btn" onclick="zoomBy(-120)" title="Zoom in" aria-label="Zoom in"><iconify-icon icon="pixelarticons:zoom-in"></iconify-icon> <span class="btn-label">ZOOM IN</span></button>
+          <button class="btn" onclick="renderView()" title="Reset view" aria-label="Reset view"><iconify-icon icon="pixelarticons:undo"></iconify-icon> <span class="btn-label">FIT</span></button>
         </div>
 
         <div class="controls" id="controls-3d" style="display: none;">
-          <button class="btn icon-only" onclick="setCameraPreset('TOP')" title="Top view" aria-label="Top view"><iconify-icon icon="pixelarticons:arrow-up"></iconify-icon></button>
-          <button class="btn icon-only" onclick="setCameraPreset('ISO')" title="Isometric view" aria-label="Isometric view"><iconify-icon icon="pixelarticons:corner-up-right"></iconify-icon></button>
-          <button class="btn icon-only" onclick="setCameraPreset('FRONT')" title="Front view" aria-label="Front view"><iconify-icon icon="pixelarticons:arrow-down"></iconify-icon></button>
-          <button class="btn icon-only" onclick="setCameraPreset('RESET')" title="Reset camera" aria-label="Reset camera"><iconify-icon icon="pixelarticons:reload"></iconify-icon></button>
+          <button class="btn" onclick="setCameraPreset('TOP')" title="Top view" aria-label="Top view"><iconify-icon icon="pixelarticons:arrow-up"></iconify-icon> <span class="btn-label">TOP</span></button>
+          <button class="btn" onclick="setCameraPreset('ISO')" title="Isometric view" aria-label="Isometric view"><iconify-icon icon="pixelarticons:corner-up-right"></iconify-icon> <span class="btn-label">ISO</span></button>
+          <button class="btn" onclick="setCameraPreset('FRONT')" title="Front view" aria-label="Front view"><iconify-icon icon="pixelarticons:arrow-down"></iconify-icon> <span class="btn-label">FRONT</span></button>
+          <button class="btn" onclick="setCameraPreset('RESET')" title="Reset camera" aria-label="Reset camera"><iconify-icon icon="pixelarticons:reload"></iconify-icon> <span class="btn-label">RESET</span></button>
           <span class="dock-divider"></span>
           <button class="btn" id="btn-mechanical-overlay" onclick="toggleMechanical('overlay')" title="Show enclosure"><iconify-icon icon="pixelarticons:box"></iconify-icon> <span class="btn-label">ENCLOSURE</span></button>
         </div>
 
         <div class="controls" id="controls-mechanical" style="display: none;">
-          <button class="btn icon-only" onclick="setCameraPreset('TOP')" title="Top view" aria-label="Top view"><iconify-icon icon="pixelarticons:arrow-up"></iconify-icon></button>
-          <button class="btn icon-only" onclick="setCameraPreset('ISO')" title="Isometric view" aria-label="Isometric view"><iconify-icon icon="pixelarticons:corner-up-right"></iconify-icon></button>
-          <button class="btn icon-only" onclick="setCameraPreset('FRONT')" title="Front view" aria-label="Front view"><iconify-icon icon="pixelarticons:arrow-down"></iconify-icon></button>
-          <button class="btn icon-only" onclick="setCameraPreset('RESET')" title="Reset camera" aria-label="Reset camera"><iconify-icon icon="pixelarticons:reload"></iconify-icon></button>
+          <button class="btn" onclick="setCameraPreset('TOP')" title="Top view" aria-label="Top view"><iconify-icon icon="pixelarticons:arrow-up"></iconify-icon> <span class="btn-label">TOP</span></button>
+          <button class="btn" onclick="setCameraPreset('ISO')" title="Isometric view" aria-label="Isometric view"><iconify-icon icon="pixelarticons:corner-up-right"></iconify-icon> <span class="btn-label">ISO</span></button>
+          <button class="btn" onclick="setCameraPreset('FRONT')" title="Front view" aria-label="Front view"><iconify-icon icon="pixelarticons:arrow-down"></iconify-icon> <span class="btn-label">FRONT</span></button>
+          <button class="btn" onclick="setCameraPreset('RESET')" title="Reset camera" aria-label="Reset camera"><iconify-icon icon="pixelarticons:reload"></iconify-icon> <span class="btn-label">RESET</span></button>
           <span class="dock-divider"></span>
           <button class="btn" id="btn-mechanical-lid" onclick="toggleMechanical('lid')" title="Show lid"><iconify-icon icon="pixelarticons:eye"></iconify-icon> <span class="btn-label">LID</span></button>
           <button class="btn" id="btn-mechanical-explode" onclick="toggleMechanical('explode')" title="Explode enclosure"><iconify-icon icon="pixelarticons:expand"></iconify-icon> <span class="btn-label">EXPLODE</span></button>
         </div>
       </div>
 
-      <div class="floating floating-tree tree-open">
-        <button class="btn icon-only" id="tree-open" title="Show project ([)" aria-label="Show project" aria-expanded="false"><iconify-icon icon="pixelarticons:layout-sidebar-left"></iconify-icon></button>
-      </div>
-
       <div class="floating floating-status">
+        <button class="btn tree-open" id="tree-open" title="Show project ([)" aria-label="Show project" aria-expanded="false"><iconify-icon icon="pixelarticons:layout-sidebar-left"></iconify-icon> <span class="btn-label">PROJECT</span></button>
         <iconify-icon icon="pixelarticons:cpu-sharp" class="brand-logo"></iconify-icon>
         <span class="board-name" id="board-name">BOARD PREVIEW</span>
         <span class="live" title="Live reload connected" id="live-indicator"><span class="status-dot" id="live-dot"></span></span>

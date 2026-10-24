@@ -7,6 +7,17 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+### Changed
+
+- Redesigned the studio `PARTS & COSTS` view: no borders, summary tiles with the grand total highlighted, lines grouped by electronics, 3D prints, and other parts with a subtotal each, a sticky table header, and unpicked lines dimmed.
+- The currency is picked from a list (EUR, USD, GBP, CHF, CAD, AUD, JPY, CNY, SEK, NOK, DKK, PLN). A custom code already in `bom.yml` stays selectable. Only the label changes; prices are not converted.
+- The zoom, camera, and panel buttons of the studio dock show a text label next to their icon.
+- The studio never renders bold text.
+
+### Fixed
+
+- The button that reopens the collapsed project tree moved to the bottom-left status bar, so it no longer covers the viewers' own top-left controls.
+
 ## [0.14.0] - 2026-10-24
 
 ### Added
