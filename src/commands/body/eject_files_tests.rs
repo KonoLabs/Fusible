@@ -80,19 +80,24 @@ fn publishing_never_replaces_an_existing_file() {
     std::fs::remove_dir_all(dir).unwrap();
 }
 
-#[cfg(unix)]
 #[test]
 fn atomic_write_replaces_the_file_and_keeps_its_permissions() {
-    use std::os::unix::fs::PermissionsExt;
-
     let dir = fresh("atomic");
     let path = dir.join("fusible.yml");
     std::fs::write(&path, "old").unwrap();
-    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o640)).unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o640)).unwrap();
+    }
     write_atomic(&path, "new").unwrap();
     assert_eq!(std::fs::read_to_string(&path).unwrap(), "new");
-    let mode = std::fs::metadata(&path).unwrap().permissions().mode();
-    assert_eq!(mode & 0o777, 0o640);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mode = std::fs::metadata(&path).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o640);
+    }
     assert!(leftovers(&dir).is_empty());
     std::fs::remove_dir_all(dir).unwrap();
 }

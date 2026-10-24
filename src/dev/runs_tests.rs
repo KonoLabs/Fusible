@@ -4,10 +4,10 @@ use std::time::{Duration, Instant};
 use super::hub::ClientHub;
 use super::runs::{Runs, Status};
 
-fn shell(script: &str) -> Command {
-    let mut command = Command::new("sh");
-    command.args(["-c", script]);
-    command
+use crate::test_shell::{shell, sleeping};
+
+fn exit(code: i32) -> Command {
+    shell(&format!("exit {code}"), &format!("exit {code}"))
 }
 
 fn wait_until_done(runs: &Runs) -> serde_json::Value {
@@ -32,8 +32,15 @@ fn run_collects_both_streams_and_maps_the_exit_code() {
     let runs = Runs::default();
     let hub = ClientHub::default();
     let rx = hub.subscribe(Vec::new);
-    runs.start(&hub, "demo".into(), shell("echo out; echo err >&2; exit 1"))
-        .unwrap();
+    runs.start(
+        &hub,
+        "demo".into(),
+        shell(
+            "echo out; echo err >&2; exit 1",
+            "echo out& >&2 echo err& exit 1",
+        ),
+    )
+    .unwrap();
     let snapshot = wait_until_done(&runs);
     assert_eq!(snapshot[0]["status"], "fuse_blown");
     let mut lines: Vec<&str> = snapshot[0]["lines"]
@@ -58,10 +65,10 @@ fn run_collects_both_streams_and_maps_the_exit_code() {
 fn only_one_run_goes_at_a_time() {
     let runs = Runs::default();
     let hub = ClientHub::default();
-    runs.start(&hub, "slow".into(), shell("sleep 0.3")).unwrap();
-    assert!(runs.start(&hub, "second".into(), shell("true")).is_err());
+    runs.start(&hub, "slow".into(), sleeping(1)).unwrap();
+    assert!(runs.start(&hub, "second".into(), exit(0)).is_err());
     wait_until_done(&runs);
-    assert!(runs.start(&hub, "third".into(), shell("true")).is_ok());
+    assert!(runs.start(&hub, "third".into(), exit(0)).is_ok());
 }
 
 #[test]
@@ -83,8 +90,7 @@ fn run_events_carry_the_label_when_the_run_starts_and_when_it_ends() {
     let runs = Runs::default();
     let hub = ClientHub::default();
     let rx = hub.subscribe(Vec::new);
-    runs.start(&hub, "check main".into(), shell("exit 0"))
-        .unwrap();
+    runs.start(&hub, "check main".into(), exit(0)).unwrap();
     wait_until_done(&runs);
     let events: Vec<String> = rx
         .try_iter()
@@ -104,13 +110,13 @@ fn a_run_that_hangs_is_killed_and_frees_the_slot() {
     runs.start_with(
         &hub,
         "hang".into(),
-        shell("sleep 30"),
+        sleeping(30),
         Duration::from_millis(200),
     )
     .unwrap();
     let snapshot = wait_until_done(&runs);
     assert_eq!(snapshot[0]["status"], "error");
-    assert!(runs.start(&hub, "next".into(), shell("true")).is_ok());
+    assert!(runs.start(&hub, "next".into(), exit(0)).is_ok());
 }
 
 #[test]
