@@ -7,6 +7,8 @@ mod discovery;
 pub mod error;
 #[cfg(test)]
 mod kicad_tests;
+#[cfg(test)]
+mod links_tests;
 mod query;
 mod raw;
 #[cfg(test)]
@@ -24,7 +26,9 @@ use discovery::{check_file_target, find_in_dir};
 pub use error::ConfigError;
 use raw::RawConfig;
 pub use raw::LEGACY_BOARD;
-pub use types::{BoardConfig, BodyConfig, EnclosureConfig, FirmwareConfig};
+pub use types::{
+    BoardConfig, BodyConfig, EnclosureConfig, FirmwareConfig, LinkConfig, PinId, WireConfig,
+};
 pub use validate::GENERATORS;
 
 /// Recognized filenames for the Fusible manifest, in order of precedence.
@@ -39,6 +43,7 @@ pub struct FusibleConfig {
     pub boards: BTreeMap<String, BoardConfig>,
     pub firmware: BTreeMap<String, FirmwareConfig>,
     pub bodies: BTreeMap<String, BodyConfig>,
+    pub links: BTreeMap<String, LinkConfig>,
 }
 
 impl FusibleConfig {

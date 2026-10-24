@@ -2,7 +2,7 @@
 
 use std::collections::BTreeSet;
 
-use super::types::BodyConfig;
+use super::types::{BodyConfig, LinkConfig};
 use super::FusibleConfig;
 
 /// Generators a body can name in `generate:`.
@@ -23,6 +23,9 @@ pub(super) fn validate(cfg: &FusibleConfig) -> Result<(), String> {
         if body.generate.is_some() || body.board.is_some() {
             board_reference(cfg, "body", name, body.board.as_deref())?;
         }
+    }
+    for (name, link) in &cfg.links {
+        link_ends(cfg, name, link)?;
     }
     Ok(())
 }
@@ -87,4 +90,36 @@ fn body_kind(name: &str, body: &BodyConfig) -> Result<(), String> {
         )),
         _ => Ok(()),
     }
+}
+
+fn link_ends(cfg: &FusibleConfig, name: &str, link: &LinkConfig) -> Result<(), String> {
+    for end in [&link.from, &link.to] {
+        let board = end
+            .split_once('.')
+            .filter(|(b, r)| !b.is_empty() && !r.is_empty());
+        match board {
+            None => {
+                return Err(format!(
+                    "link `{name}` end `{end}` must be written `board.REFDES`"
+                ))
+            }
+            Some((board, _)) if !cfg.boards.contains_key(board) => {
+                return Err(format!("link `{name}` refers to unknown board `{board}`"))
+            }
+            Some(_) => {}
+        }
+    }
+    if link.wires.is_empty() {
+        return Err(format!("link `{name}` has no wires"));
+    }
+    if link
+        .wires
+        .iter()
+        .any(|w| w.net.is_some() && w.nets.is_some())
+    {
+        return Err(format!(
+            "link `{name}` sets both `net` and `nets` on a wire; use one"
+        ));
+    }
+    Ok(())
 }

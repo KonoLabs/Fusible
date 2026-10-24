@@ -86,3 +86,47 @@ pub struct EnclosureConfig {
     #[serde(default)]
     pub mounting: Option<bool>,
 }
+
+/// A pin of a connector, written as a number (`1`) or a name (`GND`).
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum PinId {
+    Number(u32),
+    Name(String),
+}
+
+impl std::fmt::Display for PinId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Number(n) => write!(f, "{n}"),
+            Self::Name(name) => f.write_str(name),
+        }
+    }
+}
+
+/// One wire of a link: pin `a` of the `from` connector goes to pin `b` of the `to` connector.
+///
+/// `net` names the net both ends must carry. `nets` names the net of each end, for a crossed
+/// wire such as `[TX, RX]`. Without either, both ends must carry the same net name.
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct WireConfig {
+    pub a: PinId,
+    pub b: PinId,
+    #[serde(default)]
+    pub net: Option<String>,
+    #[serde(default)]
+    pub nets: Option<[String; 2]>,
+}
+
+/// Board-to-board wiring: a connector of one board cabled to a connector of another.
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct LinkConfig {
+    /// `board.REFDES` of the first connector.
+    pub from: String,
+    /// `board.REFDES` of the second connector.
+    pub to: String,
+    #[serde(default)]
+    pub wires: Vec<WireConfig>,
+}

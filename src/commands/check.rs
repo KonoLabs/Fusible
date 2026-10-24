@@ -6,8 +6,10 @@ use miette::Diagnostic;
 use thiserror::Error;
 
 use crate::commands::check_merge::{label, merge};
+use crate::commands::links::check_links;
 pub use crate::commands::source::{find_fallback_circuit_json, load_circuit_source};
 use crate::commands::target::{resolve_boards, BoardTarget, TargetError};
+use crate::config::FusibleConfig;
 use crate::linter::{FuseBlown, LintContext, Linter, Severity};
 use crate::netlist::Netlist;
 use crate::parser;
@@ -106,7 +108,19 @@ pub fn run_boards(
             .map(|error| label(error, name));
         failure = merge(failure, next, &mut report);
     }
+    failure = merge(failure, check_manifest_links(boards).err(), &mut report);
     failure.map_or(Ok(()), Err)
+}
+
+fn check_manifest_links(boards: &[BoardTarget]) -> Result<(), CheckError> {
+    let Some((_, cfg)) = FusibleConfig::nearest() else {
+        return Ok(());
+    };
+    let all = !cfg.boards.is_empty() && cfg.boards.len() == boards.len();
+    if cfg.links.is_empty() || !all {
+        return Ok(());
+    }
+    check_links(&cfg)
 }
 
 fn check_board(
