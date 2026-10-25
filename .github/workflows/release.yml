@@ -97,6 +97,7 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --title "$GITHUB_REF_NAME" \
             --generate-notes \
+            --latest=false \
             dist/*.tar.gz dist/*.zip dist/checksums.txt || \
           gh release upload "$GITHUB_REF_NAME" \
             --repo "$GITHUB_REPOSITORY" \

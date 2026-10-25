@@ -20,7 +20,7 @@
       ? `<span class="run-status ${build.status}">${STATUS_TEXT[build.status] || build.status}</span>`
       : '<span class="run-status">NOT BUILT</span>';
     const button = !data || data.buildable
-      ? `<button class="btn" id="fw-build" ${busy ? 'disabled' : ''}>BUILD</button>`
+      ? `<button class="btn" id="fw-build" ${busy ? 'disabled' : ''}><iconify-icon icon="pixelarticons:play"></iconify-icon> BUILD</button>`
       : '';
     return `<div class="fw-head">
       <div class="fw-title">${escapeHtml(name)}</div>

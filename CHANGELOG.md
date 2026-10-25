@@ -7,6 +7,16 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.20.1] - 2026-10-25
+
+### Fixed
+
+- Self-update failed with "Could not fetch a valid release JSON" for the minutes after a tag: the new release was already marked latest while its `latest.json` was still being built, so the updater endpoint returned 404. Releases are now created as not latest, and the manifest job marks them latest once `latest.json` is uploaded.
+
+### Changed
+
+- Buttons that had only text now carry a Pixelarticons icon: a plus on the parts ADD button, a trash can on part removal, and icons on BUILD, SAVE, GET UPDATES, CHECK, RE-CHECK, KEEP MINE and KEEP THEIRS.
+
 ## [0.20.0] - 2026-10-25
 
 ### Added

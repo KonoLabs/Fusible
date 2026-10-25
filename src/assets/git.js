@@ -71,8 +71,8 @@
     const who = author ? `${escapeHtml(author)} and you both changed ` : 'Both you and someone else changed ';
     return `<div class="sync-card" data-path="${escapeHtml(path)}">${who}<b>${escapeHtml(path)}</b>. Pick the version to keep.
       <div class="sync-actions">
-        <button class="btn" data-keep="mine" title="Keep the version you made">KEEP MINE</button>
-        <button class="btn" data-keep="theirs" title="Keep the version from ${escapeHtml(author || 'the other person')}">KEEP THEIRS</button>
+        <button class="btn" data-keep="mine" title="Keep the version you made"><iconify-icon icon="pixelarticons:check"></iconify-icon> KEEP MINE</button>
+        <button class="btn" data-keep="theirs" title="Keep the version from ${escapeHtml(author || 'the other person')}"><iconify-icon icon="pixelarticons:download"></iconify-icon> KEEP THEIRS</button>
       </div></div>`;
   }
 
@@ -100,7 +100,7 @@
       <div class="sync-line">Install Git to sync your work.</div>
       <div class="sync-line subtle">Git is the free program that shares your project with your team. Install it, then come back.</div>
       <div class="sync-line"><a class="sync-link" href="${GIT_DOWNLOAD}" target="_blank" rel="noopener noreferrer">Download Git</a></div>
-      <div class="sync-actions"><button class="btn" id="sync-recheck">${state.busy ? 'CHECKING...' : 'RE-CHECK'}</button></div>`;
+      <div class="sync-actions"><button class="btn" id="sync-recheck">${state.busy ? 'CHECKING...' : '<iconify-icon icon="pixelarticons:reload"></iconify-icon> RE-CHECK'}</button></div>`;
   }
 
   function panelHtml(s) {
@@ -109,13 +109,13 @@
     const noUpdates = state.busy || stuck || !s.upstream ? 'disabled' : '';
     const warn = s.fetch_error ? `<div class="sync-line subtle">Could not check for updates: ${escapeHtml(s.fetch_error)}</div>` : '';
     return `<div class="sync-head"><span class="sync-title">SYNC</span>
-        <button class="btn" id="sync-refresh" title="Check for updates" ${state.busy ? 'disabled' : ''}>CHECK</button></div>
+        <button class="btn" id="sync-refresh" title="Check for updates" ${state.busy ? 'disabled' : ''}><iconify-icon icon="pixelarticons:reload"></iconify-icon> CHECK</button></div>
       <div class="sync-line" id="sync-status">${escapeHtml(summary(s))}</div>${localOnly(s)}${warn}
       ${s.conflicts.map((p) => conflictCard(s, p)).join('')}
       ${s.changes.length ? '<textarea class="sync-box" id="sync-message" rows="2" placeholder="What did you change?" aria-label="What did you change?"></textarea>' : ''}
       <div class="sync-actions">
-        <button class="btn primary" id="sync-save" ${off}>${state.busy ? 'WORKING...' : 'SAVE'}</button>
-        <button class="btn" id="sync-update" ${noUpdates}>GET UPDATES</button>
+        <button class="btn primary" id="sync-save" ${off}>${state.busy ? 'WORKING...' : '<iconify-icon icon="pixelarticons:save"></iconify-icon> SAVE'}</button>
+        <button class="btn" id="sync-update" ${noUpdates}><iconify-icon icon="pixelarticons:download"></iconify-icon> GET UPDATES</button>
       </div>${noticeHtml()}${changesHtml(s)}${savesHtml(s)}`;
   }
 

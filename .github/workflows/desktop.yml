@@ -169,7 +169,8 @@ jobs:
           gh release create "$RELEASE_TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --title "$RELEASE_TAG" \
-            --generate-notes || true
+            --generate-notes \
+            --latest=false || true
           gh release upload "$RELEASE_TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --clobber \
@@ -217,3 +218,6 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --clobber \
             latest.json Fusible-Studio-*.sig
+          gh release edit "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --latest

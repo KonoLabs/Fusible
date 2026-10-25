@@ -41,7 +41,7 @@
   }
 
   function rowHtml(line) {
-    const remove = line.kind === 'manual' ? '<button class="btn icon-only" data-remove title="Remove part" aria-label="Remove part">&times;</button>' : '';
+    const remove = line.kind === 'manual' ? '<button class="btn icon-only" data-remove title="Remove part" aria-label="Remove part"><iconify-icon icon="pixelarticons:trash"></iconify-icon></button>' : '';
     return `<tr data-id="${escapeHtml(line.id)}" data-kind="${line.kind}"${line.picked ? '' : ' class="off"'}>
       <td><input type="checkbox" data-f="picked" ${line.picked ? 'checked' : ''} aria-label="Pick"></td>
       <td class="bom-r">${input('quantity', line.quantity, 'type="number" min="0" step="1" class="bom-num"')}</td>
@@ -91,7 +91,7 @@
       <label>CURRENCY <select id="bom-currency" title="Your prices are never converted. Estimates (~) follow the currency.">${currencyOptions(data.report.currency)}</select></label>
       <label>FILAMENT PER KG <input id="bom-kg" type="number" min="0" step="0.5" value="${data.report.price_per_kg}" class="bom-num"></label>
       <label class="bom-add">ADD A PART <input id="bom-new" placeholder="M3 screw" class="bom-wide"></label>
-      <button class="btn" id="bom-add">ADD</button>
+      <button class="btn" id="bom-add"><iconify-icon icon="pixelarticons:plus"></iconify-icon> ADD</button>
     </div>`;
   }
 
