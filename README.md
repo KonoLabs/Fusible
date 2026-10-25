@@ -291,12 +291,13 @@ Three rules compare the boards with the bodies and blow the fuse (exit 1, no
 
 - `body_interference`: a body overlaps the board slab or a component's volume,
   or two bodies overlap.
-- `hole_misaligned`: a body has material near a board hole on one face, but not
-  all around it. A hole with no body material near it is left alone.
+- `hole_misaligned`: a body has material near a board hole but no boss around
+  it (fewer than 2 of 4 ring quadrants), or has any material inside the hole's
+  bore (a pilot hole up to 0.5 mm narrower in radius is fine). A hole with no body material near it is left alone.
 - `connector_blocked`: a body stands in front of the opening a connector at the
   board edge needs.
 
-Parts that only touch do not fire. Each run writes `dist/assembly/check.json`
+Parts that only touch do not fire. Two bodies that overlap by more than 0.01 mm³ blow the fuse, so give a lip a clearance. Each run writes `dist/assembly/check.json`
 (`fuse`, and per violation the rule, parts, overlap volume in mm³, and position)
 and `dist/assembly/preview.glb`, which holds the bodies, the board slabs, and one
 `collision:<n>` node per overlap, even when the fuse blows. `fusible check` runs

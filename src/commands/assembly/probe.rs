@@ -80,6 +80,10 @@ pub enum Role {
         hole: usize,
         side: Side,
     },
+    HoleBore {
+        hole: usize,
+        at: [f64; 2],
+    },
 }
 
 /// One probe: its id, what it stands for, its shape, and its placement.
@@ -109,7 +113,7 @@ impl Frame<'_> {
             board: self.board.to_string(),
             collide: matches!(
                 role,
-                Role::Slab | Role::KeepOut { .. } | Role::Opening { .. }
+                Role::Slab | Role::KeepOut { .. } | Role::Opening { .. } | Role::HoleBore { .. }
             ),
             show: role == Role::Slab,
             role,

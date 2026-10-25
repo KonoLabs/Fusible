@@ -1,3 +1,5 @@
+use super::measure::clearance;
+use super::parts::Context;
 use super::rules::{
     violations, write_report, PairMeasurement, Response, BODY_INTERFERENCE, CONNECTOR_BLOCKED,
     EPS_VOLUME,
@@ -90,5 +92,25 @@ fn a_report_says_blown_with_violations_and_intact_without() {
     let intact = read().unwrap();
     assert_eq!(intact["fuse"], "intact");
     assert_eq!(intact["violations"], serde_json::json!([]));
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn no_bodies_still_write_an_intact_report() {
+    let dir = std::env::temp_dir().join(format!("fusible_nobodies_{}", std::process::id()));
+    let cfg = crate::config::FusibleConfig::default();
+    let circuits = Default::default();
+    let frames = Default::default();
+    let ctx = Context {
+        cfg: &cfg,
+        root: &dir,
+        parts_dir: &dir,
+        circuits: &circuits,
+        frames: &frames,
+    };
+    assert!(clearance(&ctx, &[], Some(&dir)).unwrap().is_empty());
+    let text = std::fs::read_to_string(dir.join("check.json")).unwrap();
+    assert!(text.contains("\"intact\""), "{text}");
+    assert!(!dir.join("preview.glb").exists());
     let _ = std::fs::remove_dir_all(&dir);
 }

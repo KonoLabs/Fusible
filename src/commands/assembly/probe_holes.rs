@@ -1,7 +1,7 @@
-//! Hole probes: a near cylinder and four ring quadrants on each face of the board.
+//! Hole probes: a near cylinder and four ring quadrants on each face, and a bore through the board.
 
 use super::probe::{Frame, Probe, Role, Shape, Side};
-use super::rules::{INSET, NEAR_MARGIN, PROBE_DEPTH, RING_WIDTH};
+use super::rules::{BORE_MARGIN, INSET, NEAR_MARGIN, PROBE_DEPTH, RING_WIDTH};
 use super::shrink::{shrunk_polygon, shrunk_span};
 use crate::commands::body::Kit;
 
@@ -63,6 +63,26 @@ fn face_probes(frame: &Frame, kit: &Kit, hole: &Hole, side: Side) -> Vec<Probe> 
     probes
 }
 
+fn bore_probe(frame: &Frame, kit: &Kit, hole: &Hole) -> Option<Probe> {
+    if hole.radius <= BORE_MARGIN {
+        return None;
+    }
+    let half = kit.thickness / 2.0;
+    let (z0, z1) = shrunk_span(-half - PROBE_DEPTH, half + PROBE_DEPTH);
+    let bore = Shape::Cylinder {
+        center: hole.center,
+        r: hole.radius - BORE_MARGIN,
+        z0,
+        z1,
+        clip: None,
+    };
+    let role = Role::HoleBore {
+        hole: hole.index,
+        at: hole.center,
+    };
+    Some(frame.probe(format!("hole:{}:bore", hole.index), role, bore))
+}
+
 /// The probes of every hole of the kit, bottom face first.
 pub(super) fn hole_probes(frame: &Frame, kit: &Kit) -> Vec<Probe> {
     kit.holes
@@ -74,9 +94,11 @@ pub(super) fn hole_probes(frame: &Frame, kit: &Kit) -> Vec<Probe> {
                 center: [h.x, h.y],
                 radius: h.diameter / 2.0,
             };
-            [Side::Bottom, Side::Top]
+            let faces = [Side::Bottom, Side::Top]
                 .into_iter()
-                .flat_map(|side| face_probes(frame, kit, &hole, side))
+                .flat_map(|side| face_probes(frame, kit, &hole, side));
+            faces
+                .chain(bore_probe(frame, kit, &hole))
                 .collect::<Vec<_>>()
         })
         .collect()
