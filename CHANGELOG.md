@@ -7,6 +7,14 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+### Fixed
+
+- Studio: the project tree, the view tabs and the panel now share one top margin (8 px), and the desktop window strip is 32 px so the window controls no longer sit above the sidebar edge.
+- Studio: the bottom bar is a grid, so the view controls stay beside the status pill and only stack when the viewport is under 480 px, instead of floating above it below 1000 px.
+- Studio: SAVE is disabled while there are no changes.
+- Studio: the sync success note disappears after 4 seconds.
+- Desktop: removed the borders around cards, panels, dialogs, menus, segmented controls and tool lists in the project and settings pages.
+
 ## [0.20.1] - 2026-10-25
 
 ### Fixed

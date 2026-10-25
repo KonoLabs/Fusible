@@ -2,7 +2,8 @@
   const POLL_MS = 30000;
   const CHECK_EVERY = 4;
   const GIT_DOWNLOAD = 'https://git-scm.com/downloads';
-  const state = { status: null, busy: false, draft: '', notice: null, ticks: 0 };
+  const NOTICE_MS = 4000;
+  const state = { status: null, busy: false, draft: '', notice: null, ticks: 0, timer: 0 };
 
   const view = () => document.getElementById('sync-view');
   const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -105,7 +106,7 @@
 
   function panelHtml(s) {
     const stuck = s.conflicts.length > 0;
-    const off = state.busy || stuck ? 'disabled' : '';
+    const off = state.busy || stuck || !s.changes.length ? 'disabled' : '';
     const noUpdates = state.busy || stuck || !s.upstream ? 'disabled' : '';
     const warn = s.fetch_error ? `<div class="sync-line subtle">Could not check for updates: ${escapeHtml(s.fetch_error)}</div>` : '';
     return `<div class="sync-head"><span class="sync-title">SYNC</span>
@@ -152,7 +153,13 @@
     render();
   }
 
+  function dismiss() {
+    state.notice = null;
+    render();
+  }
+
   async function act(url, body) {
+    clearTimeout(state.timer);
     state.busy = true;
     state.notice = null;
     render();
@@ -161,6 +168,7 @@
       if (reply.status) state.status = reply.status;
       state.notice = ok ? { text: reply.message } : { text: reply.error || 'That did not work.', details: reply.details, error: true };
       if (ok && url.endsWith('/save')) state.draft = '';
+      if (ok) state.timer = setTimeout(dismiss, NOTICE_MS);
     } catch (err) {
       state.notice = { text: 'Cannot reach Fusible Studio.', details: String(err), error: true };
     }

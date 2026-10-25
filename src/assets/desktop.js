@@ -1,6 +1,6 @@
 (() => {
   if (!window.FUSIBLE_DESKTOP) return;
-  const STRIP = 44;
+  const STRIP = 32;
   const LABEL = 'main';
   const isMac = /Mac|iPhone|iPad/.test(navigator.platform) || /Mac OS X/.test(navigator.userAgent);
   const invoke = (cmd, args) => {
@@ -10,8 +10,8 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    body.desktop-chrome #project, body.desktop-chrome #sidebar { padding-top: calc(var(--gutter) + ${STRIP}px); }
-    body.desktop-chrome .floating-views { top: calc(var(--gutter) + ${STRIP}px); }
+    body.desktop-chrome #project, body.desktop-chrome #sidebar { padding-top: calc(var(--top) + ${STRIP}px); }
+    body.desktop-chrome .floating-views { top: calc(var(--top) + ${STRIP}px); }
     .desktop-strip { position: fixed; top: 0; left: 0; right: 0; height: ${STRIP}px; z-index: 60; display: flex; align-items: center; padding: 0 16px; }
     .desktop-strip .traffic-group { display: flex; align-items: center; gap: 8px; }
     .desktop-strip .traffic { display: grid; place-items: center; width: 12px; height: 12px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; }
