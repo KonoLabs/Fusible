@@ -18,10 +18,10 @@
     .sync-box:focus-visible { border-color: var(--green); outline: none; }
     .sync-actions { display: flex; gap: 2px; padding: 0 12px 8px; }
     .sync-actions .btn { flex: 1; justify-content: center; padding: 0 6px; }
-    .sync-actions .btn.primary { background: var(--green); color: #000000; }
+    .sync-actions .btn.primary { background: var(--green); color: var(--on-green); }
     .sync-actions .btn:disabled { opacity: 0.4; cursor: default; }
-    .sync-note { margin: 0 16px 8px; padding: 6px 8px; font-size: 11px; line-height: 1.5; background: rgba(134, 168, 129, 0.14); }
-    .sync-note.error { background: rgba(197, 84, 84, 0.1); color: var(--alert); }
+    .sync-note { margin: 0 16px 8px; padding: 6px 8px; font-size: 11px; line-height: 1.5; background: color-mix(in srgb, var(--green) 14%, transparent); }
+    .sync-note.error { background: color-mix(in srgb, var(--alert) 10%, transparent); color: var(--alert); }
     .sync-note pre { margin-top: 6px; white-space: pre-wrap; word-break: break-word; color: var(--text-subtle); user-select: text; }
     .sync-card { margin: 0 12px 8px; padding: 8px; border: 1px solid var(--alert); font-size: 11px; line-height: 1.5; }
     .sync-card b { color: var(--alert); word-break: break-all; }

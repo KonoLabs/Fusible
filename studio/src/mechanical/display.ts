@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { themeHex } from "../theme";
 import type { MechanicalModel, MechanicalPart } from "./store";
 
 export type MechanicalStyle = "solid" | "overlay";
@@ -9,15 +10,16 @@ export interface MechanicalDisplay {
   dispose: () => void;
 }
 
-const PALETTE: Record<MechanicalPart, { color: number; opacity: number }> = {
-  base: { color: 0x6f7d6b, opacity: 0.16 },
-  lid: { color: 0xa8b365, opacity: 0.1 },
+const PALETTE: Record<MechanicalPart, { color: string; opacity: number }> = {
+  base: { color: "part-base", opacity: 0.16 },
+  lid: { color: "olive", opacity: 0.1 },
 };
 
-const EDGE_COLOR: Record<MechanicalStyle, number> = { solid: 0x1f1f1f, overlay: 0x86a881 };
+const EDGE_COLOR: Record<MechanicalStyle, string> = { solid: "edge", overlay: "green" };
 
 function surfaceMaterial(part: MechanicalPart, style: MechanicalStyle): THREE.Material {
-  const { color, opacity } = PALETTE[part];
+  const { color: colorName, opacity } = PALETTE[part];
+  const color = themeHex(colorName);
   const overlay = style === "overlay";
   return new THREE.MeshStandardMaterial({
     color,
@@ -33,7 +35,7 @@ function surfaceMaterial(part: MechanicalPart, style: MechanicalStyle): THREE.Ma
 function edgeMaterial(style: MechanicalStyle): THREE.LineBasicMaterial {
   const overlay = style === "overlay";
   return new THREE.LineBasicMaterial({
-    color: EDGE_COLOR[style],
+    color: themeHex(EDGE_COLOR[style]),
     transparent: overlay,
     opacity: overlay ? 0.55 : 1,
     depthWrite: !overlay,

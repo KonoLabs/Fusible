@@ -7,6 +7,10 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+### Changed
+
+- One file, `src/assets/theme.css`, defines every colour, including the desktop light theme. The dev server serves it at `/theme.css`, the studio and the desktop UI link it, and the studio 3D and schematic views read its variables at runtime through `studio/src/theme.ts`. The brand green is now `#88A888`.
+
 ## [0.17.0] - 2026-10-24
 
 ### Added

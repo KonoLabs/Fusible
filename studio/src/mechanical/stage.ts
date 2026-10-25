@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three-stdlib";
 import { animateCameraPreset, type Vec3 } from "../orbit";
+import { themeHex } from "../theme";
 
 export interface Stage {
   host: HTMLElement;
@@ -19,17 +20,18 @@ function directional(color: number, intensity: number, position: Vec3): THREE.Di
 }
 
 function addLights(scene: THREE.Scene, camera: THREE.Camera): void {
-  const hemi = new THREE.HemisphereLight(0xffffff, 0x18181b, 0.6);
+  const hemi = new THREE.HemisphereLight(themeHex("light"), themeHex("stage-ground"), 0.6);
   hemi.position.set(0, 0, 1);
-  scene.add(new THREE.AmbientLight(0xffffff, 0.25), hemi);
-  scene.add(directional(0xffffff, 1.25, [70, -80, 130]), directional(0x90cdf4, 0.5, [-80, 70, 50]));
-  scene.add(directional(0xffffff, 0.85, [40, -50, -110]));
-  camera.add(directional(0xffffff, 0.7, [0, 0, 1]));
+  scene.add(new THREE.AmbientLight(themeHex("light"), 0.25), hemi);
+  scene.add(directional(themeHex("light"), 1.25, [70, -80, 130]));
+  scene.add(directional(themeHex("light-fill"), 0.5, [-80, 70, 50]));
+  scene.add(directional(themeHex("light"), 0.85, [40, -50, -110]));
+  camera.add(directional(themeHex("light"), 0.7, [0, 0, 1]));
   scene.add(camera);
 }
 
 function createGrid(): THREE.GridHelper {
-  const grid = new THREE.GridHelper(400, 80, 0x353535, 0x1f1f1f);
+  const grid = new THREE.GridHelper(400, 80, themeHex("grid-major"), themeHex("edge"));
   grid.rotation.x = Math.PI / 2;
   grid.position.z = -0.05;
   return grid;
@@ -44,7 +46,7 @@ export function createStage(host: HTMLElement): Stage {
   renderer.domElement.style.display = "block";
   host.appendChild(renderer.domElement);
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x000000);
+  scene.background = new THREE.Color(themeHex("bg"));
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 5000);
   camera.up.set(0, 0, 1);
   camera.position.set(-120, -120, 120);

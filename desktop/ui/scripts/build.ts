@@ -18,6 +18,7 @@ export async function build(): Promise<void> {
     process.exit(1);
   }
   cpSync(`${root}index.html`, `${dist}/index.html`);
+  cpSync(`${root}../../src/assets/theme.css`, `${dist}/theme.css`);
   cpSync(`${root}styles.css`, `${dist}/styles.css`);
   cpSync(`${root}assets/undefined-medium.otf`, `${dist}/undefined-medium.otf`);
 }

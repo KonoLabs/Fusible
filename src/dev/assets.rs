@@ -12,10 +12,11 @@ const DESKTOP_JS: &str = include_str!("../assets/desktop.js");
 const DRAWER_JS: &str = include_str!("../assets/drawer.js");
 const GIT_JS: &str = include_str!("../assets/git.js");
 const KICAD_JS: &str = include_str!("../assets/kicad.js");
+const THEME_CSS: &str = include_str!("../assets/theme.css");
 const FONT_DATA: &[u8] = include_bytes!("../assets/undefined-medium.otf");
 const FAVICON_SVG: &str = concat!(
     r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">"##,
-    r##"<path fill="#86A881" d="M5 3h14v2H5zm0 16h14v2H5zM3 5h2v14H3zm16 0h2v14h-2zM7 7h10v2H7zm0 8h10v2H7z"##,
+    r##"<path fill="#88A888" d="M5 3h14v2H5zm0 16h14v2H5zM3 5h2v14H3zm16 0h2v14h-2zM7 7h10v2H7zm0 8h10v2H7z"##,
     r##"m0-6h2v6H7zm8 0h2v6h-2zm-4-8h2v2h-2zm0 20h2v2h-2zM1 11h2v2H1zm20 0h2v2h-2zm0-4h2v2h-2zm0 8h2v2h-2z"##,
     r##"M1 15h2v2H1zm0-8h2v2H1zm6-6h2v2H7zm8 0h2v2h-2zm0 20h2v2h-2zm-8 0h2v2H7z"/></svg>"##,
 );
@@ -88,6 +89,7 @@ pub(super) fn static_response(
             "application/javascript; charset=utf-8",
             PROJECT_JS.into(),
         ),
+        "/theme.css" => http_response(200, "text/css; charset=utf-8", THEME_CSS.into()),
         "/bom.js" => script_response(BOM_JS),
         "/firmware.js" => script_response(FIRMWARE_JS),
         "/drawer.js" => script_response(DRAWER_JS),
