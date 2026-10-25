@@ -7,6 +7,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-10-25
+
 ### Added
 
 - The desktop app opens on a sidebar home page: project list (most recent first, status dot), search, keyboard selection, a detail pane with Open, Reveal and Forget, and Settings in the main area. The last selection is remembered.
