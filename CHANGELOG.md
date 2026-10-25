@@ -7,6 +7,13 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.20.3] - 2026-10-25
+
+### Fixed
+
+- Desktop: the project search field no longer draws a native border, and its icon stays visible on hover.
+- Studio: the bottom bar keeps the status pill and the view controls on one line whenever they fit, and stacks them only when they do not.
+
 ## [0.20.2] - 2026-10-25
 
 ### Fixed
