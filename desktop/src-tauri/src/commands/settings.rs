@@ -9,10 +9,14 @@ pub fn get_settings<R: Runtime>(app: AppHandle<R>) -> Result<Settings, String> {
     Ok(storage::load_settings(&app))
 }
 
-/// Validates and saves the settings, returning the saved copy.
+/// Validates and saves the settings, returning the saved copy. The update check time stays as stored.
 #[tauri::command]
 pub fn set_settings<R: Runtime>(app: AppHandle<R>, settings: Settings) -> Result<Settings, String> {
-    let clean = validate::settings(settings)?;
+    let last_update_check = storage::load_settings(&app).last_update_check;
+    let clean = Settings {
+        last_update_check,
+        ..validate::settings(settings)?
+    };
     storage::save_settings(&app, &clean)?;
     Ok(clean)
 }

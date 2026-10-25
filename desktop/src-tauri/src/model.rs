@@ -24,6 +24,8 @@ pub struct Settings {
     pub port: u16,
     pub open_last_project: bool,
     pub theme: String,
+    pub auto_update: bool,
+    pub last_update_check: Option<i64>,
 }
 
 impl Default for Settings {
@@ -34,6 +36,8 @@ impl Default for Settings {
             port: DEFAULT_PORT,
             open_last_project: false,
             theme: "system".into(),
+            auto_update: true,
+            last_update_check: None,
         }
     }
 }

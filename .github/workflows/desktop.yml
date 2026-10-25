@@ -117,6 +117,9 @@ jobs:
 
       - name: Build the app
         working-directory: desktop/src-tauri
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: bunx @tauri-apps/cli@2 build ${{ matrix.tauri_args }}
 
       - name: Name the installers
@@ -125,11 +128,15 @@ jobs:
           bundle="${{ matrix.bundle_dir }}"
           case "${{ matrix.name }}" in
             windows-x64)
-              cp "$bundle"/nsis/*-setup.exe out/Fusible-Studio-windows-x64-setup.exe ;;
+              cp "$bundle"/nsis/*-setup.exe out/Fusible-Studio-windows-x64-setup.exe
+              cp "$bundle"/nsis/*-setup.exe.sig out/Fusible-Studio-windows-x64-setup.exe.sig ;;
             macos-universal)
-              cp "$bundle"/dmg/*.dmg out/Fusible-Studio-macos-universal.dmg ;;
+              cp "$bundle"/dmg/*.dmg out/Fusible-Studio-macos-universal.dmg
+              cp "$bundle"/macos/*.app.tar.gz out/Fusible-Studio-macos-universal.app.tar.gz
+              cp "$bundle"/macos/*.app.tar.gz.sig out/Fusible-Studio-macos-universal.app.tar.gz.sig ;;
             linux-x64)
               cp "$bundle"/appimage/*.AppImage out/Fusible-Studio-linux-x64.AppImage
+              cp "$bundle"/appimage/*.AppImage.sig out/Fusible-Studio-linux-x64.AppImage.sig
               cp "$bundle"/deb/*.deb out/Fusible-Studio-linux-x64.deb ;;
           esac
           ls -l out
@@ -151,7 +158,7 @@ jobs:
           path: out
           merge-multiple: true
 
-      - name: Upload installers and checksums
+      - name: Upload installers, signatures and checksums
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
@@ -167,3 +174,46 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --clobber \
             Fusible-Studio-* desktop-checksums.txt
+
+  manifest:
+    name: updater manifest
+    needs: [bundle, publish]
+    if: github.ref_type == 'tag' || inputs.tag != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: out
+          merge-multiple: true
+
+      - name: Test the manifest builder
+        run: bun test desktop/scripts
+
+      - name: Build latest.json
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          bun run desktop/scripts/latest-json.ts \
+            --tag "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --dir out \
+            --changelog CHANGELOG.md \
+            --out out/latest.json
+          cat out/latest.json
+
+      - name: Upload latest.json and signatures
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          cd out
+          gh release upload "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber \
+            latest.json Fusible-Studio-*.sig

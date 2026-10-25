@@ -18,6 +18,7 @@ mod size;
 mod storage;
 mod studio;
 mod timestamp;
+mod updates;
 mod validate;
 mod window;
 
@@ -39,6 +40,8 @@ mod ready_tests;
 mod recent_tests;
 #[cfg(test)]
 mod timestamp_tests;
+#[cfg(test)]
+mod updates_tests;
 #[cfg(test)]
 mod validate_tests;
 #[cfg(test)]

@@ -14,6 +14,8 @@ export type Settings = {
   port: number;
   open_last_project: boolean;
   theme: "system" | "dark" | "light";
+  auto_update: boolean;
+  last_update_check: number | null;
 };
 
 export type Inspection = { has_manifest: boolean; name: string | null };
@@ -36,3 +38,11 @@ export type CreateArgs = {
 };
 
 export type Theme = Settings["theme"];
+
+export type UpdateCheck =
+  | { status: "skipped" }
+  | { status: "up_to_date" }
+  | { status: "available"; version: string; notes: string; date: string | null }
+  | { status: "unsupported"; url: string };
+
+export type UpdateProgress = { downloaded: number; total: number | null };
