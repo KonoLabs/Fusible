@@ -7,6 +7,10 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+### Added
+
+- The studio has an ASSEMBLY tab (key `5`), shown when `fusible.yml` declares `assembly:`. It draws `dist/assembly/preview.glb` and paints every `collision:*` node red on top. A side list shows each violation of `dist/assembly/check.json`; a click frames its collision. `BUILD ASSEMBLY` runs `fusible assembly` from the empty state and the toolbar, and the view reloads when the run ends. New endpoints `GET /api/assembly` and `GET /api/assembly/model`; `/api/project` carries `assembly`, and `POST /api/run` accepts `{"action":"assembly"}`.
+
 ### Changed
 
 - One file, `src/assets/theme.css`, defines every colour, including the desktop light theme. The dev server serves it at `/theme.css`, the studio and the desktop UI link it, and the studio 3D and schematic views read its variables at runtime through `studio/src/theme.ts`. The brand green is now `#88A888`.

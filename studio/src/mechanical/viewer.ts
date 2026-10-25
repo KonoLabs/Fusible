@@ -2,7 +2,7 @@ import { Z_UP_PRESETS, type CameraPresetName } from "../cadCamera";
 import { demandAuthored, isAuthoredSelected, refreshAuthored, subscribeAuthored, type AuthoredState } from "./authored";
 import { buildMechanicalDisplay, poseMechanicalDisplay } from "./display";
 import { getMechanicalOption } from "./prefs";
-import { framePreset } from "./stage";
+import { framePreset } from "./frame";
 import { demandMechanical, subscribeMechanical, type MechanicalModel, type MechanicalState } from "./store";
 import { attach, clearAuthored, mount, showAuthored, startLoop, type Tab } from "./tab";
 
