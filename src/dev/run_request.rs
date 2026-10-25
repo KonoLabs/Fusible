@@ -24,6 +24,7 @@ fn known_targets<'a>(cfg: &'a FusibleConfig, action: &str) -> Option<Vec<&'a Str
         "check" => Some(boards.collect()),
         "build" => Some(boards.chain(cfg.firmware.keys()).collect()),
         "body" => Some(boards.chain(cfg.bodies.keys()).collect()),
+        "assembly" => Some(Vec::new()),
         _ => None,
     }
 }
@@ -34,10 +35,19 @@ pub(super) fn parse(body: &str, cfg: Option<&FusibleConfig>) -> Result<Spec, Str
     let default = FusibleConfig::default();
     let targets = known_targets(cfg.unwrap_or(&default), &request.action).ok_or_else(|| {
         format!(
-            "unknown action `{}`; use check, build, or body",
+            "unknown action `{}`; use check, build, body, or assembly",
             request.action
         )
     })?;
+    if request.action == "assembly" {
+        return match request.target.as_deref() {
+            None | Some("assembly") => Ok(Spec {
+                label: request.action.clone(),
+                args: vec![request.action],
+            }),
+            Some(target) => Err(format!("`{target}` is not a valid target for `assembly`")),
+        };
+    }
     let mut args = vec![request.action.clone()];
     let mut label = request.action;
     if let Some(target) = request.target {
