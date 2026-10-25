@@ -7,6 +7,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.20.4] - 2026-10-25
+
 ### Fixed
 
 - Studio: every card and toolbar now sits 12 px from the window edge, top and bottom alike, and the PCB and schematic toolbars line up with the view tabs.
