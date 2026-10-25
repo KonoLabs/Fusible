@@ -1,5 +1,7 @@
 use tauri::{AppHandle, Manager, Runtime, Url, WebviewWindow};
 
+use crate::access::{check_fragment, grant_studio};
+
 pub const MAIN: &str = "main";
 const TITLE: &str = "Fusible Studio";
 
@@ -40,6 +42,7 @@ pub fn title_for(name: Option<&str>) -> String {
 
 /// Navigates to the Projects page, optionally with a hash such as `settings`.
 pub fn show_projects<R: Runtime>(app: &AppHandle<R>, fragment: Option<&str>) -> Result<(), String> {
+    let fragment = check_fragment(fragment)?;
     let window = main(app)?;
     let mut url = app.state::<Home>().0.clone();
     url.set_fragment(fragment);
@@ -53,6 +56,7 @@ pub fn show_projects<R: Runtime>(app: &AppHandle<R>, fragment: Option<&str>) -> 
 pub fn show_studio<R: Runtime>(app: &AppHandle<R>, url: &str, name: &str) -> Result<(), String> {
     let window = main(app)?;
     let target = Url::parse(url).map_err(|err| format!("The studio sent a bad URL: {err}"))?;
+    grant_studio(app, &target)?;
     window.navigate(target).map_err(|err| err.to_string())?;
     window
         .set_title(&title_for(Some(name)))

@@ -24,7 +24,9 @@ function openSelected(): void {
 }
 
 function onKey(event: KeyboardEvent): void {
-  const typing = (event.target as HTMLElement).id === "search";
+  const target = event.target as HTMLElement;
+  const typing = target.id === "search";
+  if (!typing && !target.classList.contains("row")) return;
   const deltas: Record<string, number> = { ArrowDown: 1, ArrowUp: -1 };
   if (event.key in deltas) step(deltas[event.key], !typing);
   else if (event.key === "Enter") openSelected();
@@ -41,7 +43,7 @@ export function sidebar(): HTMLElement {
   const actions = h("div", { className: "side-actions" }, create, open);
   const foot = h("div", { className: "side-foot" }, toolchainLine(), settingsLink());
   const side = h("aside", { className: "sidebar", "aria-label": "Projects" },
-    strip, brand(), actions, search(), list(), foot);
+    strip, brand(), actions, state.view === "settings" ? null : search(), list(), foot);
   side.addEventListener("keydown", onKey);
   return side;
 }

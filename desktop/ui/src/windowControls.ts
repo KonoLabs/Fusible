@@ -1,12 +1,9 @@
 import { h } from "./dom";
+import { isMac } from "./platform";
 
 type Invoke = (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
 
 const LABEL = "main";
-
-export function isMac(): boolean {
-  return /Mac|iPhone|iPad/.test(navigator.platform);
-}
 
 function invoke(cmd: string): void {
   const tauri = (window as unknown as { __TAURI_INTERNALS__?: { invoke?: Invoke } }).__TAURI_INTERNALS__;

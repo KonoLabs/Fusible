@@ -3,6 +3,7 @@ import { copyButton } from "./copyButton";
 import { h, icon } from "./dom";
 import { openFolderFlow } from "./folder";
 import { openNewProject } from "./newProject";
+import { isMac } from "./platform";
 import { update, type Failure } from "./store";
 
 export function failurePanel(failure: Failure): HTMLElement {
@@ -36,5 +37,5 @@ export function emptyState(): HTMLElement {
 }
 
 export function shortcut(key: string): string {
-  return /Mac|iPhone|iPad/.test(navigator.platform) ? `Cmd+${key}` : `Ctrl+${key}`;
+  return isMac() ? `Cmd+${key}` : `Ctrl+${key}`;
 }

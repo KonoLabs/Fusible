@@ -1,6 +1,6 @@
 (() => {
   if (!window.FUSIBLE_DESKTOP) return;
-  const STRIP = 36;
+  const STRIP = 44;
   const LABEL = 'main';
   const isMac = /Mac|iPhone|iPad/.test(navigator.platform) || /Mac OS X/.test(navigator.userAgent);
   const invoke = (cmd, args) => {
@@ -60,7 +60,9 @@
       q: () => invoke('plugin:window|close', { label: LABEL }),
     };
     const shifted = { o: () => invoke('open_projects', {}) };
+    const editable = (node) => node instanceof Element && Boolean(node.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])'));
     document.addEventListener('keydown', (event) => {
+      if (event.defaultPrevented || editable(event.target)) return;
       if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
       const run = (event.shiftKey ? shifted : plain)[event.key.toLowerCase()];
       if (!run) return;

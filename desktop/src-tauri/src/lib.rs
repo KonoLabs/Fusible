@@ -1,3 +1,4 @@
+mod access;
 mod actions;
 mod chrome;
 mod commands;
@@ -20,6 +21,8 @@ mod timestamp;
 mod validate;
 mod window;
 
+#[cfg(test)]
+mod access_tests;
 #[cfg(test)]
 mod actions_tests;
 #[cfg(test)]
