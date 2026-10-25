@@ -7,6 +7,13 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.20.7] - 2026-10-25
+
+### Changed
+
+- Desktop studio: the project name is hidden when the project card is collapsed, and sits closer to the window controls when it is open.
+- Desktop: the top bar is gone from the Projects and Settings pages. The save status floats at the top right of Settings.
+
 ## [0.20.6] - 2026-10-25
 
 ### Changed

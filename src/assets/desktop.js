@@ -14,12 +14,10 @@
     .desktop-strip { position: fixed; top: 0; left: 0; right: 0; height: var(--gutter); z-index: 60; }
     .window-controls { display: flex; align-items: center; flex: none; width: 54px; height: 28px; margin-left: 8px; }
     .project-head { flex-wrap: wrap; }
-    .project-head .window-controls { order: 0; margin-top: 8px; margin-right: auto; }
+    .project-head .window-controls { order: 0; height: 20px; margin-top: 8px; margin-right: auto; }
     .project-head .btn.icon-only { order: 1; }
-    .project-head .project-title { order: 2; flex: 1 0 100%; padding: 4px 12px 8px; }
-    .window-pill-host { top: var(--gutter); left: var(--gutter); width: ${PILL}px; flex-direction: column; align-items: flex-start; gap: 0; padding: 0; background: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
-    .window-pill-host .window-controls { margin-left: 8px; }
-    .window-pill-title { max-width: 100%; box-sizing: border-box; padding: 0 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; letter-spacing: 0.05em; color: var(--green); }
+    .project-head .project-title { order: 2; flex: 1 0 100%; padding: 0 12px 8px; }
+    .window-pill-host { top: var(--gutter); left: var(--gutter); width: ${PILL}px; padding: 0; background: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
     .window-pill-host[hidden] { display: none; }
     .window-controls .traffic-group { display: flex; align-items: center; gap: 8px; }
     .window-controls .traffic { display: grid; place-items: center; width: 12px; height: 12px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; }
@@ -70,24 +68,13 @@
   const pill = document.createElement('div');
   pill.className = 'floating window-pill-host';
   drag(pill);
-  const pillTitle = document.createElement('div');
-  pillTitle.className = 'window-pill-title';
-  const title = document.getElementById('project-title');
-  const syncTitle = () => {
-    const name = title ? title.textContent : '';
-    pillTitle.textContent = name;
-    pillTitle.title = name;
-    pillTitle.hidden = !name;
-  };
-  syncTitle();
-  if (title) new MutationObserver(syncTitle).observe(title, { childList: true, characterData: true, subtree: true });
   if (viewport) viewport.append(pill);
   for (const node of [head, document.getElementById('project-title'), document.querySelector('.sidebar-tabs'), document.querySelector('.floating-views')]) drag(node);
 
   function place() {
     const inCard = Boolean(project && head && !project.hidden && getComputedStyle(project).display !== 'none');
     if (inCard) head.prepend(controls);
-    else pill.append(controls, pillTitle);
+    else pill.append(controls);
     pill.hidden = inCard;
     document.body.classList.toggle('window-pill', !inCard);
   }

@@ -19,15 +19,11 @@ function projectPage(): (Node | null)[] {
 export function shell(): HTMLElement {
   const settings = state.view === "settings";
   const status = h("span", { className: "save-status", role: "status", "aria-live": "polite" });
-  const header = settings
-    ? h("header", { className: "header", "data-tauri-drag-region": true },
-      h("h1", { className: "title", "data-tauri-drag-region": true }, "Settings"),
-      h("div", { className: "header-actions" }, status))
-    : null;
   const main = h("main", { className: "page" });
   const nodes = settings ? settingsPage(status) : projectPage();
   for (const node of nodes) if (node) main.append(node);
+  if (settings) main.append(status);
   const empty = !settings && state.loaded && !state.projects.length && !state.loadError;
   return h("div", { className: empty ? "shell is-empty" : "shell" },
-    sidebar(), h("div", { className: "main" }, ...(header ? [header, main] : [main])));
+    sidebar(), h("div", { className: "main" }, main));
 }
