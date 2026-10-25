@@ -11,6 +11,10 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 - `fusible dev` is now `fusible studio`. `dev`, `view`, and `webview` stay as aliases, so existing scripts keep working. The desktop app launches `fusible studio --desktop`.
 
+### Fixed
+
+- `hole_misaligned` fails closed: a body fitted to a board (generated, or authored with `board:`) must have a boss for every non-plated hole of that board. A hole with no body material near it now blows the fuse instead of being ignored. Plated holes need no boss.
+
 ## [0.18.0] - 2026-10-25
 
 ### Added

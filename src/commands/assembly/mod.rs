@@ -31,6 +31,8 @@ mod probe_hole_tests;
 #[cfg(test)]
 pub(crate) mod probe_tests;
 #[cfg(test)]
+mod rules_boss_tests;
+#[cfg(test)]
 mod rules_hole_tests;
 #[cfg(test)]
 mod rules_support;

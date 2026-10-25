@@ -75,6 +75,7 @@ pub enum Role {
         hole: usize,
         side: Side,
         at: [f64; 2],
+        plated: bool,
     },
     HoleQuadrant {
         hole: usize,
