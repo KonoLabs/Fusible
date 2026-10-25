@@ -1,118 +1,223 @@
-# Plan: Fusible after 0.11.0
+# Plan: Fusible 0.18.0
 
-Current version: `0.11.0`, released and on crates.io. This plan replaces the 0.11.0 hardening plan, whose six workstreams all shipped.
+Current version: `0.17.0`. Target: `0.18.0` (new rules, new studio view, desktop shell redesign).
 
-Four phases. Phase 0 needs no decisions. Phase 1 needs two answers from you. Phase 2 is a patch release. Phase 3 is three separate pieces of work, each planned on its own when it starts.
+Five workstreams, A to E, each run by one agent in its own git worktree. They touch disjoint files, so they run in parallel. The contracts between them are fixed below; do not change a contract without updating this file.
 
-Everything verified against the tree at `84ecc91` on 2026-10-23. Paths and line numbers below were read, not recalled.
+Verified against `32b2ac8` on 2026-10-25. Paths were read, not recalled.
 
-## Rules for every change
+## Rules for every agent
 
-- Conventional Commits, no gitmoji, no co-author lines, no inline comments, no comments inside function bodies.
-- One regression test per fix, confirmed failing before and passing after.
-- Before any commit, all four must pass and filet must print nothing:
+- Conventional Commits (`type(scope): summary`), no gitmoji (the hook adds it), no co-author lines. Merge commits use `chore:`.
+- No inline comments, no comments inside function bodies. Doc comments on public items match the file around them.
+- Branch names never start with `claude` or `codex`. Use `feat/cross-rules`, `feat/studio-assembly`, `test/assembly-success`, `feat/desktop-shell`.
+- Before any commit, all four pass and filet prints nothing:
   ```sh
   cargo fmt --all -- --check
   cargo clippy --all-targets -- -D warnings
   cargo test --locked
   filet check .
   ```
-- FieldCam is the acceptance board. `fusible check` there must exit 0 and leave `apps/firmware/src/pins.rs` unchanged.
+- Desktop changes also pass `cd desktop/ui && bun test && bun run build` and `cd desktop/src-tauri && cargo clippy --all-targets -- -D warnings && cargo test --locked`.
+- Studio TS changes rebuild the committed bundle: `cd studio && bun run build` (writes `src/assets/studio.bundle.js`).
+- Acceptance project: `/home/yann/Code/Kono/FieldCam`. `fusible check` and `fusible assembly` there must exit 0 with its real generated enclosure. A false positive on FieldCam is a bug in the rule, not in FieldCam.
+- Never `pkill -f "fusible dev"`; use `fuser -k <port>/tcp`.
 
-## Phase 1: two decisions
+## Decision taken: missing bun or geometry
 
-### D1. Does `schematic_scale` become a warning?
+- No `assembly:` in `fusible.yml`: the three cross-world rules are skipped. Nothing changes for current users.
+- `assembly:` declared, and bun or a body model cannot be loaded: exit 2 (tool error), never 1. This reuses `BodyError::BunMissing` and the existing `AssemblyError` variants.
+- `fusible check <one board>` skips the cross-world rules, the same way `check_manifest_links` skips links when not every board was checked.
+- `--skip-lint` on `fusible assembly` skips them too.
 
-**Current state.** It blows the fuse like every other rule. There is no warning level anywhere in the linter: `src/linter/diagnostics.rs:37` hardcodes `miette::Severity::Error` for every `Diagnostic`, and `src/commands/check.rs:139` returns `CheckError::FuseBlown` whenever `violations` is non-empty. So this is not a one-line severity flip. It introduces the concept of a non-fatal diagnostic, which Fusible does not have.
+## Contract shared by A and B
 
-**Blast radius.** `Diagnostic` is a public struct built as a literal at 12 sites across 9 rule files (`src/linter/rules/`), plus 3 in `src/linter/tests.rs`. `src/dispatch.rs` matches `FuseBlown` in four arms (check, build, export, mechanical), and `FuseBlown` is the only path that renders diagnostics today. Warnings currently have nowhere to print.
+`fusible assembly` writes two diagnostic files into `<out_dir>/assembly/` (the parts directory it already creates) on every run that reaches the measurement step, intact or blown:
 
-**Recommended design.** Put severity on the rule, not on each diagnostic, and stamp it centrally:
+- `check.json`:
+  ```json
+  {
+    "version": 1,
+    "fuse": "intact",
+    "violations": [
+      {
+        "rule": "body_interference",
+        "message": "body `case` overlaps board `main` by 3.20 mm³",
+        "parts": ["case", "main"],
+        "volume": 3.2,
+        "at": [12.0, -4.5, 1.6],
+        "collision": "collision:0"
+      }
+    ]
+  }
+  ```
+  `fuse` is `"intact"` or `"blown"`. `volume` (mm³), `at` (assembly frame, mm, centre of the overlap bounding box) and `collision` are optional per violation. `collision` names a node in `preview.glb`.
+- `preview.glb`: every part in the assembly frame (same colours as `assembly.ts` uses now), plus one node per overlap solid, named `collision:<n>`. Written even when the fuse blows. It is a diagnostic, not a fabrication export.
 
-1. Add `enum Severity { Error, Warning }` to `src/linter/diagnostics.rs`, with `Error` as `Default`.
-2. Add `severity: Severity` to `Diagnostic`, derive `Default`, and have the 12 literal sites gain `..Default::default()`. Mechanical, nine files.
-3. Add `fn severity(&self) -> Severity { Severity::Error }` to the `Rule` trait in `src/linter.rs:38`, overridden only by `SchematicScaleRule`.
-4. `Linter::run_with_context` (`src/linter.rs:70`) stamps each diagnostic with its rule's severity.
-5. `check.rs:139` partitions by severity. Errors build `FuseBlown` and exit 1 as now. Warnings render through a separate `miette::Report` and the command returns `Ok`.
-6. `diagnostics.rs:37` returns the stored severity instead of the constant.
+`assembly.glb` and `assembly.step` stay fuse-gated: they are written only when `fuse` is `"intact"`.
 
-The smaller alternative is a `const WARNING_RULES: &[&str]` lookup on `Diagnostic::rule` inside `diagnostics.rs`: about ten lines in one file, no rule changes. It is stringly typed, so renaming a rule would silently drop its warning status. If you take it, pin the behaviour with a test.
+## A. Cross-world fuse rules (`feat/cross-rules`)
 
-**Tests.** A circuit whose only violation is `schematic_scale` exits 0 and prints a warning. A circuit with that plus one real violation still exits 1 and prints both. Exit 2 paths untouched.
+Goal: `body_interference`, `hole_misaligned`, `connector_blocked` blow the fuse. This finishes Milestone 16.
 
-**Open question for you:** should warnings also be suppressible (`--no-warnings`) or promotable (`--deny-warnings`) in this change, or is that a later addition? Recommendation: leave both out now. Nobody has asked, and adding the severity model is the part that is hard to reverse.
+### Design
 
-### D2. How does FieldCam's fab export get unblocked?
+The board side of every rule comes from the Circuit JSON, in pure Rust, through the kit that `fusible body kit` already builds (`build_kit` in `src/commands/body/kit_data.rs:185`: outline, thickness, holes, components with `z`/`height`, `keep_out`, `openings`). No board STEP and no tscircuit runner are needed for the rules. Only body geometry needs occt-wasm.
 
-**Current state.** `fusible export --preset fab` on FieldCam fails because two kaomoji silkscreen strings have no glyph. `src/gerber/layers/text.rs:56` returns `Err("character '{ch}' has no glyph")`, which is the fail-closed behaviour workstream E was asked for. The built-in font at `src/gerber/layers/font.rs:10` covers `0-9`, `A-Z`, `. - _ / +` and space. `font.rs:58` upper-cases first, so lowercase text works; the gap is genuinely non-ASCII only.
+Rust builds probe solids, places them with the existing `place.rs` matrices, and sends them with the bodies to bun. The script only measures: for each `(probe, body)` pair it returns `getVolume(common(probe, body))`. Rust turns the numbers into `Diagnostic`s. All thresholds and rule logic stay in Rust, where they are unit-tested.
 
-Three options:
+Probe kinds (serde-tagged enum, `kind` field):
 
-1. **Remove the kaomoji from the FieldCam TSX.** No Fusible change. Fusible stays fail-closed, which is the invariant. FieldCam loses two decorative strings.
-2. **Add a `--allow-missing-glyphs` flag** that skips unmappable characters with a warning. Keeps the default fail-closed and gives an escape hatch. Pairs naturally with D1 if the warning level lands first.
-3. **Widen the font.** Open-ended. Kaomoji need CJK and arrow glyphs in a 4x6 single-stroke grid, where they will not be legible at silkscreen sizes anyway.
+| kind | fields | built in TS with |
+|---|---|---|
+| `prism` | `points: [[x,y]]`, `z0`, `z1`, `matrix` | `makeLineEdge` + `makeWire` + `makeFace` + `extrude`, then `transform` |
+| `box` | `min: [x,y,z]`, `max: [x,y,z]`, `matrix` | `makeBoxFromCorners`, then `transform` |
+| `cylinder` | `center: [x,y]`, `r`, `z0`, `z1`, `matrix` | `makeCylinder`, `translate`, `transform` |
+| `ring` | `center`, `r0`, `r1`, `z0`, `z1`, `quadrant: 0..3`, `matrix` | outer cylinder `cut` inner cylinder, `common` with a quadrant box |
 
-**Recommendation: option 1.** Silkscreen that cannot be stroked is not silkscreen, and a fab house would not render it either. Option 2 is a reasonable follow-up if a second board hits this, but adding a bypass flag for one decorative string on one board is the wrong trade against the fuse contract.
+Each probe carries an `id: String` that the response echoes.
 
-## Phase 2: 0.11.1 patch
+Rules, with constants in one place (`src/commands/assembly/rules.rs`):
 
-Both items are small, independent, and need no decisions. Ship them together.
+- `EPS_VOLUME = 0.01` mm³: any common volume above it counts as contact.
+- `INSET = 0.1` mm: every probe shrinks by this on each face, so parts that only touch do not fire.
+- **`body_interference`**: probes are the board slab (`prism` from `outline`, `z0 = -thickness/2`, `z1 = +thickness/2`, board frame, because tscircuit's board model is centred on Z = 0) and one `box` per `keep_out` volume. Fires when a probe overlaps a body. Also fires for each pair of bodies whose solids overlap: for body pairs the script computes `common(bodyA, bodyB)` directly (request field `pairs: [[a,b]]`).
+- **`hole_misaligned`**: for each kit hole and each side of the board (below the bottom face, above the top face), four `ring` quadrant probes (`r0 = d/2`, `r1 = d/2 + 0.8`, 2 mm tall) and one `cylinder` near-probe (`r = d/2 + 4`, same height). Aligned: all four quadrants hit. No boss: the near-probe misses, and the rule says nothing. Misaligned: the near-probe hits and at least one quadrant misses. The message names the hole position, the side, and the body.
+- **`connector_blocked`**: for each kit `opening`, one `box` spanning `from..to` along the edge, the component's `z..z+height` vertically, extruded outward along `normal` by 3 mm from the board edge. Fires when it overlaps a body. The message names the component (`opening.component`) and the side.
 
-### P1. Name the chip by its part number in the no-target hint
+STL bodies: `importStl` gives a shell, and `common` with a shell has no volume. The script runs `sewAndSolidify` (fallback `makeSolid(sew(...))`) on STL imports before measuring, and `isValid` must hold; otherwise it reports a load error, which Rust maps to exit 2 (fail closed, never a silent pass).
 
-`print_hint` in `src/codegen/select.rs:54` builds its candidate list from `c.name`, falling back to `c.component_id`, then `"?"`. On a board whose chips carry a manufacturer part number but terse refdes, the hint reads `several chips on the board (U1, U3)`, which does not tell you what to put in `mcu.chip`.
+### Files
 
-Fix: prefer the manufacturer part number for the display string, falling back to name, then id. `descriptors` in `src/codegen/select/fields.rs` already gathers those fields, so reuse it rather than re-reading the component.
+- `src/commands/body/kit_data.rs`, `kit_levels.rs`, `kit.rs`, `mod.rs`: widen `build_kit` and the `Kit*` types from `pub(super)` to `pub(crate)`, re-export from `commands::body`. No behaviour change.
+- New `src/commands/assembly/probe.rs` (+ `probe_tests.rs`): probe types and builders from a `Kit` and a frame `Matrix`. Pure, no IO.
+- New `src/commands/assembly/rules.rs` (+ `rules_tests.rs`): `fn violations(kits, response) -> Vec<Diagnostic>`, the constants, and the `check.json` writer. Pure except the writer.
+- New `src/commands/assembly/measure.rs`: builds the measure job, runs `run_script("assembly.ts", ...)`, reads the response file. The job gains `mode: "measure" | "merge"`, `probes`, `pairs`, `report` (path of the response JSON), `preview` (path of `preview.glb`). `run_script` sends stdout to null, so the response goes through a file, not stdout.
+- `src/commands/assembly/parts.rs`: split board STEP export out of `collect_parts`, so measuring needs only bodies. Merge still exports boards.
+- `src/commands/assembly/mod.rs`: order becomes gate, collect bodies, measure, write `check.json`, blow the fuse if any violation (`CheckError::FuseBlown(FuseBlown::new(..))` wrapped in `AssemblyError::Check`, exit 1, no `assembly.*` written), then export boards and merge. Two bun runs: measure, then merge. Do not merge both into one run: the script would have to decide the fuse.
+- `src/assets/assembly.ts`: add the measure mode. Keep the merge mode output byte-identical in behaviour.
+- `src/commands/check.rs`: next to `check_manifest_links` (line 115), add `check_manifest_assembly` with the same guard (manifest found, every board checked, `assembly:` present). It runs gate-free measurement (the boards were just linted) and writes no preview. Merge its failure the same way as links at line 111.
+- `src/commands/assembly/error.rs`: add a variant for a body that loaded but could not be solidified (`fusible::assembly::body_not_solid`, exit 2).
+- Docs: `AGENTS.md` (fuse contract list in section 1, `assembly` entry in section 4), `README.md` rule list, `GLOSSARY.md` if it lists rules, `ROADMAP.md` (tick Milestone 16), `CHANGELOG.md` `[Unreleased]` entry.
 
-Test: a board with two chips carrying part numbers prints both part numbers in the hint. Keep asserting that selection still returns `None`, since the hint is cosmetic and must not change which chip is picked.
+### Tests
 
-### P2. Let `c`-package STM32G431 boards reach their extra pins (done, 0.11.3)
+- `probe_tests.rs`: a square board with one hole and one edge connector gives the expected probe count and corners after a 90 degree placement.
+- `rules_tests.rs`: hand-written measurement responses produce exactly the expected diagnostics: four quadrant hits = no violation; near hit with two quadrant misses = `hole_misaligned`; near miss = nothing; a volume of `EPS_VOLUME / 2` = nothing.
+- `tests/assembly_rules.rs` (new file, not `tests/assembly.rs`, which belongs to C): skip unless bun is found (same helper C writes, see C). An ASCII STL box written by the test, placed through the board: exit 1, `body_interference` in stderr, no `dist/assembly.glb`, `dist/assembly/check.json` says `blown`. Same box moved 50 mm away: exit 0.
+- FieldCam: `fusible check` and `fusible assembly` exit 0. If the generated enclosure fires a rule, fix the probe, not the threshold.
 
-Shipped as `stm32g431cbu` (UFQFPN48, 42 GPIOs) and `stm32g431cby` (WLCSP49, 41 GPIOs), named after the ordering scheme in DS12589 Table 101 rather than `cu`/`cw`.
+## B. Studio assembly view (`feat/studio-assembly`)
 
-`src/silicon/database/stm32/mod.rs:185` maps `STM32G431C` to `PINS_48`. The `c` package letter covers LQFP48, UFQFPN48 and WLCSP49, and the latter two bond out 3 to 4 GPIOs that LQFP48 does not. Those pins are currently rejected as unknown, so a valid WLCSP49 design cannot pass `pin_mux`.
+Goal: the studio shows `preview.glb` with collisions in red, and can rebuild it.
 
-Open question to settle while implementing: the package letter alone cannot distinguish these, so this needs either a longer target name (`stm32g431cu`, `stm32g431cw`) or an explicit package field in `fusible.yml`. Recommendation: extend the target name, because the silicon database is already keyed by name and `matches_target` resolves it without touching the manifest schema.
+### Files
 
-Source of truth is DS12589 Table 12, the same table the existing tables cite. Do not widen `PINS_48` itself; that would let LQFP48 designs claim pins their package does not have, which is the bug 0.11.0 fixed.
+- New `src/dev/assembly.rs`: `GET /api/assembly` returns `{"declared": bool, "report": <check.json or null>, "model": "/api/assembly/model?rev=<mtime>" or null}`. `GET /api/assembly/model` streams `<out_dir>/assembly/preview.glb` (`out_dir` from `assembly.out_dir`, default `dist` beside the manifest, same as `src/commands/assembly/mod.rs`). 404 with a JSON error when missing. Read-only, no path from the query string.
+- `src/dev/server.rs:68-77`: route both paths. They fall under the existing `/api/` guard at line 62.
+- `src/dev/run_request.rs:20`: `known_targets` accepts `"assembly"` with no target (or the sentinel `"assembly"`), mapped to `fusible assembly`. Test in `src/dev/api_tests.rs`.
+- `src/dev/api.rs` `project`: add `"assembly": bool` to the `/api/project` payload.
+- Reload: when the run finishes, the existing `run` SSE event fires; the view refetches `/api/assembly` on a `run` event whose action is `assembly`. No new watcher.
+- New `studio/src/assembly/` (`index.ts`, `view.ts`): mount a Three.js stage. Reuse `studio/src/mechanical/stage.ts`, `gltf.ts` (`parseMeshes`, `readError`) and `orbit.ts`; do not copy them. Nodes named `collision:*` get an unlit red material (`#C55454`, the studio's blown-fuse red) drawn on top (`depthTest: false`, 0.6 opacity); other parts keep their GLB colours. A side list shows each violation; clicking one frames its `collision` node.
+- `studio/src/index.ts`: register the view.
+- `src/assets/viewer.html` line 1394: add a fifth tab after BODIES, `ASSEMBLY`, icon `pixelarticons:layers`, key `5`, shown only when `/api/project` says `assembly: true`. Empty state when there is no preview: one line and a `BUILD ASSEMBLY` button that posts `{"action":"assembly"}` to `/api/run`. Same button in the view toolbar.
+- Rebuild `src/assets/studio.bundle.js`.
 
-Tests: a WLCSP49 target accepts one of the extra pins; `stm32g431c` still rejects it; spot-check one pin per package against the datasheet.
+### Tests
 
-## Phase 3: wave 2
+- Rust: `src/dev/assembly_tests.rs` builds a temp project with and without `dist/assembly/preview.glb` and `check.json`, and checks both endpoints (status, JSON shape, 404).
+- Headless check against FieldCam (see the wiki recipe: `fusible dev -p 3077`, Playwright with `executablePath` to `~/.cache/ms-playwright/chromium-1223/chrome-linux64/chrome`, `--no-sandbox`): the tab appears, BUILD ASSEMBLY runs, the model renders. Screenshot to the scratchpad, not the repo.
 
-Three independent pieces. Plan each one properly when it starts rather than now, because each needs measurement first. Ordered by how much they block real boards.
+## C. Assembly success test and CI (`test/assembly-success`)
 
-### W1. Router expansion cap (premise falsified, 0.11.2)
+Goal: a successful `fusible assembly` is tested automatically, on the CI job that has bun.
 
-Measured on FieldCam: no search hit `MAX_EXPANSIONS`; the largest successful route used 132k of 400k. All 10 failures end by exhausting reachable nodes after 3 to 6 expansions, and all route fine on an empty board. The cause is congestion from earlier routes, not the cap. 0.11.2 adds rip-up and reroute (`src/router/engine/ripup.rs`): 92 to 95 of 102. The remaining 7 need more than one neighbour moved, so the next step is negotiated congestion or multi-victim rip-up, not a bigger cap. Initial ordering (shortest or longest first) did not help.
+No CI job installs bun today. `ci.yml` has none; only `desktop.yml` does (`oven-sh/setup-bun@v2`, line 73), and it runs on tags only.
 
-Original notes:
+### Files
 
-`MAX_EXPANSIONS = 400_000` at `src/router/astar/search.rs:10`, enforced against `self.closed.len()` at `search.rs:114`. Routes beyond roughly 27 mm exhaust it and fail.
+- `tests/common/mod.rs`: add `pub fn bun() -> Option<PathBuf>` (honours `FUSIBLE_BUN`, then `PATH`) and `pub fn require_bun() -> Option<PathBuf>`: returns `None` to skip when bun is missing, except it panics when `FUSIBLE_REQUIRE_BUN=1`, so CI cannot skip silently. A plain `eprintln!` names the skip.
+- `tests/assembly.rs`: one new test. Project: `boards: main: { entry: circuit.json }`, `bodies: case: { generate: enclosure, board: main }`, `assembly: { parts: { case: {} } }`. No board part, so no tscircuit runner is needed; only bun and occt-wasm. Run `fusible assembly -f all` with the real `PATH`. Assert exit 0, `dist/assembly.glb` starts with `glTF`, `dist/assembly.step` contains `ISO-10303-21`, both non-empty. Once A lands, also assert `dist/assembly/check.json` has `"fuse": "intact"` (C adds this assertion during the merge, see the merge order).
+- `.github/workflows/ci.yml` job `check`: add `- uses: oven-sh/setup-bun@v2` before `Test`, and `env: FUSIBLE_REQUIRE_BUN: "1"` on the `Test` step. The Windows job keeps skipping.
+- The generator's first run installs occt-wasm into `~/.cache/fusible/body-occt-*` from the network. Cache it in CI with `actions/cache@v4` keyed on `src/commands/body/generator_setup.rs` if the first run is slow.
 
-Measure before changing anything: how many expansions does a failing FieldCam connection actually use, and where does the search spend them? Raising the cap is the tempting move and probably the wrong one, since A\* on a fine grid scales badly in the open. Candidates once the numbers are in: a coarse-to-fine grid, or a bounding-box corridor around the straight-line path. Goal: all 102 FieldCam connections routed in under 30 s.
+## D. Desktop shell redesign (`feat/desktop-shell`)
 
-### W2. Mechanical lid and heights
+Goal: real logo, no native title bar, controls inside the app, borderless top nav, a sidebar home page.
 
-`src/commands/mechanical/` holds `layout.rs` (notches and vents), `generator.rs`, `settings.rs`, `spec.rs`. Four items:
+### D1. Logo and app icon
 
-- Lid lip, so the lid locates on the base instead of sitting flat.
-- Screw bosses.
-- Wall notches currently run to the top of the wall; they should stop at connector height. `layout.rs:11` is `notches`, `layout.rs:40` is `edge_notch`.
-- `HEADROOM` is a flat `12.0` mm at `src/commands/mechanical/mod.rs:37`. Take per-component heights from `cad_component` models where the circuit provides them, and keep 12 mm only as the fallback.
+- Logo: the pixelarticons `cpu` glyph, the `"cpu"` entry in `desktop/ui/assets/icons.json`, in Fusible green on a black square.
+- Green: `#88A888`, decided by the user (the old `#86A881` is retired). Gray surfaces: `#111111`. Both come from the theme file of workstream T; the icon SVG is the one place that must hardcode the green, because it is a build input.
+- New `desktop/src-tauri/icons/icon.svg` (source of truth): 1024x1024, `#000000` background filling the square, the glyph scaled to about 68% and centred, `fill` the green.
+- Generate: `magick -background none -density 384 icons/icon.svg -resize 1024x1024 <scratch>/icon-1024.png` (ImageMagick is installed through mise), then `bunx @tauri-apps/cli@2 icon <png> -o desktop/src-tauri/icons`. Keep only what `tauri.conf.json` lists plus `icon.png`; delete the extra `Square*`, `StoreLogo`, `android/`, `ios/` outputs.
+- In-app brand: `brand()` in `desktop/ui/src/projects.ts:9` uses `icon("cpu", ...)` instead of `"fuse"`. Favicons in `desktop/ui/index.html:7`, `src/assets/viewer.html:7` and `src/dev/assets.rs:18` switch to the same `cpu` path, same green. Drop the `"fuse"` entry from `icons.json` if nothing else uses it (`graft grep "\"fuse\""`).
 
-The last item is the one that changes real output, so it is worth doing first and separately.
+### D2. No title bar, controls in the app
 
-### W3. Studio 3D mirror
+- `desktop/src-tauri/tauri.conf.json` window `main`: `"titleBarStyle": "Overlay"`, `"hiddenTitle": true`, `"trafficLightPosition": {"x": 16, "y": 20}`. On macOS this keeps the native traffic lights, drawn over the app.
+- Windows and Linux: in `desktop/src-tauri/src/setup.rs` startup hook, `#[cfg(not(target_os = "macos"))]` call `set_decorations(false)` on the main window. Do not set `decorations: false` in the config, it would remove the macOS lights.
+- Native menu: on macOS keep `menu::build` (it lives in the system menu bar). On Windows and Linux do not attach the menu to the window, or a menu bar stays where the title bar was. Its accelerators (`Ctrl+Shift+O`, `Ctrl+O`, `Ctrl+N`, `Ctrl+,`, `Ctrl+Q`) must keep working: check `desktop/ui/src/keys.ts`, add the missing ones there, and add the studio side in `src/assets/desktop.js`.
+- Window controls on Windows and Linux: three 12 px circles, top-left, macOS order and colours (close `#FF5F57`, minimise `#FEBC2E`, maximise `#28C840`), glyph on hover, `aria-label` on each. One small module `desktop/ui/src/windowControls.ts`, calling `getCurrentWindow()` equivalents through `window.__TAURI_INTERNALS__.invoke` (the UI has no `@tauri-apps/api` dependency; keep it that way): `plugin:window|close`, `plugin:window|minimize`, `plugin:window|toggle_maximize`. On macOS render nothing and leave 80 px of space for the native lights.
+- Drag region: the top strip of the sidebar and of the main area carry `data-tauri-drag-region`.
+- Capabilities: `default.json` and `studio.json` gain `core:window:allow-start-dragging`, `core:window:allow-close`, `core:window:allow-minimize`, `core:window:allow-toggle-maximize`.
+- Studio (remote page on `localhost`, same window): `src/assets/desktop.js` already runs only under `window.FUSIBLE_DESKTOP`. It injects a 36 px drag strip across the top, the same controls on Windows and Linux, and a `body.desktop-chrome` class whose CSS (injected by `desktop.js`, so B owns `viewer.html` alone) pushes `#project` and `.floating-views` down by the strip height. Platform comes from `navigator.userAgent`.
+- Linux check: with decorations off, resizing from the window edges must still work under GNOME. If it does not, add edge handles calling `plugin:window|start_resize_dragging`.
+- `window::title_for` stays: the taskbar and window switcher still show the title.
 
-The native engine maps world z to circuit y, so the board renders mirrored. I did not locate the specific line: `studio/src/mechanical/stage.ts` sets up lights, grid and camera (`stage.ts:34` grid, `stage.ts:50` camera) but the axis swap is not there. First step is to find where the mesh vertices or the board group get their coordinates, across `studio/src/mechanical/viewer.ts`, `display.ts` and `studio/src/pcbViewer.ts`.
+### D3. Borderless top nav
 
-Fix the engine and the mechanical overlay in one change so they cannot disagree, and move the grid to the shell floor while in there.
+- `desktop/ui/styles.css:101` `.header` drops `border-bottom`; `.title` drops `border-left`. The glass background and blur stay.
+- The studio's `.floating-views` has no border today (`viewer.html:80-96`, shadow only). Leave it.
 
-## Corrections to earlier notes
+### D4. Sidebar home page
 
-Three things I previously reported are wrong, now that the tree is checked:
+Replace the header plus grid with a two-column layout.
 
-- `src/silicon/database/stm32.rs` no longer exists. Workstream D split it into `src/silicon/database/stm32/` with one file per port, as its plan allowed.
-- Making `schematic_scale` a warning is not a quick severity flip. There is no warning level in the linter at all, so D1 is a small design change, not a fifteen-minute edit.
-- Lowercase silkscreen text is fine. `font.rs:58` upper-cases before lookup, so the FieldCam blocker is non-ASCII characters only.
+- Sidebar (fixed 260 px, full height, `var(--surface)`, no border, a 1 px `var(--border-subtle)` divider at most):
+  1. Window-controls and drag strip (D2).
+  2. Brand: cpu logo + `FUSIBLE`.
+  3. `New project` (primary) and `Open folder` buttons.
+  4. Search field filtering the list by name and path.
+  5. Project list, most recent first: name, short path, check status dot. Click selects, double-click or Enter opens. Up and Down move the selection. Right-click opens the existing project menu (`desktop/ui/src/menu.ts`).
+  6. Bottom: toolchain status (from `toolchain.ts`) and `Settings`.
+- Main area: the selected project. Name, path, boards, last check, last opened, `Open` (primary), `Reveal`, `Forget`. Reuse `card.ts` internals; delete what the sidebar makes redundant (`strip.ts` and its use in `projects.ts`, if nothing else imports it).
+- Settings renders in the main area with the sidebar kept and `Settings` marked active. `#settings` routing in `main.ts` stays.
+- Empty states: no projects shows the current `emptyState()` in the main area; load error and failure panels stay in the main area.
+- State: `store.ts` gains `selected: string | null`. Default to the most recent project. Remember the last selection in `localStorage`, every access in `try/catch`.
+- No drawer: the window's minimum width is 960 px, which fits the sidebar.
+- Fonts: the Undefined font is never bold. No `font-weight` above 400 anywhere in the new CSS.
+- `desktop/ui/src/helpers.test.ts`: add a test for the selection logic (default pick, keyboard move, filter keeps or clears the selection).
+
+### D5. Verify
+
+- `cd desktop/ui && bun run dev` with the mock (`mock.ts`) in a browser: screenshot sidebar, selection, settings, empty state at 1440x900 and 960x600, both themes.
+- `cd desktop && bunx @tauri-apps/cli@2 dev` on Linux: no title bar, controls work, drag works, resize works, keyboard shortcuts work, opening a project shows the studio with the strip and controls.
+- macOS cannot be tested here. Say so in the PR; the `desktop.yml` macOS bundle job must still pass.
+
+## E. Integration, review, ship
+
+1. Merge order into `main`: T and C first (start together with A), then A, then B and D (both start after T is merged). After A, C adds the `check.json` assertion to its test. B rebases on A to read the real `check.json` and to run the headless check on FieldCam.
+2. After each merge: the four gates, plus the desktop gates after D.
+3. Review: three parallel read-only review agents, one per area (A+C Rust, B studio, D desktop), using `/review`. Then fix agents per area, merged the same way.
+4. `CHANGELOG.md`: one `## [0.18.0] - 2026-10-25` section (copy the file's own heading style) with Added (three rules, studio assembly view, sidebar home, in-app window controls, new icon), Changed (no native title bar, borderless header).
+5. `/ship` 0.18.0. Five version strings: `Cargo.toml`, `Cargo.lock`, `desktop/src-tauri/Cargo.toml`, `desktop/src-tauri/Cargo.lock`, `desktop/src-tauri/tauri.conf.json`. The `desktop.yml` version check fails if they disagree. Then confirm the GitHub release has all desktop installers attached and crates.io has 0.18.0.
+6. Wiki end gate: add the 0.18 facts to `projects/fusible.md` (rule probes and thresholds, `check.json`/`preview.glb` contract, `FUSIBLE_REQUIRE_BUN`, the macOS-only `titleBarStyle` and `set_decorations(false)` split).
+
+## T. Global theme (`feat/theme`), runs first, merged before B and D
+
+Goal: one file defines every colour. Green `#88A888`, gray surface `#111111`.
+
+- Single source: `src/assets/theme.css`, a `:root` block of custom properties (`--bg`, `--surface`, `--surface-hover`, `--border`, `--border-subtle`, `--text`, `--text-subtle`, `--green`, `--on-green`, `--red`, `--glass`, `--shadow`, plus the light-theme overrides the desktop UI already has). Keep the current values except green becomes `#88A888` and the gray surface becomes `#111111`.
+- Consumers read it, none redefine it:
+  - Studio: `src/dev` serves it at `/theme.css`; `viewer.html` links it and drops its own `:root` colour block (line ~49).
+  - Desktop UI: `desktop/ui/scripts/build.ts` and `dev.ts` copy it from `../../src/assets/theme.css` into `dist/`; `styles.css` drops its own colour block and `index.html` links it first.
+  - Studio TS (`studio/src/schematic.ts`, `mechanical/boardOutline.ts`, `mechanical/display.ts`, and any other hex literal found with `graft grep "#86"` and `grep -rn "0x86a881"`): one `studio/src/theme.ts` that reads the CSS variables with `getComputedStyle(document.documentElement)` at first use. No hex colour literal outside `theme.css` and the icon SVG afterwards.
+  - Rust: `src/dev/assets.rs:18` favicon and the `index.html` favicons use `#88A888`.
+- A test (Rust, `tests/`) fails if `#86A881`/`#86a881` or `0x86a881` appears anywhere in `src/`, `studio/src/` or `desktop/ui/src`, and if `theme.css` lacks `#88A888` or `#111111`.
+- Rebuild `studio.bundle.js`. Update `CHANGELOG.md` `[Unreleased]`.
+
+## Open questions for the user
+
+1. (answered: `#88A888` and `#111111`.)
+2. `hole_misaligned` ignores a hole with no body material within 4 mm. That is not fail-closed: a boss placed far off is silent. Accept, or make every non-plated hole require a boss when a generated or authored body is fitted to that board?
