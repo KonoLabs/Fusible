@@ -7,6 +7,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.20.2] - 2026-10-25
+
 ### Fixed
 
 - Studio: the project tree, the view tabs and the panel now share one top margin (8 px), and the desktop window strip is 32 px so the window controls no longer sit above the sidebar edge.
