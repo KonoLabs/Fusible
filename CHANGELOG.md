@@ -7,6 +7,11 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+### Added
+
+- Fusible Studio updates itself. On launch (at most once a day, silent when offline) and from Settings > Updates it looks for a newer release, shows a notice in the sidebar, downloads it with a progress bar and asks before restarting. Updates are signed with a minisign key, and an unsigned, badly signed or older release never installs. A Linux `.deb` install shows the release page instead. The release workflow signs the bundles and publishes `latest.json` and the `.sig` files; it needs the repository secrets `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
+- The desktop settings gain `auto_update` (default on) and `last_update_check`.
+
 ## [0.18.0] - 2026-10-25
 
 ### Added
