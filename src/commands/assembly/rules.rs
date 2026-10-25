@@ -10,6 +10,7 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 use super::probe::{Probe, Role};
+pub(super) use super::rules_hole::missing_bosses;
 use super::rules_hole::{aligned_quadrants, hole_finding, Group};
 use crate::linter::Diagnostic;
 

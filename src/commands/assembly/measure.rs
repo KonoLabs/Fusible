@@ -10,7 +10,7 @@ use super::parts::{Context, Part};
 use super::place::IDENTITY;
 use super::probe::{probes, Probe};
 use super::probe_warnings::warnings;
-use super::rules::{violations, write_report, Response, Violation, EPS_VOLUME};
+use super::rules::{missing_bosses, violations, write_report, Response, Violation, EPS_VOLUME};
 use super::rules_validate::validate;
 use super::{blow_if_any, AssemblyError, FORMATS};
 use crate::commands::body::{build_kit, generator_dir, run_script};
@@ -39,6 +39,31 @@ fn all_probes(ctx: &Context) -> Result<Vec<Probe>, AssemblyError> {
         all.extend(probes(name, &kit, frame));
     }
     Ok(all)
+}
+
+fn fitted(ctx: &Context, bodies: &[Part]) -> Vec<(String, String)> {
+    bodies
+        .iter()
+        .filter_map(|part| {
+            let board = ctx.cfg.body_board(ctx.cfg.bodies.get(&part.name)?)?;
+            Some((part.name.clone(), board.to_string()))
+        })
+        .collect()
+}
+
+fn judged(
+    ctx: &Context,
+    bodies: &[Part],
+    probes: &[Probe],
+    response: &Response,
+) -> Result<Vec<Violation>, AssemblyError> {
+    if let Some(name) = response.invalid.first() {
+        return Err(AssemblyError::BodyNotSolid { name: name.clone() });
+    }
+    validate(probes, response).map_err(|reason| AssemblyError::BadMeasurement { reason })?;
+    let mut found = violations(probes, response);
+    found.extend(missing_bosses(probes, &response.hits, &fitted(ctx, bodies)));
+    Ok(found)
 }
 
 fn body_pairs(bodies: &[Part]) -> Vec<[&str; 2]> {
@@ -126,12 +151,7 @@ pub(super) fn clearance(
     if let Some(staging) = &staging {
         let _ = std::fs::remove_file(staging);
     }
-    let response = measured?;
-    if let Some(name) = response.invalid.first() {
-        return Err(AssemblyError::BodyNotSolid { name: name.clone() });
-    }
-    validate(&probes, &response).map_err(|reason| AssemblyError::BadMeasurement { reason })?;
-    let found = violations(&probes, &response);
+    let found = judged(ctx, bodies, &probes, &measured?)?;
     if let Some(dir) = parts_dir {
         write_report(&dir.join("check.json"), &found)?;
     }

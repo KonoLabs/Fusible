@@ -53,6 +53,21 @@ fn a_bore_narrower_than_the_hole_blows_the_fuse() {
 }
 
 #[test]
+fn a_body_without_a_boss_near_a_plain_hole_blows_the_fuse() {
+    need_bun!();
+    let dir = project_with(
+        "assembly_rules_no_boss",
+        "[15, 0, 5.8]",
+        HOLE_BOARD,
+        &box_triangles(5.0, -5.0, 5.0),
+    );
+    let (code, stderr) = run(&dir.path, &["assembly"]);
+    assert_eq!(code, Some(1), "{stderr}");
+    assert!(stderr.contains("no boss for the hole"), "{stderr}");
+    assert_eq!(report(&dir.path)["fuse"], "blown");
+}
+
+#[test]
 fn an_inside_out_stl_is_not_measured_as_a_solid() {
     need_bun!();
     let dir = project_with(

@@ -9,6 +9,7 @@ struct Hole {
     index: usize,
     center: [f64; 2],
     radius: f64,
+    plated: bool,
 }
 
 struct Face {
@@ -30,6 +31,7 @@ fn near_probe(frame: &Frame, kit: &Kit, hole: &Hole, face: &Face) -> Probe {
         hole: hole.index,
         side: face.side,
         at: hole.center,
+        plated: hole.plated,
     };
     frame.probe(format!("{}:near", face.tag), role, near)
 }
@@ -93,6 +95,7 @@ pub(super) fn hole_probes(frame: &Frame, kit: &Kit) -> Vec<Probe> {
                 index,
                 center: [h.x, h.y],
                 radius: h.diameter / 2.0,
+                plated: h.plated,
             };
             let faces = [Side::Bottom, Side::Top]
                 .into_iter()

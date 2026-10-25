@@ -293,7 +293,7 @@ Three rules compare the boards with the bodies and blow the fuse (exit 1, no
   or two bodies overlap.
 - `hole_misaligned`: a body has material near a board hole but no boss around
   it (fewer than 2 of 4 ring quadrants), or has any material inside the hole's
-  bore (a pilot hole up to 0.5 mm narrower in radius is fine). A hole with no body material near it is left alone.
+  bore (a pilot hole up to 0.5 mm narrower in radius is fine). A body fitted to a board (generated, or authored with `board:`) must also have a boss for every non-plated hole of that board: a hole with no body material near it blows the fuse. Plated holes (vias, pads) need no boss.
 - `connector_blocked`: a body stands in front of the opening a connector at the
   board edge needs.
 
