@@ -22,6 +22,7 @@ export interface Report {
 export interface Overview {
   declared: boolean;
   report: Report | null;
+  report_error?: string | null;
   model: string | null;
 }
 
@@ -77,15 +78,6 @@ export async function loadPreview(url: string): Promise<Preview> {
   if (!response.ok) throw new Error(await readError(response, "ASSEMBLY PREVIEW UNAVAILABLE"));
   const root = await parseScene(await response.arrayBuffer());
   return { url, root, collisions: paintCollisions(root) };
-}
-
-/** Releases the geometry and materials of a preview. */
-export function disposePreview(preview: Preview): void {
-  preview.root.traverse((node) => {
-    if (!(node instanceof THREE.Mesh)) return;
-    node.geometry.dispose();
-    [node.material].flat().forEach((material) => material.dispose());
-  });
 }
 
 /** The sphere to frame for a violation: its collision solid, else a ball around its `at` point. */

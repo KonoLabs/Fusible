@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
 use serde_json::{json, Value};
-use tiny_http::Request;
+use tiny_http::{Method, Request};
 
 use super::api::{error_body, JSON};
 use super::assets::http_response;
@@ -34,12 +34,22 @@ pub(super) fn report_json(cfg: Option<&FusibleConfig>, root: &Path) -> String {
     let Some(dir) = cfg.and_then(|c| preview_dir(c, root)) else {
         return json!({ "declared": false, "report": null, "model": null }).to_string();
     };
-    let report: Option<Value> = std::fs::read_to_string(dir.join("check.json"))
-        .ok()
-        .and_then(|text| serde_json::from_str(&text).ok());
+    let (report, report_error) = read_report(&dir.join("check.json"));
     let model =
         revision(&dir.join("preview.glb")).map(|rev| format!("/api/assembly/model?rev={rev}"));
-    json!({ "declared": true, "report": report, "model": model }).to_string()
+    json!({ "declared": true, "report": report, "report_error": report_error, "model": model })
+        .to_string()
+}
+
+fn read_report(path: &Path) -> (Option<Value>, Option<String>) {
+    match std::fs::read_to_string(path) {
+        Ok(text) => match serde_json::from_str(&text) {
+            Ok(report) => (Some(report), None),
+            Err(err) => (None, Some(format!("check.json does not parse: {err}"))),
+        },
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => (None, None),
+        Err(err) => (None, Some(format!("check.json is unreadable: {err}"))),
+    }
 }
 
 /// The status, content type and body of `GET /api/assembly/model`: the preview GLB, or a JSON error.
@@ -64,11 +74,22 @@ pub(super) fn serve(request: Request, path: &str) {
         .as_deref()
         .and_then(Path::parent)
         .unwrap_or(Path::new(""));
-    let response = if path == "/api/assembly" {
-        http_response(200, JSON, report_json(cfg.as_ref(), root).into_bytes())
-    } else {
-        let (status, content_type, body) = model_reply(cfg.as_ref(), root);
-        http_response(status, content_type, body)
-    };
-    let _ = request.respond(no_store(response));
+    let (status, content_type, body) = reply(request.method(), path, cfg.as_ref(), root);
+    let _ = request.respond(no_store(http_response(status, content_type, body)));
+}
+
+/// The reply to `method` on one of the assembly routes: GET only, anything else is a 405.
+pub(super) fn reply(
+    method: &Method,
+    path: &str,
+    cfg: Option<&FusibleConfig>,
+    root: &Path,
+) -> (u16, &'static str, Vec<u8>) {
+    if *method != Method::Get {
+        return (405, JSON, error_body("method not allowed").into_bytes());
+    }
+    if path == "/api/assembly" {
+        return (200, JSON, report_json(cfg, root).into_bytes());
+    }
+    model_reply(cfg, root)
 }

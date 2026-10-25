@@ -90,5 +90,6 @@ fn a_report_says_blown_with_violations_and_intact_without() {
     let intact = read().unwrap();
     assert_eq!(intact["fuse"], "intact");
     assert_eq!(intact["violations"], serde_json::json!([]));
+    assert!(!super::atomic::staging_path(&path).exists());
     let _ = std::fs::remove_dir_all(&dir);
 }

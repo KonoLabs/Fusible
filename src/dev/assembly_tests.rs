@@ -88,3 +88,21 @@ fn custom_out_dir_is_honoured() {
     .unwrap();
     assert_eq!(model_reply(Some(&cfg), &dir).0, 200);
 }
+
+#[test]
+fn a_corrupt_report_is_an_error_not_a_clean_model() {
+    let dir = project("corrupt");
+    let parts = dir.join("dist/assembly");
+    fs::create_dir_all(&parts).unwrap();
+    fs::write(parts.join("check.json"), b"{\"version\":1,\"fuse\":").unwrap();
+    fs::write(parts.join("preview.glb"), b"glTF").unwrap();
+    let body = parsed(report_json(Some(&manifest(true)), &dir));
+    assert!(body["report"].is_null());
+    assert!(body["report_error"]
+        .as_str()
+        .unwrap()
+        .contains("does not parse"));
+    assert!(body["model"].is_string());
+    let clean = parsed(report_json(Some(&manifest(true)), &project("noreport")));
+    assert!(clean["report_error"].is_null());
+}

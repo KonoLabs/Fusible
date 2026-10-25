@@ -45,6 +45,8 @@ pub mod watcher;
 #[cfg(test)]
 mod api_tests;
 #[cfg(test)]
+mod assembly_route_tests;
+#[cfg(test)]
 mod assembly_run_tests;
 #[cfg(test)]
 mod assembly_tests;
