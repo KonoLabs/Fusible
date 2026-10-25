@@ -85,7 +85,7 @@ Commit messages MUST adhere to [Conventional Commits](https://www.conventionalco
 ## 4. Fusible CLI Commands Reference
 
 - `fusible check [TARGET] [--mcu <MCU>]`: Runs the electrical linter on a board name, Circuit JSON, or TSX file. Without a target it checks every board of `fusible.yml`. Falls back to cached `dist/circuit.json` if runner is absent.
-- `fusible dev [FILE] [-p <PORT>] [--desktop]`: Launches interactive hot-reloading webview. `--desktop` prints one `FUSIBLE_READY {"url","port"}` line when bound, exits 0 when stdin closes, and adds a Projects button to the studio dock.
+- `fusible studio [FILE] [-p <PORT>] [--desktop]` (aliases `dev`, `view`, `webview`): Launches interactive hot-reloading webview. `--desktop` prints one `FUSIBLE_READY {"url","port"}` line when bound, exits 0 when stdin closes, and adds a Projects button to the studio dock.
 - `fusible export [FILE] [--preset <PRESET>] [-f <FORMAT>] [-o <PATH>]`:
   - **Fuse-gated**: Validates rules before creating any files.
   - `--preset fab`: Exports `gerbers.zip` and `circuit.json` into `dist/fab/`.

@@ -1,6 +1,6 @@
 //! Step 1 — command-line definition.
 //!
-//! clap handles CLI arguments and subcommands (`dev`, `export`, `build`, `check`, `init`).
+//! clap handles CLI arguments and subcommands (`studio`, `export`, `build`, `check`, `init`).
 
 use std::path::PathBuf;
 
@@ -21,7 +21,7 @@ pub use args::{
     version,
     arg_required_else_help = true,
     about = "Electronic linter: the fuse blows to block firmware code generation",
-    after_help = "Examples:\n  fusible --input circuit.json\n  fusible check\n  fusible dev"
+    after_help = "Examples:\n  fusible --input circuit.json\n  fusible check\n  fusible studio"
 )]
 pub struct Cli {
     #[command(subcommand)]
@@ -39,9 +39,9 @@ pub struct Cli {
 /// Available subcommands for managing tscircuit monorepo projects.
 #[derive(Debug, Subcommand, PartialEq)]
 pub enum Commands {
-    /// Start the interactive development server and web viewer
-    #[command(alias = "view", alias = "webview")]
-    Dev {
+    /// Open the studio: the interactive viewer with hot reload
+    #[command(alias = "dev", alias = "view", alias = "webview")]
+    Studio {
         /// Entry file (.tsx, .json) or directory
         #[arg(value_name = "FILE")]
         file: Option<PathBuf>,

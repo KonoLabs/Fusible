@@ -117,4 +117,4 @@ Before exporting deliverables with `fusible export --preset fab`:
 1. **Run `fusible check`**: Verify that no nets are floating and all endpoints are accounted for.
 2. **Inspect Silkscreen Clearance**: Ensure component designations (`R1`, `C1`, `U1`) are placed outside component pads and clear of vias.
 3. **Check Board Dimensions**: Confirm mounting holes are placed with sufficient edge margin (at least 3mm from board edges).
-4. **Inspect in 3D (`fusible dev`)**: Verify connector orientations, clearance around electrolytic capacitors, and USB-C port alignment.
+4. **Inspect in 3D (`fusible studio`)**: Verify connector orientations, clearance around electrolytic capacitors, and USB-C port alignment.

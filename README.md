@@ -7,7 +7,7 @@
 Fusible reads the Circuit JSON that [tscircuit](https://tscircuit.com) produces,
 checks the electrical and physical rules of every board, and only then writes
 fabrication files, firmware pin bindings, and enclosures. It ships as a command
-line tool, a browser studio (`fusible dev`), and a desktop app.
+line tool, a browser studio (`fusible studio`), and a desktop app.
 
 ![demo1](assets/demo1.png)
 ![demo4](assets/demo4.png)
@@ -41,7 +41,7 @@ fusible doctor --install  # installs what is missing
 ```
 
 The desktop app (Windows, macOS, Linux) is attached to each GitHub release. It
-bundles `bun`, lists your projects, and runs `fusible dev --desktop` for each.
+bundles `bun`, lists your projects, and runs `fusible studio --desktop` for each.
 The installers are not code-signed yet.
 
 ## Quick start
@@ -49,7 +49,7 @@ The installers are not code-signed yet.
 ```sh
 fusible init --name sensor-node
 fusible check
-fusible dev
+fusible studio
 ```
 
 `init` writes a `fusible.yml`:
@@ -105,7 +105,7 @@ links:
 
 - `fusible check` checks every board and reports all violations together. `fusible check sensor` checks one.
 - `fusible build sensor-fw` checks the `sensor` board, writes its pin bindings, then builds that firmware.
-- `fusible export main --preset fab` writes into `dist/main/fab/`. With several boards, `export` and `dev` need a name.
+- `fusible export main --preset fab` writes into `dist/main/fab/`. With several boards, `export` and `studio` need a name.
 - A firmware or generated body names its `board:` when the project has several. An authored body may name one too: it is then modeled in that board's coordinate frame. `around:` still works as an alias.
 - The old single-board form (`hardware:`, `mcu: { chip }`, one `firmware:`, `mechanical:`) still loads.
 
@@ -149,14 +149,16 @@ The rules: `unconnected_net`, `ghost_net`, `shorted_nets`, `malformed_element`,
 (`body_interference`, `hole_misaligned`, `connector_blocked`). A rule that cannot prove a
 net is connected reports it. Silence is never the default.
 
-### `dev`: the studio
+### `studio`: the studio
 
 ```sh
-fusible dev                  # every board, on port 3020
-fusible dev sensor           # opened on one board
-fusible dev --port 3030
-fusible dev --desktop        # for the desktop shell
+fusible studio               # every board, on port 3020
+fusible studio sensor        # opened on one board
+fusible studio --port 3030
+fusible studio --desktop     # for the desktop shell
 ```
+
+`dev`, `view`, and `webview` still work as aliases.
 
 - **Project tree.** Lists boards, firmware, and bodies, each with its fuse state. The URL keeps the selection (`?item=board:sensor`).
 - **Views.** PCB layout, schematic, 3D board, parts, nets, and checks follow the selected board. Layers toggle on and off.

@@ -57,7 +57,7 @@ fn main() -> ExitCode {
 /// Dispatches one subcommand and returns its exit code.
 fn run_command(command: Commands) -> ExitCode {
     match command {
-        Commands::Dev {
+        Commands::Studio {
             file,
             port,
             legacy,

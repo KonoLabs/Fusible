@@ -113,7 +113,7 @@ fn print_summary(project_name: &str) {
     println!("      └── tsconfig.json");
     println!();
     println!("Next steps:");
-    println!("  fusible dev               Start interactive hot-reloading webviewer");
+    println!("  fusible studio            Open the studio: interactive hot-reloading viewer");
     println!(
         "  fusible check             Validate electrical design rules & extract firmware pins"
     );

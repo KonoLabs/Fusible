@@ -1,4 +1,4 @@
-//! Subcommand: `fusible dev` / `view` / `webview` — live previewer.
+//! Subcommand: `fusible studio` / `dev` / `view` / `webview` — live previewer.
 
 use std::path::PathBuf;
 

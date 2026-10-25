@@ -6,7 +6,7 @@ Verified against the tree at `1a8128e` (v0.14.3) and Vitrine at `0df4dc5` on 202
 
 ## Summary
 
-- A Tauri 2 shell in `desktop/` runs the existing `fusible dev` binary as a sidecar, one per open project, and points its window at it. The studio itself does not move or change shape.
+- A Tauri 2 shell in `desktop/` runs the existing `fusible studio` binary as a sidecar, one per open project, and points its window at it. The studio itself does not move or change shape.
 - The shell owns two local pages: Projects (cards grid, new, open, recent) and Settings.
 - The installer also ships `bun`, so TSX compiles and `bun install` work on a bare Windows machine.
 - `bom.yml` already stores `currency` per project. One gap remains: price estimates are euros whatever the currency says.
@@ -48,21 +48,21 @@ Fusible Studio.exe (Tauri 2, desktop/src-tauri)
 │   ├── tauri://localhost/            Projects page   (desktop/ui)
 │   ├── tauri://localhost/#settings   Settings page   (desktop/ui)
 │   └── http://localhost:<port>/      the studio, served by the sidecar
-├── sidecar: fusible dev --desktop     cwd = project folder, one at a time
+├── sidecar: fusible studio --desktop     cwd = project folder, one at a time
 └── sidecar: bun                       found by fusible through FUSIBLE_BUN
 ```
 
 Opening a project:
 
 1. The shell kills the current sidecar, if any.
-2. It spawns `fusible dev --desktop -p <settings.port>` with `cwd` = project folder and env `FUSIBLE_BUN=<bundled bun path>`.
+2. It spawns `fusible studio --desktop -p <settings.port>` with `cwd` = project folder and env `FUSIBLE_BUN=<bundled bun path>`.
 3. It reads stdout until the line `FUSIBLE_READY {"url":"http://localhost:3020/","port":3020}`.
 4. It navigates the window to that URL, and pushes the project to the recent list.
 5. On any exit before ready, it shows the captured stderr on the Projects page with a "Copy log" button.
 
 Going back: a native menu item "File > Projects" (Ctrl+Shift+O / Cmd+Shift+O) and a "Projects" button in the studio. The button exists only when the studio runs inside the shell. It calls one Tauri command, `open_projects`, which the capability file allows from `http://localhost:*` and nothing else.
 
-Quitting: the shell kills the sidecar on `RunEvent::Exit`. Because a crashed shell cannot kill anything, `fusible dev --desktop` also exits when its stdin closes. The shell holds the sidecar's stdin open and never writes to it.
+Quitting: the shell kills the sidecar on `RunEvent::Exit`. Because a crashed shell cannot kill anything, `fusible studio --desktop` also exits when its stdin closes. The shell holds the sidecar's stdin open and never writes to it.
 
 One window, one project at a time. Multi-window is out of scope.
 
@@ -72,7 +72,7 @@ Agents build against these, so they can work in parallel. Change them only in th
 
 ### Sidecar CLI (workstream B builds, C consumes)
 
-- `fusible dev --desktop` does three things, nothing else:
+- `fusible studio --desktop` does three things, nothing else:
   - prints exactly one line `FUSIBLE_READY {json}` to stdout once the server is bound, before the first compile finishes. JSON keys: `url`, `port`.
   - exits with code 0 when stdin reaches EOF.
   - sets `window.FUSIBLE_DESKTOP = true` in the served `viewer.html`, so the studio shows its Projects button.
@@ -147,7 +147,7 @@ Files: `.github/workflows/ci.yml`, `.github/workflows/release.yml`, test gating 
 3. Add `x86_64-pc-windows-msvc` to the release matrix, packaged as `.zip` with `fusible.exe`.
 4. Fix what breaks. Do not paper over a failing test with `cfg(unix)` when the behavior matters on Windows (path handling, process spawning, file watching).
 
-Done when: CI is green on Windows and a manual `fusible dev examples/<board>.json` on a Windows VM serves the studio.
+Done when: CI is green on Windows and a manual `fusible studio examples/<board>.json` on a Windows VM serves the studio.
 
 ### B. Desktop hooks in the CLI and the bom currency fix
 
@@ -162,7 +162,7 @@ Files: `src/cli/args.rs`, `src/commands/dev.rs`, `src/dev/server.rs`, `src/dev/a
 7. Estimate conversion (decision 5): estimates convert from EUR with a const table; user prices and `print.price_per_kg` never convert. Unknown currency keeps euros and the report says so. One test: a USD file yields an estimate equal to the EUR estimate times the table rate.
 8. Regression tests per item. Studio button: extend `src/dev/studio_tests.rs` style checks that the button is absent without the flag.
 
-Done when: the four gates pass, and `fusible dev --desktop` in FieldCam prints the ready line, serves the button, and exits when its stdin closes.
+Done when: the four gates pass, and `fusible studio --desktop` in FieldCam prints the ready line, serves the button, and exits when its stdin closes.
 
 ### C. Tauri shell
 

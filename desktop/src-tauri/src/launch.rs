@@ -66,7 +66,7 @@ fn describe_failure(reason: &str, log: &SharedLog) -> String {
     }
 }
 
-/// Starts `fusible dev --desktop` in `dir` and waits for its ready line.
+/// Starts `fusible studio --desktop` in `dir` and waits for its ready line.
 ///
 /// Replaces any studio already running. On failure the sidecar is killed and the
 /// captured stderr becomes the error and the value of `last_error`.
@@ -77,7 +77,7 @@ pub async fn start<R: Runtime>(
     port: u16,
 ) -> Result<Ready, String> {
     studio.reset();
-    let command = sidecar::fusible(app, dir)?.args(["dev", "--desktop", "-p", &port.to_string()]);
+    let command = sidecar::fusible(app, dir)?.args(["studio", "--desktop", "-p", &port.to_string()]);
     let (mut rx, child) = command
         .spawn()
         .map_err(|err| studio.fail(format!("Could not start fusible: {err}")))?;

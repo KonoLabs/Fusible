@@ -57,5 +57,5 @@ export const FAILURE_LOG = [
   "  --> boards/main.circuit.tsx:42:7",
   "   | <resistor name=\"R1\" resistance=\"10k\" footprint=\"0402\" />",
   "   |   ^ unknown footprint \"0402x\"",
-  "fusible dev exited with code 2 before the server was ready.",
+  "fusible studio exited with code 2 before the server was ready.",
 ].join("\n");

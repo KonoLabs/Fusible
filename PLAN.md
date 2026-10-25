@@ -21,7 +21,7 @@ Verified against `32b2ac8` on 2026-10-25. Paths were read, not recalled.
 - Desktop changes also pass `cd desktop/ui && bun test && bun run build` and `cd desktop/src-tauri && cargo clippy --all-targets -- -D warnings && cargo test --locked`.
 - Studio TS changes rebuild the committed bundle: `cd studio && bun run build` (writes `src/assets/studio.bundle.js`).
 - Acceptance project: `/home/yann/Code/Kono/FieldCam`. `fusible check` and `fusible assembly` there must exit 0 with its real generated enclosure. A false positive on FieldCam is a bug in the rule, not in FieldCam.
-- Never `pkill -f "fusible dev"`; use `fuser -k <port>/tcp`.
+- Never `pkill -f "fusible studio"`; use `fuser -k <port>/tcp`.
 
 ## Decision taken: missing bun or geometry
 
@@ -126,7 +126,7 @@ Goal: the studio shows `preview.glb` with collisions in red, and can rebuild it.
 ### Tests
 
 - Rust: `src/dev/assembly_tests.rs` builds a temp project with and without `dist/assembly/preview.glb` and `check.json`, and checks both endpoints (status, JSON shape, 404).
-- Headless check against FieldCam (see the wiki recipe: `fusible dev -p 3077`, Playwright with `executablePath` to `~/.cache/ms-playwright/chromium-1223/chrome-linux64/chrome`, `--no-sandbox`): the tab appears, BUILD ASSEMBLY runs, the model renders. Screenshot to the scratchpad, not the repo.
+- Headless check against FieldCam (see the wiki recipe: `fusible studio -p 3077`, Playwright with `executablePath` to `~/.cache/ms-playwright/chromium-1223/chrome-linux64/chrome`, `--no-sandbox`): the tab appears, BUILD ASSEMBLY runs, the model renders. Screenshot to the scratchpad, not the repo.
 
 ## C. Assembly success test and CI (`test/assembly-success`)
 

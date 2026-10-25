@@ -7,6 +7,10 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+### Changed
+
+- `fusible dev` is now `fusible studio`. `dev`, `view`, and `webview` stay as aliases, so existing scripts keep working. The desktop app launches `fusible studio --desktop`.
+
 ## [0.18.0] - 2026-10-25
 
 ### Added

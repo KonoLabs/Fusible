@@ -8,7 +8,7 @@ hardware:
   entry: hardware/index.tsx
   # Destination directory for Circuit JSON, Gerbers, and exports
   out_dir: dist
-  # Live interactive preview server port (fusible dev)
+  # Live interactive preview server port (fusible studio)
   port: 3020
 
 mcu:

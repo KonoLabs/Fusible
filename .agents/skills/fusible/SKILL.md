@@ -55,10 +55,10 @@ fusible check hardware/index.tsx  # compiles .tsx on the fly and lints
 fusible --input circuit.json      # lint precompiled Circuit JSON
 ```
 
-### Live Interactive Preview (`dev` / `view`)
+### Live Interactive Preview (`studio` / `dev` / `view`)
 ```sh
-fusible dev                       # launches local interactive viewer
-fusible dev --port 3020           # specify preview port
+fusible studio                  # launches local interactive viewer
+fusible studio --port 3020        # specify preview port
 ```
 Opens interactive viewer featuring schematic, PCB layout, and 3D preview.
 

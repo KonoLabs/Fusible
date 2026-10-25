@@ -1,4 +1,4 @@
-//! Integration tests for `fusible dev --desktop`: the ready line, the viewer flag, and the stdin watchdog.
+//! Integration tests for `fusible studio --desktop`: the ready line, the viewer flag, and the stdin watchdog.
 
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -33,7 +33,7 @@ fn get(port: u16) -> String {
 fn desktop_dev_prints_the_ready_line_serves_the_flag_and_exits_when_stdin_closes() {
     let port = free_port();
     let mut child = fusible()
-        .args(["dev", "--desktop", "-p", &port.to_string()])
+        .args(["studio", "--desktop", "-p", &port.to_string()])
         .arg("examples/circuit.json")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

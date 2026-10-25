@@ -47,7 +47,7 @@ firmware:
 Fusible unifies the hardware development workflow by wrapping tscircuit commands:
 
 * `fusible` prints the help. `fusible -i <file>` / `fusible check [file]`: Runs the electrical linter. If target is `.tsx`, evaluates circuit to JSON first. Exits `0` (intact), `1` (fuse blown), or `2` (tool error).
-* `fusible dev [file] [--port P]` (aliases: `view`, `webview`): Starts the tscircuit interactive web previewer (`tsci dev` / `@tscircuit/runframe`) with hot reloading.
+* `fusible studio [file] [--port P]` (aliases: `dev`, `view`, `webview`): Starts the tscircuit interactive web previewer (`tsci dev` / `@tscircuit/runframe`) with hot reloading.
 * `fusible export [file] [-f format] [-o out]`: Wraps `tsci export` to generate Gerbers, SVGs, 3D models (GLB/STEP), or netlists.
 * `fusible build`: Compiles `.tsx` to Circuit JSON, validates electrical rules, generates `pins.rs`, and builds firmware.
 * `fusible init`: Scaffolds a starter monorepo with `fusible.yml`, `hardware/`, and `firmware/`.
