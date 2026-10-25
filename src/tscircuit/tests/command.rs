@@ -103,6 +103,8 @@ fn bun_runner_runs_tsci_through_bun_x() {
         &[
             "x",
             "--bun",
+            "--package",
+            "tscircuit",
             "tsci",
             "build",
             "circuit.tsx",

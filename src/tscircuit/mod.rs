@@ -35,7 +35,7 @@ pub enum RunnerKind {
     Local(PathBuf),
     /// Globally installed executable on PATH (`tsci` or `tscircuit`).
     Global(PathBuf),
-    /// `bun x --bun tsci`, used when no `tsci` is installed but bun is.
+    /// `bun x --bun --package tscircuit tsci`, used when no `tsci` is installed but bun is.
     Bun(PathBuf),
 }
 

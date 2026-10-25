@@ -345,7 +345,7 @@ fusible doctor --json      # {"bun","node","tsci"}, exit 0
 ```
 
 `FUSIBLE_BUN` names the bun binary for every command. Without a `tsci`, Fusible
-runs `bun x --bun tsci`.
+runs `bun x --bun --package tscircuit tsci`.
 
 ## Exit codes
 

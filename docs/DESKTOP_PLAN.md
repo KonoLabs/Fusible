@@ -78,7 +78,7 @@ Agents build against these, so they can work in parallel. Change them only in th
   - sets `window.FUSIBLE_DESKTOP = true` in the served `viewer.html`, so the studio shows its Projects button.
 - `fusible init --name <NAME> [--currency <CODE>]` in an empty or existing folder: unchanged behavior, plus `--currency` writes `bom.yml` with that currency. Exit 0 on success, 2 on error, stderr readable as one message.
 - `fusible doctor --json` prints `{"bun": {"path", "version"} | null, "node": ... | null, "tsci": ... | null}` and exits 0 even when tools are missing.
-- Env `FUSIBLE_BUN=<path>`: when set and the file exists, every place that runs bun uses it, and runner detection falls back to a `Bun` runner (`<bun> x --bun tsci ...`) when no `tsci` is found.
+- Env `FUSIBLE_BUN=<path>`: when set and the file exists, every place that runs bun uses it, and runner detection falls back to a `Bun` runner (`<bun> x --bun --package tscircuit tsci ...`) when no `tsci` is found.
 
 ### Tauri commands (workstream C builds, D consumes)
 
@@ -156,7 +156,7 @@ Files: `src/cli/args.rs`, `src/commands/dev.rs`, `src/dev/server.rs`, `src/dev/a
 1. `--desktop` flag on `dev`: the ready line, the stdin-EOF watchdog thread, and the `FUSIBLE_DESKTOP` flag injected when serving `viewer.html`.
 2. Studio Projects button: shown only when `window.FUSIBLE_DESKTOP`. It calls `window.__TAURI_INTERNALS__.invoke('open_projects')` so the studio needs no Tauri npm package. Put it in the existing dock, same style as the other dock buttons.
 3. One helper `bun_path()` that reads `FUSIBLE_BUN`, then PATH. Use it in `init.rs:126`, the body generator, and doctor. Grep every `"bun"` literal; fix the shared lookup once.
-4. `RunnerKind::Bun(PathBuf)`: `base_command` becomes `<bun> x --bun tsci`. Detection order stays local, global, then Bun. Verify on Windows that `bun x --bun tsci build` compiles a board without node installed; if it does not, stop and report, because decision 1 depends on it.
+4. `RunnerKind::Bun(PathBuf)`: `base_command` becomes `<bun> x --bun --package tscircuit tsci`. Detection order stays local, global, then Bun. Verify on Windows that `bun x --bun tsci build` compiles a board without node installed; if it does not, stop and report, because decision 1 depends on it.
 5. `fusible init --currency <CODE>` writes `bom.yml` through the existing `BomFile` type, so the format stays in one place. Validate the code against the same list the studio offers.
 6. `fusible doctor --json` as specified.
 7. Estimate conversion (decision 5): estimates convert from EUR with a const table; user prices and `print.price_per_kg` never convert. Unknown currency keeps euros and the report says so. One test: a USD file yields an estimate equal to the EUR estimate times the table rate.

@@ -73,7 +73,7 @@ pub fn base_command(kind: &RunnerKind) -> Command {
         RunnerKind::Local(p) | RunnerKind::Global(p) => Command::new(p),
         RunnerKind::Bun(bun) => {
             let mut cmd = Command::new(bun);
-            cmd.args(["x", "--bun", "tsci"]);
+            cmd.args(["x", "--bun", "--package", "tscircuit", "tsci"]);
             cmd
         }
     }

@@ -7,6 +7,12 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.20.9] - 2026-10-25
+
+### Fixed
+
+- Windows and any machine without `tsci`: the bun runner now runs `bun x --bun --package tscircuit tsci`. Plain `bun x tsci` fetched an unrelated npm package named `tsci` that prompts on stdin and crashed with `readline was closed`.
+
 ## [0.20.8] - 2026-10-25
 
 ### Fixed
