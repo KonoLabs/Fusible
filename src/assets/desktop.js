@@ -71,16 +71,14 @@
     });
   }
 
-  const dock = document.querySelector('.floating-dock');
-  if (!dock) return;
-  const divider = document.createElement('span');
-  divider.className = 'dock-divider';
+  const head = document.querySelector('.project-head');
+  if (!head) return;
   const button = document.createElement('button');
-  button.className = 'btn';
+  button.className = 'project-back';
   button.id = 'btn-projects';
   button.title = 'Back to projects';
   button.setAttribute('aria-label', 'Back to projects');
-  button.innerHTML = '<iconify-icon icon="pixelarticons:folder"></iconify-icon> <span class="btn-label">PROJECTS</span>';
+  button.innerHTML = '<iconify-icon icon="pixelarticons:chevron-left"></iconify-icon><span>ALL PROJECTS</span>';
   button.addEventListener('click', () => invoke('open_projects', {}));
-  dock.append(divider, button);
+  head.after(button);
 })();

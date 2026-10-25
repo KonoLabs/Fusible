@@ -203,6 +203,18 @@
         display: none;
       }
     }
+    @container viewport (max-width: 1200px) {
+      .floating-dock .btn-label {
+        display: none;
+      }
+    }
+    @container viewport (max-width: 1000px) {
+      .floating-dock {
+        bottom: calc(var(--gutter) + 48px);
+        max-width: calc(100% - 2 * var(--gutter));
+        overflow-x: auto;
+      }
+    }
     @container viewport (max-width: 640px) {
       .btn .btn-label {
         display: none;
@@ -1054,6 +1066,24 @@
     .sidebar-tab-btn.active {
       color: var(--green);
       background: color-mix(in srgb, var(--green) 12%, transparent);
+    }
+    .project-back {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      height: 32px;
+      padding: 0 16px;
+      background: transparent;
+      border: none;
+      color: var(--text-subtle);
+      font-size: 10px;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+    }
+    .project-back:hover {
+      color: var(--text);
+      background: var(--surface-hover);
     }
     .project-head .btn.icon-only {
       flex: 0 0 28px;

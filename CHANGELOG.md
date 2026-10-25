@@ -7,6 +7,14 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+### Changed
+
+- The desktop "back to projects" button moved from the bottom toolbar to the top of the project sidebar.
+
+### Fixed
+
+- The bottom-left status and the bottom-center view controls no longer overlap: the controls drop their labels below 1200 px and stack above the status below 1000 px.
+
 ## [0.19.1] - 2026-10-25
 
 ### Changed
