@@ -8,6 +8,7 @@ await build();
 for (const target of ["src", "index.html", "styles.css"]) {
   watch(`${root}${target}`, { recursive: true }, () => void build());
 }
+watch(`${root}../../src/assets/theme.css`, () => void build());
 
 const server = Bun.serve({
   port: Number(process.env.PORT ?? 5173),

@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { themeHex } from "../theme";
 
 type Point = [number, number];
 
@@ -47,7 +48,7 @@ export async function fetchOutline(board: string): Promise<Point[]> {
 /** Builds a closed line in the board frame (Z = 0, the board's reference plane). */
 export function buildOutlineLine(outline: Point[]): THREE.LineLoop {
   const geometry = new THREE.BufferGeometry().setFromPoints(outline.map(([x, y]) => new THREE.Vector3(x, y, 0)));
-  const line = new THREE.LineLoop(geometry, new THREE.LineBasicMaterial({ color: 0x86a881 }));
+  const line = new THREE.LineLoop(geometry, new THREE.LineBasicMaterial({ color: themeHex("green") }));
   line.name = "board-outline";
   return line;
 }

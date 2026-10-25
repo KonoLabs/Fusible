@@ -3,9 +3,9 @@
   const refs = { chip: null, panel: null };
 
   const STYLE = `
-    .kicad-chip.kicad-in_sync { background: rgba(134, 168, 129, 0.14); color: var(--green); }
-    .kicad-chip.kicad-differs { background: rgba(168, 179, 101, 0.16); color: var(--olive); }
-    .kicad-chip.kicad-error { background: rgba(197, 84, 84, 0.18); color: var(--alert); }
+    .kicad-chip.kicad-in_sync { background: color-mix(in srgb, var(--green) 14%, transparent); color: var(--green); }
+    .kicad-chip.kicad-differs { background: color-mix(in srgb, var(--olive) 16%, transparent); color: var(--olive); }
+    .kicad-chip.kicad-error { background: color-mix(in srgb, var(--alert) 18%, transparent); color: var(--alert); }
     .kicad-chip[hidden] { display: none; }
     .kicad-notice {
       position: fixed;

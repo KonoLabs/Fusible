@@ -92,3 +92,11 @@ fn viewer_loads_the_project_script_the_server_serves() {
     let html = include_str!("../assets/viewer.html");
     assert!(html.contains(r#"<script src="/project.js"></script>"#));
 }
+
+#[test]
+fn server_serves_the_theme_the_viewer_links() {
+    let css = super::assets::static_response("/theme.css", None, false).unwrap();
+    assert_eq!(css.status_code().0, 200);
+    let html = include_str!("../assets/viewer.html");
+    assert!(html.contains(r#"<link rel="stylesheet" href="/theme.css">"#));
+}

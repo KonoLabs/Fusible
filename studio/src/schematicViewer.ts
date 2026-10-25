@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { SchematicViewer } from "@tscircuit/schematic-viewer";
 import { rootSlot, renderIntoSlot } from "./roots";
 import { resolveComponentRefdes } from "./refdes";
-import { FUSIBLE_SCHEMATIC_PALETTE, normalizeCircuitJsonForSchematic } from "./schematic";
+import { themeColor } from "./theme";
+import { fusibleSchematicPalette, normalizeCircuitJsonForSchematic } from "./schematic";
 
 const schematicSlot = rootSlot();
 
@@ -49,9 +50,9 @@ function ResponsiveSchematicViewer({
     React.createElement(SchematicViewer, {
       key: `${dimensions.width}x${dimensions.height}`,
       circuitJson: normalizedCircuit || [],
-      containerStyle: { width: "100%", height: "100%", backgroundColor: "#000000" },
+      containerStyle: { width: "100%", height: "100%", backgroundColor: themeColor("bg") },
       colorOverrides: {
-        schematic: FUSIBLE_SCHEMATIC_PALETTE,
+        schematic: fusibleSchematicPalette(),
       },
       onSchematicComponentClicked: (event: any) => {
         const id = event?.schematicComponentId || event?.refdes;
