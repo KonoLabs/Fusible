@@ -3,7 +3,8 @@ import { menuIsOpen } from "./menu";
 import { showProjects } from "./navigate";
 import { openNewProject } from "./newProject";
 import { state } from "./store";
-import { closeWindow, isMac } from "./windowControls";
+import { isMac } from "./platform";
+import { closeWindow } from "./windowControls";
 
 const COMBOS: Record<string, () => void> = {
   n: () => openNewProject(),
@@ -20,11 +21,11 @@ const SHIFT_COMBOS: Record<string, () => void> = {
 
 function combo(event: KeyboardEvent): (() => void) | undefined {
   const key = event.key.toLowerCase();
-  if (event.shiftKey) return isMac() ? undefined : SHIFT_COMBOS[key];
-  return key === "q" && isMac() ? undefined : COMBOS[key];
+  return event.shiftKey ? SHIFT_COMBOS[key] : COMBOS[key];
 }
 
 export function installKeys(): void {
+  if (isMac()) return;
   document.addEventListener("keydown", (event) => {
     const mod = event.ctrlKey || event.metaKey;
     const run = combo(event);

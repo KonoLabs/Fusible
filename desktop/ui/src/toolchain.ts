@@ -22,13 +22,23 @@ function rows(status: ToolchainStatus): HTMLElement[] {
   ];
 }
 
+let probe: Promise<[ToolchainStatus, string]> | null = null;
+
+function probeOnce(): Promise<[ToolchainStatus, string]> {
+  probe ??= Promise.all([api.toolchainStatus(), api.appVersion().catch(() => "unknown")]);
+  probe.catch(() => {
+    probe = null;
+  });
+  return probe;
+}
+
 export async function toolchainSection(): Promise<HTMLElement> {
   const list = h("div", { className: "tools", "aria-busy": "true" }, h("p", { className: "muted" }, "Checking tools"));
   const head = h("div", { className: "section-head" }, h("h2", { className: "section-title" }, "Toolchain"));
   const section = h("section", { className: "section", "aria-labelledby": "toolchain-h" }, head, list);
   head.firstElementChild?.setAttribute("id", "toolchain-h");
   try {
-    const [status, version] = await Promise.all([api.toolchainStatus(), api.appVersion().catch(() => "unknown")]);
+    const [status, version] = await probeOnce();
     list.replaceChildren(...rows(status));
     list.removeAttribute("aria-busy");
     head.append(copyButton("Copy", () => toolchainReport(status, version)));

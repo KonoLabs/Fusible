@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use tauri_plugin_shell::process::CommandChild;
@@ -12,6 +13,7 @@ pub struct Studio {
     child: Mutex<Option<CommandChild>>,
     log: Arc<Mutex<Log>>,
     error: Mutex<Option<String>>,
+    granted: Mutex<HashSet<String>>,
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -50,6 +52,11 @@ impl Studio {
         self.stop();
         *lock(&self.error) = Some(message.clone());
         message
+    }
+
+    /// Records a granted URL pattern and tells whether it is new.
+    pub fn mark_granted(&self, pattern: &str) -> bool {
+        lock(&self.granted).insert(pattern.to_string())
     }
 
     /// The message of the last failed start.
