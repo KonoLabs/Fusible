@@ -1,4 +1,5 @@
 import { FAILURE_LOG, defaultSettings, manyProjects, toolchain } from "./fixtures";
+import { checkUpdate, installUpdate } from "./mockUpdate";
 import type { CreateArgs, Project, Settings } from "./types";
 
 type Args = Record<string, unknown> | undefined;
@@ -42,6 +43,15 @@ function forget(args: Args): Promise<void> {
   return delay(undefined);
 }
 
+function openUrl(args: Args): Promise<void> {
+  window.open(String(args?.url), "_blank");
+  return delay(undefined);
+}
+
+function touchChecked(): void {
+  store.settings.last_update_check = Math.floor(Date.now() / 1000);
+}
+
 const handlers: Record<string, (args: Args) => Promise<unknown>> = {
   list_projects: () => delay([...store.projects]),
   open_project: openProject,
@@ -54,6 +64,10 @@ const handlers: Record<string, (args: Args) => Promise<unknown>> = {
   toolchain_status: () => delay(toolchain()),
   last_error: () => delay(store.error || null),
   open_projects: () => delay(undefined),
+  check_update: (a) => checkUpdate(Boolean(a?.auto), touchChecked),
+  install_update: installUpdate,
+  restart_app: () => delay(undefined),
+  "plugin:opener|open_url": openUrl,
   "plugin:app|version": () => delay("0.14.3"),
   "plugin:dialog|open": () => delay(query.get("pick") ?? "/home/yann/Code/Scratch"),
 };

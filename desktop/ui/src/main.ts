@@ -7,15 +7,19 @@ import { openNewProject } from "./newProject";
 import { shell } from "./projects";
 import { onChange, state, update } from "./store";
 import { applyTheme } from "./theme";
+import { checkNow } from "./updater";
 
 const app = document.getElementById("app") as HTMLElement;
 
-type Focus = { path: string | null; search: [number, number] | null };
+type Focus = { path: string | null; search: [number, number] | null; id: string | null };
 
 function captureFocus(): Focus {
   const active = document.activeElement as HTMLInputElement | null;
-  if (active?.id === "search") return { path: null, search: [active.selectionStart ?? 0, active.selectionEnd ?? 0] };
-  return { path: active?.closest("[data-path]")?.getAttribute("data-path") ?? null, search: null };
+  if (active?.id === "search") {
+    return { path: null, search: [active.selectionStart ?? 0, active.selectionEnd ?? 0], id: null };
+  }
+  const path = active?.closest("[data-path]")?.getAttribute("data-path") ?? null;
+  return { path, search: null, id: path ? null : active?.id || null };
 }
 
 function restoreFocus(focus: Focus): void {
@@ -25,6 +29,8 @@ function restoreFocus(focus: Focus): void {
     input?.setSelectionRange(focus.search[0], focus.search[1]);
   } else if (focus.path) {
     document.querySelector<HTMLElement>(`[data-path="${CSS.escape(focus.path)}"] button`)?.focus();
+  } else if (focus.id) {
+    document.getElementById(focus.id)?.focus();
   }
 }
 
@@ -60,4 +66,4 @@ installKeys();
 applyTheme("system");
 route();
 render();
-void loadAll();
+void loadAll().then(() => checkNow(true));

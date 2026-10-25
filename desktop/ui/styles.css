@@ -368,3 +368,29 @@ select.input { cursor: pointer; }
 .stat-label { color: var(--text-subtle); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
 
 .search-input::-webkit-search-cancel-button { display: none; }
+
+.update-row { display: flex; align-items: center; gap: 12px; }
+.update-row .field-label { flex: none; }
+.update-version { flex: 1; color: var(--green); }
+.update-status { min-height: 1.45em; color: var(--text-subtle); font-size: 12px; }
+.update-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.update-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding: 10px;
+  background: var(--green-soft);
+  border: 1px solid var(--green);
+}
+.update-text { font-size: 12px; overflow-wrap: anywhere; }
+.update-notice .btn { height: 28px; padding: 0 10px; font-size: 12px; }
+.btn[aria-disabled="true"] { opacity: 0.45; cursor: progress; }
+.link { color: var(--green); font-size: 12px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.link:hover { color: var(--text); }
+.progress { appearance: none; width: 100%; height: 6px; border: 0; background: var(--border); color: var(--green); }
+.progress::-webkit-progress-bar { background: var(--border); }
+.progress::-webkit-progress-value { background: var(--green); }
+.progress::-moz-progress-bar { background: var(--green); }
+.update-notice.error { background: var(--alert-soft); border-color: var(--alert); }
+.update-status.error { color: var(--alert); }

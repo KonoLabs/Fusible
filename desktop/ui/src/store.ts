@@ -1,5 +1,6 @@
 import { loadSelected } from "./selection";
 import type { Project, Settings, ToolchainStatus } from "./types";
+import { IDLE, type UpdateState } from "./updateState";
 
 export type Failure = { title: string; log: string };
 
@@ -9,6 +10,7 @@ export type State = {
   projects: Project[];
   settings: Settings | null;
   toolchain: ToolchainStatus | null;
+  update: UpdateState;
   opening: string | null;
   failure: Failure | null;
   loadError: string | null;
@@ -22,6 +24,7 @@ export const state: State = {
   projects: [],
   settings: null,
   toolchain: null,
+  update: IDLE,
   opening: null,
   failure: null,
   loadError: null,

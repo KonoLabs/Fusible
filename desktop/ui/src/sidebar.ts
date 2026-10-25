@@ -7,6 +7,7 @@ import { effectiveSelection, focusRow, list } from "./rows";
 import { filterProjects, moveSelection } from "./selection";
 import { brand, search, settingsLink, toolchainLine } from "./sidebarParts";
 import { state } from "./store";
+import { updateNotice } from "./updateNotice";
 import { windowControls } from "./windowControls";
 
 function step(delta: number, focus: boolean): void {
@@ -41,7 +42,7 @@ export function sidebar(): HTMLElement {
     icon("folder"), "Open folder");
   const strip = h("div", { className: "strip", "data-tauri-drag-region": true }, windowControls());
   const actions = h("div", { className: "side-actions" }, create, open);
-  const foot = h("div", { className: "side-foot" }, toolchainLine(), settingsLink());
+  const foot = h("div", { className: "side-foot" }, updateNotice(), toolchainLine(), settingsLink());
   const side = h("aside", { className: "sidebar", "aria-label": "Projects" },
     strip, brand(), actions, state.view === "settings" ? null : search(), list(), foot);
   side.addEventListener("keydown", onKey);

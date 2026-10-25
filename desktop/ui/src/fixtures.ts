@@ -39,6 +39,8 @@ export function defaultSettings(): Settings {
     port: 3020,
     open_last_project: true,
     theme: "system",
+    auto_update: true,
+    last_update_check: Math.floor(Date.now() / 1000) - 3 * 3600,
   };
 }
 

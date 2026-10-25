@@ -1,9 +1,14 @@
 import { mockInvoke } from "./mock";
-import type { CreateArgs, Inspection, Project, Settings, ToolchainStatus } from "./types";
+import { subscribeProgress } from "./mockUpdate";
+import type {
+  CreateArgs, Inspection, Project, Settings, ToolchainStatus, UpdateCheck, UpdateProgress,
+} from "./types";
 
 type Invoke = (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
 
-type TauriGlobal = { invoke?: Invoke };
+type Listener = (event: { payload: UpdateProgress }) => void;
+
+type TauriGlobal = { invoke?: Invoke; transformCallback?: (cb: Listener) => number };
 
 export function isMock(): boolean {
   const tauri = (window as unknown as { __TAURI_INTERNALS__?: TauriGlobal }).__TAURI_INTERNALS__;
@@ -21,6 +26,13 @@ export function message(error: unknown): string {
   return String(error);
 }
 
+export async function onUpdateProgress(cb: (progress: UpdateProgress) => void): Promise<void> {
+  const tauri = (window as unknown as { __TAURI_INTERNALS__?: TauriGlobal }).__TAURI_INTERNALS__;
+  if (!tauri?.invoke || !tauri.transformCallback) return subscribeProgress(cb);
+  const handler = tauri.transformCallback((event) => cb(event.payload));
+  await tauri.invoke("plugin:event|listen", { event: "update-progress", target: { kind: "Any" }, handler });
+}
+
 function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
   return resolve()(cmd, args) as Promise<T>;
 }
@@ -36,6 +48,10 @@ export const api = {
   setSettings: (settings: Settings) => call<Settings>("set_settings", { settings }),
   toolchainStatus: () => call<ToolchainStatus>("toolchain_status"),
   lastError: () => call<string | null>("last_error"),
+  checkUpdate: (auto: boolean) => call<UpdateCheck>("check_update", { auto }),
+  installUpdate: () => call<void>("install_update"),
+  restartApp: () => call<void>("restart_app"),
+  openUrl: (url: string) => call<void>("plugin:opener|open_url", { url }),
   appVersion: () => call<string>("plugin:app|version"),
   pickFolder: (title: string, defaultPath?: string) =>
     call<string | null>("plugin:dialog|open", { options: { directory: true, multiple: false, title, defaultPath } }),
