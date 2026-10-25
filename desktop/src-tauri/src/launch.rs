@@ -77,7 +77,8 @@ pub async fn start<R: Runtime>(
     port: u16,
 ) -> Result<Ready, String> {
     studio.reset();
-    let command = sidecar::fusible(app, dir)?.args(["studio", "--desktop", "-p", &port.to_string()]);
+    let command =
+        sidecar::fusible(app, dir)?.args(["studio", "--desktop", "-p", &port.to_string()]);
     let (mut rx, child) = command
         .spawn()
         .map_err(|err| studio.fail(format!("Could not start fusible: {err}")))?;

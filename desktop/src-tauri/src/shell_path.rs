@@ -1,7 +1,9 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
 
+#[cfg(any(unix, test))]
 const BEGIN: &str = "__FUSIBLE_PATH_BEGIN__";
+#[cfg(any(unix, test))]
 const END: &str = "__FUSIBLE_PATH_END__";
 
 /// Appends the entries of `extra` that `current` lacks, keeping `current` first.
@@ -17,6 +19,7 @@ pub fn merge(current: &str, extra: &str) -> String {
 }
 
 /// Pulls the PATH out of a login shell's output, ignoring any banner around it.
+#[cfg(any(unix, test))]
 pub fn extract(output: &str) -> Option<&str> {
     let start = output.find(BEGIN)? + BEGIN.len();
     let rest = &output[start..];
