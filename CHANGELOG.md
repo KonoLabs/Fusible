@@ -7,6 +7,11 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+### Fixed
+
+- Studio: every card and toolbar now sits 12 px from the window edge, top and bottom alike, and the PCB and schematic toolbars line up with the view tabs.
+- Desktop: the window controls live in the project card header, or in a small pill at the top left when the card is hidden, instead of a strip that pushed everything down. The macOS traffic lights and the Projects page header moved to match.
+
 ## [0.20.3] - 2026-10-25
 
 ### Fixed

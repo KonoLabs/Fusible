@@ -42,7 +42,6 @@
     }
     :root {
       --gutter: 12px;
-      --top: 8px;
       --sidebar-width: 340px;
     }
     body {
@@ -79,7 +78,7 @@
       user-select: none !important;
     }
     .floating-views {
-      top: var(--top);
+      top: var(--gutter);
       right: var(--gutter);
     }
     .bottom-bar {
@@ -328,7 +327,7 @@
     #project {
       width: 232px;
       flex-shrink: 0;
-      padding: var(--top) 0 var(--gutter) var(--gutter);
+      padding: var(--gutter) 0 var(--gutter) var(--gutter);
       z-index: 10;
     }
     #project[hidden] {
@@ -492,7 +491,7 @@
     }
     #bom-view {
       position: absolute;
-      inset: var(--top) var(--gutter) 64px var(--gutter);
+      inset: var(--gutter) var(--gutter) 64px var(--gutter);
       z-index: 15;
       display: none;
       flex-direction: column;
@@ -1021,7 +1020,7 @@
     #sidebar {
       width: calc(var(--sidebar-width) + var(--gutter));
       flex-shrink: 0;
-      padding: var(--top) var(--gutter) var(--gutter) 0;
+      padding: var(--gutter) var(--gutter) var(--gutter) 0;
       overflow: hidden;
       z-index: 10;
       transition: width 0.22s ease, padding 0.22s ease;
@@ -1350,6 +1349,11 @@
       margin: 4px 0 !important;
       background: var(--border-subtle) !important;
       border: none !important;
+    }
+    [data-toolbar-overlay],
+    .schematic-viewer-toolbar {
+      top: var(--gutter) !important;
+      left: calc(var(--gutter) + var(--chrome-left, 0px)) !important;
     }
     [data-toolbar-overlay] {
       font-family: 'Undefined', monospace !important;

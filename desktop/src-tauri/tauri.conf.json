@@ -19,7 +19,7 @@
         "center": true,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
-        "trafficLightPosition": { "x": 16, "y": 15 }
+        "trafficLightPosition": { "x": 24, "y": 23 }
       }
     ],
     "security": {

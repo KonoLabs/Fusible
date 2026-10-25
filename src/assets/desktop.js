@@ -1,6 +1,6 @@
 (() => {
   if (!window.FUSIBLE_DESKTOP) return;
-  const STRIP = 32;
+  const PILL = 78;
   const LABEL = 'main';
   const isMac = /Mac|iPhone|iPad/.test(navigator.platform) || /Mac OS X/.test(navigator.userAgent);
   const invoke = (cmd, args) => {
@@ -10,25 +10,32 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    body.desktop-chrome #project, body.desktop-chrome #sidebar { padding-top: calc(var(--top) + ${STRIP}px); }
-    body.desktop-chrome .floating-views { top: calc(var(--top) + ${STRIP}px); }
-    .desktop-strip { position: fixed; top: 0; left: 0; right: 0; height: ${STRIP}px; z-index: 60; display: flex; align-items: center; padding: 0 16px; }
-    .desktop-strip .traffic-group { display: flex; align-items: center; gap: 8px; }
-    .desktop-strip .traffic { display: grid; place-items: center; width: 12px; height: 12px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; }
-    .desktop-strip .traffic.close { background: var(--traffic-close); }
-    .desktop-strip .traffic.min { background: var(--traffic-min); }
-    .desktop-strip .traffic.max { background: var(--traffic-max); }
-    .desktop-strip .traffic-glyph { font-size: 11px; line-height: 1; color: var(--traffic-glyph); opacity: 0; }
-    .desktop-strip .traffic-group:hover .traffic-glyph, .desktop-strip .traffic:focus-visible .traffic-glyph { opacity: 1; }
+    body.window-pill { --chrome-left: ${PILL + 8}px; }
+    .desktop-strip { position: fixed; top: 0; left: 0; right: 0; height: var(--gutter); z-index: 60; }
+    .window-controls { display: flex; align-items: center; flex: none; width: 54px; height: 28px; margin-left: 8px; }
+    .project-head .window-controls + .project-title { margin-right: auto; }
+    .window-pill-host { top: var(--gutter); left: var(--gutter); width: ${PILL}px; padding-right: 12px; }
+    .window-pill-host[hidden] { display: none; }
+    .window-controls .traffic-group { display: flex; align-items: center; gap: 8px; }
+    .window-controls .traffic { display: grid; place-items: center; width: 12px; height: 12px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; }
+    .window-controls .traffic.close { background: var(--traffic-close); }
+    .window-controls .traffic.min { background: var(--traffic-min); }
+    .window-controls .traffic.max { background: var(--traffic-max); }
+    .window-controls .traffic-glyph { font-size: 11px; line-height: 1; color: var(--traffic-glyph); opacity: 0; }
+    .window-controls .traffic-group:hover .traffic-glyph, .window-controls .traffic:focus-visible .traffic-glyph { opacity: 1; }
   `;
   document.head.append(style);
 
+  const drag = (node) => node && node.setAttribute('data-tauri-drag-region', '');
   const strip = document.createElement('div');
   strip.className = 'desktop-strip';
-  strip.setAttribute('data-tauri-drag-region', '');
+  drag(strip);
   document.body.classList.add('desktop-chrome');
   document.body.prepend(strip);
 
+  const controls = document.createElement('div');
+  controls.className = 'window-controls';
+  drag(controls);
   const buttons = [
     { name: 'close', label: 'Close', glyph: '×', cmd: 'plugin:window|close' },
     { name: 'min', label: 'Minimize', glyph: '−', cmd: 'plugin:window|minimize' },
@@ -49,8 +56,29 @@
       button.addEventListener('click', () => invoke(spec.cmd, { label: LABEL }));
       group.append(button);
     }
-    strip.append(group);
+    controls.append(group);
   }
+
+  const project = document.getElementById('project');
+  const head = document.querySelector('.project-head');
+  const viewport = document.getElementById('viewport-container');
+  const pill = document.createElement('div');
+  pill.className = 'floating window-pill-host';
+  drag(pill);
+  if (viewport) viewport.append(pill);
+  for (const node of [head, document.getElementById('project-title'), document.querySelector('.sidebar-tabs'), document.querySelector('.floating-views')]) drag(node);
+
+  function place() {
+    const inCard = Boolean(project && head && !project.hidden && getComputedStyle(project).display !== 'none');
+    if (inCard) head.prepend(controls);
+    else pill.append(controls);
+    pill.hidden = inCard;
+    document.body.classList.toggle('window-pill', !inCard);
+  }
+  place();
+  new MutationObserver(place).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  if (project) new MutationObserver(place).observe(project, { attributes: true, attributeFilter: ['hidden'] });
+  matchMedia('(max-width: 900px)').addEventListener('change', place);
 
   if (!isMac) {
     const plain = {
@@ -71,7 +99,6 @@
     });
   }
 
-  const head = document.querySelector('.project-head');
   if (!head) return;
   const button = document.createElement('button');
   button.className = 'project-back';
