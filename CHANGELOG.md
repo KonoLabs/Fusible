@@ -7,6 +7,16 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.20.5] - 2026-10-25
+
+### Changed
+
+- Desktop studio: the project name sits under the window controls, in the project card and when the card is collapsed. The controls get more room above them in the card.
+
+### Fixed
+
+- Desktop studio: the window controls no longer have a background when the project card is collapsed.
+
 ## [0.20.4] - 2026-10-25
 
 ### Fixed
