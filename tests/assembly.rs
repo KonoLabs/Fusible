@@ -120,4 +120,6 @@ fn a_generated_enclosure_assembles_to_a_glb_and_a_step_file() {
     assert_eq!(&glb[..4], b"glTF");
     let step = std::fs::read_to_string(dir.path.join("dist/assembly.step")).unwrap();
     assert!(step.contains("ISO-10303-21"));
+    let report = std::fs::read_to_string(dir.path.join("dist/assembly/check.json")).unwrap();
+    assert!(report.contains("\"fuse\": \"intact\""), "{report}");
 }
