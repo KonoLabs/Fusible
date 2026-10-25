@@ -58,6 +58,7 @@ use generator::run_generator;
 pub(crate) use generator::{generator_dir, run_script};
 use jobs::{select_jobs, Job};
 pub use kit::kit;
+pub(crate) use kit_data::{build_kit, Kit, KitOpening};
 use settings::{preview_settings, resolve_settings, Settings};
 use spec::{build_spec, preview_from, Output, Spec};
 pub(crate) use step::generate_step;

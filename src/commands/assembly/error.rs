@@ -64,4 +64,13 @@ pub enum AssemblyError {
         help("export the body as .step, .stp, or .stl to place it in the assembly")
     )]
     UnsupportedSource { name: String, path: PathBuf },
+
+    #[error("body `{name}` loaded but is not a solid, so its overlaps cannot be measured")]
+    #[diagnostic(
+        code(fusible::assembly::body_not_solid),
+        help(
+            "export a closed, watertight solid; an open or empty STL or STEP shell has no volume"
+        )
+    )]
+    BodyNotSolid { name: String },
 }

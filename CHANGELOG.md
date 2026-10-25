@@ -13,12 +13,15 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 - Windows and Linux draw their own close, minimise and maximise controls and drag strip, in the app and over the studio. `Ctrl+Shift+O` returns to Projects and `Ctrl+Q` quits.
 - New app icon: the `cpu` pixel glyph in the brand green on black (`desktop/src-tauri/icons/icon.svg`).
 - The studio has an ASSEMBLY tab (key `5`), shown when `fusible.yml` declares `assembly:`. It draws `dist/assembly/preview.glb` and paints every `collision:*` node red on top. A side list shows each violation of `dist/assembly/check.json`; a click frames its collision. `BUILD ASSEMBLY` runs `fusible assembly` from the empty state and the toolbar, and the view reloads when the run ends. New endpoints `GET /api/assembly` and `GET /api/assembly/model`; `/api/project` carries `assembly`, and `POST /api/run` accepts `{"action":"assembly"}`.
+- Three cross-world rules blow the fuse in `fusible assembly` and `fusible check` when `assembly:` is declared and every board is checked. `body_interference`: a body overlaps a board slab or a component's volume, or two bodies overlap. `hole_misaligned`: a body has material near a hole on one face of the board but does not surround it. `connector_blocked`: a body stands in front of a connector opening at the board edge. Parts that only touch (0.1 mm inset) and overlaps under 0.01 mm³ do not fire.
+- `fusible assembly` writes `dist/assembly/check.json` (`fuse` is `intact` or `blown`, with each violation's rule, parts, volume, position, and collision node) and `dist/assembly/preview.glb` (bodies, board slabs, and one `collision:<n>` node per overlap). Both are written even when the fuse blows. `assembly.glb` and `assembly.step` are written only when it holds.
 
 ### Changed
 
+- `fusible assembly` measures before it exports board models, so a blown fuse stops it before the tscircuit runner is called. A body with an explicit `board:` now also lints that board.
+- A declared `assembly:` without bun, or a body model that is not a closed solid (`fusible::assembly::body_not_solid`), is a tool error (exit 2).
 - The desktop window has no native title bar. macOS keeps its traffic lights over the app; Windows and Linux drop the title bar and the menu bar.
 - The desktop header has no bottom border and no title divider.
-
 - One file, `src/assets/theme.css`, defines every colour, including the desktop light theme. The dev server serves it at `/theme.css`, the studio and the desktop UI link it, and the studio 3D and schematic views read its variables at runtime through `studio/src/theme.ts`. The brand green is now `#88A888`.
 
 ## [0.17.0] - 2026-10-24

@@ -145,8 +145,9 @@ help: every net must connect at least two pads/ports: complete the routing in ts
 
 The rules: `unconnected_net`, `ghost_net`, `shorted_nets`, `malformed_element`,
 `dangling_reference`, `trace_clearance`, `decoupling_capacitor`, `pin_mux`,
-`E_SCHEMATIC_SCALE_EXCESSIVE`, and `harness_mismatch`. A rule that cannot prove a net is
-connected reports it. Silence is never the default.
+`E_SCHEMATIC_SCALE_EXCESSIVE`, `harness_mismatch`, and the three assembly rules
+(`body_interference`, `hole_misaligned`, `connector_blocked`). A rule that cannot prove a
+net is connected reports it. Silence is never the default.
 
 ### `dev`: the studio
 
@@ -284,6 +285,24 @@ its `.tsx` entry and a tscircuit runner, which exports its STEP model. A
 generated body is rebuilt for the assembly; an authored body is read from its
 `source:` (STEP or STL) after its `build:` runs. The models of each part land in
 `dist/assembly/`. Like `body`, it needs `bun` and `occt-wasm`.
+
+Three rules compare the boards with the bodies and blow the fuse (exit 1, no
+`assembly.*` written):
+
+- `body_interference`: a body overlaps the board slab or a component's volume,
+  or two bodies overlap.
+- `hole_misaligned`: a body has material near a board hole on one face, but not
+  all around it. A hole with no body material near it is left alone.
+- `connector_blocked`: a body stands in front of the opening a connector at the
+  board edge needs.
+
+Parts that only touch do not fire. Each run writes `dist/assembly/check.json`
+(`fuse`, and per violation the rule, parts, overlap volume in mm³, and position)
+and `dist/assembly/preview.glb`, which holds the bodies, the board slabs, and one
+`collision:<n>` node per overlap, even when the fuse blows. `fusible check` runs
+the rules too, when it checks every board. Without `assembly:` they are skipped.
+A declared `assembly:` without `bun`, or a body that is not a closed solid, is a
+tool error (exit 2), never a pass.
 
 ### `bom`: parts and costs
 

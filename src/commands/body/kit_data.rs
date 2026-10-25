@@ -12,7 +12,7 @@ use crate::gerber::layers::{PcbComponentElm, PcbPoint};
 use crate::gerber::PcbModel;
 
 #[derive(Debug, Serialize)]
-pub(super) struct KitHole {
+pub(crate) struct KitHole {
     pub x: f64,
     pub y: f64,
     pub diameter: f64,
@@ -21,7 +21,7 @@ pub(super) struct KitHole {
 
 /// A component footprint: `x`, `y` is its center, `w` and `h` its size.
 #[derive(Debug, Serialize)]
-pub(super) struct KitComponent {
+pub(crate) struct KitComponent {
     pub name: String,
     pub layer: String,
     pub x: f64,
@@ -40,7 +40,7 @@ pub(super) struct KitComponent {
 /// `from` and `to` are points on the board edge. The cut runs outward along `normal` for
 /// `notch.clearance + wall + notch.extra_depth` millimetres.
 #[derive(Debug, Serialize)]
-pub(super) struct KitOpening {
+pub(crate) struct KitOpening {
     pub component: String,
     pub edge: usize,
     pub side: &'static str,
@@ -51,7 +51,7 @@ pub(super) struct KitOpening {
 
 /// The constants behind the openings, so a hand-made cut can match the generated one.
 #[derive(Debug, Serialize)]
-pub(super) struct KitNotch {
+pub(crate) struct KitNotch {
     pub margin: f64,
     pub edge_tolerance: f64,
     pub clearance: f64,
@@ -71,7 +71,7 @@ impl KitNotch {
 
 /// Everything a designer needs to model a part around the board, in the generator's frame.
 #[derive(Debug, Serialize)]
-pub(super) struct Kit {
+pub(crate) struct Kit {
     pub board: Option<String>,
     pub units: &'static str,
     pub frame: &'static str,
@@ -182,7 +182,7 @@ fn entry(
 }
 
 /// Builds the kit of the board in `json`; `board` is the manifest name written to the file.
-pub(super) fn build_kit(json: &str, board: Option<String>) -> Result<Kit, BodyError> {
+pub(crate) fn build_kit(json: &str, board: Option<String>) -> Result<Kit, BodyError> {
     let names = component_names(json)?;
     let heights = component_heights(json)?;
     let model = PcbModel::parse(json);

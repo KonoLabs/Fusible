@@ -92,10 +92,10 @@ Fusible unifies the hardware development workflow by wrapping tscircuit commands
   - [x] Studio draws the board outline next to an authored body, so you can see whether they line up.
   - [x] Studio firmware view: a pin map from the generated `pins.rs` data, with a click-through to the net or connected part, and a `BUILD` button.
   - [x] Project tree drawer on narrow windows, and a collapse shortcut on wide ones.
-- [ ] **Milestone 16: Assembly and cross-world fuse rules**:
+- [x] **Milestone 16: Assembly and cross-world fuse rules**:
   - [x] `assembly:` places boards and bodies in one coordinate frame and exports `dist/assembly.{step,glb}`.
   - [x] `links:` declares board-to-board wiring; `harness_mismatch` blows the fuse on pin or net mismatches.
-  - `hole_misaligned`, `connector_blocked`, and `body_interference` check boards against bodies. They need body geometry, and a STEP file cannot be read in pure Rust, so they wait on a reader.
+  - [x] `hole_misaligned`, `connector_blocked`, and `body_interference` check boards against bodies. Rust builds probe solids from the Circuit JSON kit; an embedded occt-wasm script measures how much each probe shares with each body, and Rust decides. They write `check.json` and `preview.glb`.
 - [x] **Milestone 13: Fuse-gated 3D enclosure generator** (`v0.8.20`):
   - `fusible mechanical` (now `fusible body`) builds a base + lid from the `pcb_board` outline with screw bosses, edge-connector notches, and lid vents.
   - Layout runs in Rust; an embedded bun script drives OpenCascade (`occt-wasm`) and writes STEP, STL, GLB, or BREP.
