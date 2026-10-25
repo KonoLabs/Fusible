@@ -7,6 +7,16 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+### Added
+
+- Three cross-world rules blow the fuse in `fusible assembly` and `fusible check` when `assembly:` is declared and every board is checked. `body_interference`: a body overlaps a board slab or a component's volume, or two bodies overlap. `hole_misaligned`: a body has material near a hole on one face of the board but does not surround it. `connector_blocked`: a body stands in front of a connector opening at the board edge. Parts that only touch (0.1 mm inset) and overlaps under 0.01 mm³ do not fire.
+- `fusible assembly` writes `dist/assembly/check.json` (`fuse` is `intact` or `blown`, with each violation's rule, parts, volume, position, and collision node) and `dist/assembly/preview.glb` (bodies, board slabs, and one `collision:<n>` node per overlap). Both are written even when the fuse blows. `assembly.glb` and `assembly.step` are written only when it holds.
+
+### Changed
+
+- `fusible assembly` measures before it exports board models, so a blown fuse stops it before the tscircuit runner is called. A body with an explicit `board:` now also lints that board.
+- A declared `assembly:` without bun, or a body model that is not a closed solid (`fusible::assembly::body_not_solid`), is a tool error (exit 2).
+
 ## [0.17.0] - 2026-10-24
 
 ### Added
