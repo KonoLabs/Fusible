@@ -1,4 +1,5 @@
 mod api;
+mod assembly;
 mod assets;
 mod authored;
 mod authored_cache;
@@ -43,6 +44,10 @@ pub mod watcher;
 
 #[cfg(test)]
 mod api_tests;
+#[cfg(test)]
+mod assembly_run_tests;
+#[cfg(test)]
+mod assembly_tests;
 #[cfg(test)]
 mod authored_cache_tests;
 #[cfg(test)]

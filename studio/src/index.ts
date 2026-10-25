@@ -5,6 +5,7 @@ import { CadViewer as BaseCadViewer } from "@tscircuit/3d-viewer";
 import "iconify-icon";
 import { addCollection } from "iconify-icon";
 import pixelarticons from "@iconify-json/pixelarticons/icons.json";
+import { Assembly } from "./assembly";
 import { Mechanical } from "./mechanical";
 import { animateCadCameraPreset, type CadCameraController } from "./cadCamera";
 import { installRenderCapture, mainCapturedCanvas } from "./capture";
@@ -139,6 +140,7 @@ export const Tscircuit = {
   renderSchematicViewer,
   animateCadCameraPreset,
   ...Mechanical,
+  ...Assembly,
 };
 
 declare global {

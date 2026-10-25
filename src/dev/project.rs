@@ -37,6 +37,7 @@ pub(super) fn project_json(state: &State, cfg: Option<&FusibleConfig>, root: &Pa
         "boards": board_items(state, root),
         "firmware": firmware,
         "bodies": bodies,
+        "assembly": cfg.is_some_and(|c| c.assembly.is_some()),
     })
     .to_string()
 }

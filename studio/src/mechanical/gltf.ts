@@ -18,14 +18,20 @@ export async function readError(response: Response, fallback: string): Promise<s
   }
 }
 
+/** Parses a GLB into its scene graph, keeping node names and materials. */
+export async function parseScene(buffer: ArrayBuffer): Promise<THREE.Group> {
+  const gltf = await new GLTFLoader().parseAsync(buffer, "");
+  return gltf.scene;
+}
+
 /** Parses a GLB and returns every mesh with its world transform baked into a cloned geometry. */
 export async function parseMeshes(
   buffer: ArrayBuffer
 ): Promise<{ node: THREE.Mesh; geometry: THREE.BufferGeometry }[]> {
-  const gltf = await new GLTFLoader().parseAsync(buffer, "");
+  const scene = await parseScene(buffer);
   const meshes: { node: THREE.Mesh; geometry: THREE.BufferGeometry }[] = [];
-  gltf.scene.updateMatrixWorld(true);
-  gltf.scene.traverse((node) => {
+  scene.updateMatrixWorld(true);
+  scene.traverse((node) => {
     if (!(node instanceof THREE.Mesh)) return;
     const geometry = (node.geometry as THREE.BufferGeometry).clone().applyMatrix4(node.matrixWorld);
     meshes.push({ node, geometry });

@@ -12,6 +12,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 - The desktop app opens on a sidebar home page: project list (most recent first, status dot), search, keyboard selection, a detail pane with Open, Reveal and Forget, and Settings in the main area. The last selection is remembered.
 - Windows and Linux draw their own close, minimise and maximise controls and drag strip, in the app and over the studio. `Ctrl+Shift+O` returns to Projects and `Ctrl+Q` quits.
 - New app icon: the `cpu` pixel glyph in the brand green on black (`desktop/src-tauri/icons/icon.svg`).
+- The studio has an ASSEMBLY tab (key `5`), shown when `fusible.yml` declares `assembly:`. It draws `dist/assembly/preview.glb` and paints every `collision:*` node red on top. A side list shows each violation of `dist/assembly/check.json`; a click frames its collision. `BUILD ASSEMBLY` runs `fusible assembly` from the empty state and the toolbar, and the view reloads when the run ends. New endpoints `GET /api/assembly` and `GET /api/assembly/model`; `/api/project` carries `assembly`, and `POST /api/run` accepts `{"action":"assembly"}`.
 
 ### Changed
 

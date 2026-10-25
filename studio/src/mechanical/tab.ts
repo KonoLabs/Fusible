@@ -2,7 +2,8 @@ import { Z_UP_PRESETS } from "../cadCamera";
 import type { AuthoredModel } from "./authored";
 import { buildAuthoredDisplay, type AuthoredDisplay } from "./authoredDisplay";
 import type { MechanicalDisplay } from "./display";
-import { createStage, framePreset, resizeStage, type Stage } from "./stage";
+import { framePreset } from "./frame";
+import { createStage, resizeStage, type Stage } from "./stage";
 import type { MechanicalModel } from "./store";
 
 export interface Tab {
