@@ -7,7 +7,16 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+### Added
+
+- The desktop app opens on a sidebar home page: project list (most recent first, status dot), search, keyboard selection, a detail pane with Open, Reveal and Forget, and Settings in the main area. The last selection is remembered.
+- Windows and Linux draw their own close, minimise and maximise controls and drag strip, in the app and over the studio. `Ctrl+Shift+O` returns to Projects and `Ctrl+Q` quits.
+- New app icon: the `cpu` pixel glyph in the brand green on black (`desktop/src-tauri/icons/icon.svg`).
+
 ### Changed
+
+- The desktop window has no native title bar. macOS keeps its traffic lights over the app; Windows and Linux drop the title bar and the menu bar.
+- The desktop header has no bottom border and no title divider.
 
 - One file, `src/assets/theme.css`, defines every colour, including the desktop light theme. The dev server serves it at `/theme.css`, the studio and the desktop UI link it, and the studio 3D and schematic views read its variables at runtime through `studio/src/theme.ts`. The brand green is now `#88A888`.
 

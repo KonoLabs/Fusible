@@ -6,8 +6,17 @@ export async function loadAll(): Promise<void> {
   try {
     const [projects, settings] = await Promise.all([api.listProjects(), api.getSettings()]);
     update({ projects, settings, loaded: true, loadError: null });
+    void loadToolchain();
   } catch (error) {
     update({ loaded: true, loadError: message(error) });
+  }
+}
+
+async function loadToolchain(): Promise<void> {
+  try {
+    update({ toolchain: await api.toolchainStatus() });
+  } catch {
+    update({ toolchain: { bun: null, node: null, tsci: null } });
   }
 }
 

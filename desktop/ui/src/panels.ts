@@ -29,7 +29,7 @@ export function emptyState(): HTMLElement {
   const open = h("button", { className: "btn lg", type: "button", onClick: () => void openFolderFlow() },
     icon("folder"), "Open folder", h("kbd", null, shortcut("O")));
   return h("section", { className: "empty" },
-    h("div", { className: "empty-mark" }, icon("fuse")),
+    h("div", { className: "empty-mark" }, icon("cpu")),
     h("h2", { className: "empty-title" }, "Your first board starts here"),
     h("p", { className: "empty-text" }, "Create a project, or open a folder that already has a fusible.yml."),
     h("div", { className: "empty-actions" }, create, open));

@@ -22,6 +22,8 @@ fn viewer_carries_the_flag_and_the_projects_button_under_the_desktop_shell() {
     assert!(flag < html.find("studio.bundle.js").unwrap());
     assert!(html.contains("__TAURI_INTERNALS__"));
     assert!(html.contains("open_projects"));
+    assert!(html.contains("desktop-chrome"));
+    assert!(html.contains("data-tauri-drag-region"));
 }
 
 #[test]

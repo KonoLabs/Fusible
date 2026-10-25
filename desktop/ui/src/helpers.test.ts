@@ -2,7 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { countsLabel } from "./labels";
 import { finalPath, shortenPath, suggestName } from "./path";
 import { toolchainReport } from "./report";
+import { filterProjects, moveSelection, pickSelection } from "./selection";
 import { relativeTime } from "./time";
+import type { Project } from "./types";
 import { validateName, validatePort } from "./validate";
 
 describe("validateName", () => {
@@ -79,5 +81,42 @@ describe("display helpers", () => {
     expect(validatePort(3020)).toBeNull();
     expect(validatePort(80)).not.toBeNull();
     expect(validatePort(70000)).not.toBeNull();
+  });
+});
+
+function sample(name: string, path: string, opened: string | null): Project {
+  return { path, name, boards: 1, firmware: 0, bodies: 0, last_opened: opened, missing: false };
+}
+
+const PROJECTS = [
+  sample("Old", "/a/old", "2026-01-01T00:00:00Z"),
+  sample("Never", "/a/never", null),
+  sample("Fresh", "/b/fresh", "2026-10-01T00:00:00Z"),
+];
+
+describe("selection", () => {
+  test("orders the most recent first and defaults to it", () => {
+    const visible = filterProjects(PROJECTS, "");
+    expect(visible.map((p) => p.name)).toEqual(["Fresh", "Old", "Never"]);
+    expect(pickSelection(visible, null)).toBe("/b/fresh");
+    expect(pickSelection(visible, "/gone")).toBe("/b/fresh");
+  });
+  test("keeps a valid selection", () => {
+    expect(pickSelection(filterProjects(PROJECTS, ""), "/a/old")).toBe("/a/old");
+  });
+  test("moves with the keyboard and stops at the ends", () => {
+    const visible = filterProjects(PROJECTS, "");
+    expect(moveSelection(visible, "/b/fresh", 1)).toBe("/a/old");
+    expect(moveSelection(visible, "/a/never", 1)).toBe("/a/never");
+    expect(moveSelection(visible, "/b/fresh", -1)).toBe("/b/fresh");
+    expect(moveSelection(visible, null, 1)).toBe("/b/fresh");
+    expect(moveSelection([], null, 1)).toBeNull();
+  });
+  test("filters by name and path and clears a hidden selection", () => {
+    expect(filterProjects(PROJECTS, "FRESH").map((p) => p.path)).toEqual(["/b/fresh"]);
+    expect(filterProjects(PROJECTS, "/a/").length).toBe(2);
+    const visible = filterProjects(PROJECTS, "never");
+    expect(pickSelection(visible, "/b/fresh")).toBe("/a/never");
+    expect(pickSelection(filterProjects(PROJECTS, "zzz"), "/b/fresh")).toBeNull();
   });
 });

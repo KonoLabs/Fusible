@@ -4,7 +4,7 @@ use crate::actions::{self, Zoom};
 use crate::commands::{open, projects, settings, toolchain};
 use crate::studio::Studio;
 use crate::window::{self, Home};
-use crate::{menu, size, storage};
+use crate::{chrome, size, storage};
 
 fn focus_existing<R: Runtime>(app: &tauri::AppHandle<R>) {
     if let Ok(window) = window::main(app) {
@@ -29,6 +29,7 @@ fn open_last(app: &App) {
 }
 
 fn on_ready(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
+    chrome::strip(app);
     size::restore(app.handle());
     open_last(app);
     Ok(())
@@ -56,8 +57,7 @@ fn on_window_event(window: &Window, event: &WindowEvent) {
 
 /// The configured Tauri builder: plugins, state, menu, commands and the startup hook.
 pub fn builder() -> Builder<Wry> {
-    plugins(Builder::default())
-        .menu(menu::build)
+    chrome::with_menu(plugins(Builder::default()))
         .on_menu_event(|app, event| actions::handle(app, event.id().as_ref()))
         .on_window_event(on_window_event)
         .invoke_handler(tauri::generate_handler![

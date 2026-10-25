@@ -1,9 +1,11 @@
 mod actions;
+mod chrome;
 mod commands;
 mod discovery;
 mod launch;
 mod log;
 mod manifest;
+#[cfg(target_os = "macos")]
 mod menu;
 mod model;
 mod project;
