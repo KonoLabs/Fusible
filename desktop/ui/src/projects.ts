@@ -16,22 +16,18 @@ function projectPage(): (Node | null)[] {
   return [failure, project ? detail(project) : noSelection()];
 }
 
-function title(): string {
-  if (state.view === "settings") return "Settings";
-  const path = effectiveSelection();
-  return state.projects.find((p) => p.path === path)?.name ?? "Projects";
-}
-
 export function shell(): HTMLElement {
   const settings = state.view === "settings";
   const status = h("span", { className: "save-status", role: "status", "aria-live": "polite" });
-  const header = h("header", { className: "header", "data-tauri-drag-region": true },
-    h("h1", { className: "title", "data-tauri-drag-region": true }, title()),
-    h("div", { className: "header-actions" }, settings ? status : null));
+  const header = settings
+    ? h("header", { className: "header", "data-tauri-drag-region": true },
+      h("h1", { className: "title", "data-tauri-drag-region": true }, "Settings"),
+      h("div", { className: "header-actions" }, status))
+    : null;
   const main = h("main", { className: "page" });
   const nodes = settings ? settingsPage(status) : projectPage();
   for (const node of nodes) if (node) main.append(node);
   const empty = !settings && state.loaded && !state.projects.length && !state.loadError;
   return h("div", { className: empty ? "shell is-empty" : "shell" },
-    sidebar(), h("div", { className: "main" }, header, main));
+    sidebar(), h("div", { className: "main" }, ...(header ? [header, main] : [main])));
 }

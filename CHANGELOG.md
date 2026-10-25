@@ -7,6 +7,17 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.20.6] - 2026-10-25
+
+### Changed
+
+- Studio and desktop: checkboxes are square.
+
+### Fixed
+
+- Desktop: the Projects and Settings pages no longer scroll sideways.
+- Desktop: inputs and selects lose the default browser border.
+
 ## [0.20.5] - 2026-10-25
 
 ### Changed
