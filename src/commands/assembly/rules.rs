@@ -9,7 +9,8 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-use super::probe::{Probe, Role, Side};
+use super::probe::{Probe, Role};
+use super::rules_hole::{aligned_quadrants, hole_finding, Group};
 use crate::linter::Diagnostic;
 
 /// Any shared volume above this counts as contact, in mm³.
@@ -23,6 +24,9 @@ pub const RING_WIDTH: f64 = 0.8;
 
 /// Height of the hole probes above and below the board faces, in mm.
 pub const PROBE_DEPTH: f64 = 2.0;
+
+/// How much narrower than the hole the bore probe is, so a pilot hole under the screw size stays legal, in mm.
+pub const BORE_MARGIN: f64 = 0.5;
 
 /// How far from the hole edge a body counts as a boss meant for that hole, in mm.
 pub const NEAR_MARGIN: f64 = 4.0;
@@ -70,6 +74,10 @@ pub struct Response {
     pub pairs: Vec<PairMeasurement>,
     #[serde(default)]
     pub invalid: Vec<String>,
+    #[serde(default)]
+    pub version: u32,
+    #[serde(default)]
+    pub measured: Vec<String>,
 }
 
 /// One broken rule, as written to `check.json`.
@@ -101,8 +109,13 @@ impl Violation {
     /// The linter diagnostic that blows the fuse for this violation.
     pub fn diagnostic(&self) -> Diagnostic {
         let help = match self.rule {
-            BODY_INTERFERENCE => "move the body or the part, or reshape the body around the board",
-            HOLE_MISALIGNED => "line the boss up with the hole, or remove the boss",
+            BODY_INTERFERENCE => {
+                "move the body or the part, or reshape the body around the board; two bodies \
+                 that overlap by more than 0.01 mm³ blow the fuse, so give a lip a clearance"
+            }
+            HOLE_MISALIGNED => {
+                "line the boss up with the hole and keep its bore at least as wide, or remove the boss"
+            }
             _ => "open the wall in front of the connector or move the body away from the edge",
         };
         Diagnostic {
@@ -114,35 +127,8 @@ impl Violation {
     }
 }
 
-fn solid(volume: f64) -> bool {
+pub(super) fn solid(volume: f64) -> bool {
     volume > EPS_VOLUME
-}
-
-type Group = (String, usize, Side, String);
-
-fn aligned_quadrants(roles: &HashMap<&str, &Probe>, hits: &[Measurement]) -> HashMap<Group, usize> {
-    let mut counts = HashMap::new();
-    for hit in hits.iter().filter(|h| solid(h.volume)) {
-        let Some(probe) = roles.get(hit.probe.as_str()) else {
-            continue;
-        };
-        if let Role::HoleQuadrant { hole, side } = &probe.role {
-            let key = (probe.board.clone(), *hole, *side, hit.body.clone());
-            *counts.entry(key).or_insert(0) += 1;
-        }
-    }
-    counts
-}
-
-fn hole_message(probe: &Probe, body: &str, at: [f64; 2], side: Side) -> String {
-    format!(
-        "body `{body}` has material near the hole at ({:.2}, {:.2}) on the {} side of board `{}`, \
-         but it does not line up with the hole",
-        at[0],
-        at[1],
-        side.label(),
-        probe.board
-    )
 }
 
 fn violation_of(
@@ -169,13 +155,7 @@ fn violation_of(
                  by {volume:.2} mm³"
             ),
         ),
-        Role::HoleNear { hole, side, at } => {
-            let key = (probe.board.clone(), *hole, *side, hit.body.clone());
-            if quadrants.get(&key).copied().unwrap_or(0) >= 4 {
-                return None;
-            }
-            (HOLE_MISALIGNED, hole_message(probe, body, *at, *side))
-        }
+        Role::HoleNear { .. } | Role::HoleBore { .. } => hole_finding(probe, hit, quadrants)?,
         Role::HoleQuadrant { .. } => return None,
     };
     Some(Violation::from_hit(rule, message, [body, board], hit))

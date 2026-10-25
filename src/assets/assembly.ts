@@ -65,7 +65,8 @@ const loadBodies = () => {
   for (const part of job.parts) {
     const shape = part.format === "stl" ? solidify(load(part)) : load(part);
     const placed = k.transform(shape, part.matrix);
-    const solid = k.isValid(placed) && Math.abs(k.getVolume(placed)) > 0;
+    const volume = k.getVolume(placed);
+    const solid = k.isValid(placed) && (part.format === "stl" ? volume > 0 : Math.abs(volume) > 0);
     if (solid) bodies.set(part.name, placed);
     else invalid.push(part.name);
   }
@@ -93,7 +94,9 @@ const measure = () => {
   };
 
   const hits = [];
+  const measured: string[] = [];
   for (const probe of job.probes) {
+    measured.push(probe.id);
     const shape = k.transform(buildProbe(k, probe), probe.matrix);
     if (probe.show) doc?.addShape(shape, { name: probe.id, color: COLORS.board });
     for (const [body, solid] of bodies) {
@@ -111,7 +114,7 @@ const measure = () => {
 
   if (doc && job.preview) writeFileSync(job.preview, doc.exportGLTF());
   doc?.close();
-  writeFileSync(job.report, JSON.stringify({ version: 1, hits, pairs, invalid }));
+  writeFileSync(job.report, JSON.stringify({ version: 1, hits, pairs, invalid, measured }));
 };
 
 if (job.mode === "measure") measure();

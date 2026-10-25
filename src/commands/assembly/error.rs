@@ -65,6 +65,13 @@ pub enum AssemblyError {
     )]
     UnsupportedSource { name: String, path: PathBuf },
 
+    #[error("the measurement cannot be trusted: {reason}")]
+    #[diagnostic(
+        code(fusible::assembly::bad_measurement),
+        help("rerun `fusible assembly`; if it persists, report the bug with this message")
+    )]
+    BadMeasurement { reason: String },
+
     #[error("body `{name}` loaded but is not a solid, so its overlaps cannot be measured")]
     #[diagnostic(
         code(fusible::assembly::body_not_solid),

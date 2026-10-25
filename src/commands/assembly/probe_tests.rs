@@ -3,7 +3,7 @@ use super::probe::{probes, Probe, Role, Shape, Side};
 use crate::commands::body::build_kit;
 use crate::config::PlacementConfig;
 
-const BOARD: &str = r#"[
+pub(super) const BOARD: &str = r#"[
   {"type":"pcb_board","width":40,"height":30,"center":{"x":0,"y":0},"thickness":1.4},
   {"type":"pcb_hole","x":-15,"y":10,"hole_diameter":3.2},
   {"type":"source_component","source_component_id":"sc1","name":"J1"},
@@ -12,11 +12,11 @@ const BOARD: &str = r#"[
   {"type":"cad_component","pcb_component_id":"pc1","position":{"x":18,"y":0,"z":3.5},"size":{"x":6,"y":8,"z":4.0}}
 ]"#;
 
-fn near_eq(a: f64, b: f64) -> bool {
+pub(super) fn near_eq(a: f64, b: f64) -> bool {
     (a - b).abs() < 1e-9
 }
 
-fn built(frame: &[f64; 12]) -> Vec<Probe> {
+pub(super) fn built(frame: &[f64; 12]) -> Vec<Probe> {
     let kit = build_kit(BOARD, Some("main".into())).unwrap();
     probes("main", &kit, frame)
 }
@@ -25,7 +25,7 @@ fn built(frame: &[f64; 12]) -> Vec<Probe> {
 fn a_board_with_one_hole_and_one_connector_gets_every_probe_kind() {
     let all = built(&IDENTITY);
     let count = |f: fn(&Role) -> bool| all.iter().filter(|p| f(&p.role)).count();
-    assert_eq!(all.len(), 1 + 1 + 1 + 2 * 5);
+    assert_eq!(all.len(), 1 + 1 + 1 + 2 * 5 + 1);
     assert_eq!(count(|r| matches!(r, Role::Slab)), 1);
     assert_eq!(count(|r| matches!(r, Role::KeepOut { .. })), 1);
     assert_eq!(count(|r| matches!(r, Role::Opening { .. })), 1);

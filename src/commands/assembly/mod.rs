@@ -16,7 +16,10 @@ mod parts;
 pub mod place;
 mod probe;
 mod probe_holes;
+mod probe_warnings;
 mod rules;
+mod rules_hole;
+mod rules_validate;
 mod shrink;
 
 #[cfg(test)]
@@ -24,13 +27,17 @@ mod atomic_tests;
 #[cfg(test)]
 mod place_tests;
 #[cfg(test)]
-mod probe_tests;
+mod probe_hole_tests;
+#[cfg(test)]
+pub(crate) mod probe_tests;
 #[cfg(test)]
 mod rules_hole_tests;
 #[cfg(test)]
 mod rules_support;
 #[cfg(test)]
 mod rules_tests;
+#[cfg(test)]
+mod rules_validate_tests;
 
 use std::path::{Path, PathBuf};
 
@@ -43,7 +50,7 @@ use crate::linter::FuseBlown;
 
 pub use error::AssemblyError;
 use gate::{fuse_gate, load_circuits};
-use measure::clearance;
+use measure::{clearance, remove_stale, report_clearance};
 use parts::{board_frames, board_parts, body_parts, Context, Part};
 use rules::Violation;
 
@@ -79,8 +86,9 @@ pub fn run(
     let root = manifest.parent().unwrap_or(Path::new("."));
     let formats = formats(format.or(assembly.format.clone()))?;
     let out_dir = out_dir(output.or(assembly.out_dir.clone()), root)?;
-    let circuits = fuse_gate(&cfg, &assembly, skip_lint)?;
     let parts_dir = out_dir.join("assembly");
+    remove_stale(&parts_dir, &out_dir);
+    let circuits = fuse_gate(&cfg, &assembly, skip_lint)?;
     let frames = board_frames(&cfg, &assembly);
     let ctx = Context {
         cfg: &cfg,
@@ -91,8 +99,7 @@ pub fn run(
     };
     let bodies = body_parts(&ctx, &assembly)?;
     if !skip_lint {
-        blow_if_any(&clearance(&ctx, &bodies, Some(&parts_dir))?)?;
-        println!("⚡ Fuse intact — the bodies clear the boards.\n");
+        report_clearance(&ctx, &bodies, &parts_dir)?;
     }
     let mut parts = board_parts(&ctx, &assembly)?;
     parts.extend(bodies);
