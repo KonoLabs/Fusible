@@ -2,12 +2,30 @@
 
 #![allow(dead_code)]
 
+use std::path::PathBuf;
 use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// Returns a command for the compiled `fusible` binary.
 pub fn fusible() -> Command {
     Command::new(env!("CARGO_BIN_EXE_fusible"))
+}
+
+/// Finds `bun` on the real `PATH`.
+pub fn bun() -> Option<PathBuf> {
+    let path = std::env::var_os("PATH")?;
+    std::env::split_paths(&path)
+        .map(|dir| dir.join("bun"))
+        .find(|candidate| candidate.is_file())
+}
+
+/// Finds `bun`, or panics when `FUSIBLE_REQUIRE_BUN=1` demands it, so CI cannot skip silently.
+pub fn require_bun() -> Option<PathBuf> {
+    let found = bun();
+    if found.is_none() && std::env::var("FUSIBLE_REQUIRE_BUN").as_deref() == Ok("1") {
+        panic!("FUSIBLE_REQUIRE_BUN=1 but bun is not on PATH");
+    }
+    found
 }
 
 /// A unique temporary directory removed on drop.
