@@ -1,8 +1,9 @@
 use tauri::{App, Builder, Manager, Runtime, Window, WindowEvent, Wry};
 
 use crate::actions::{self, Zoom};
-use crate::commands::{open, projects, settings, toolchain};
+use crate::commands::{open, projects, settings, toolchain, update};
 use crate::studio::Studio;
+use crate::updates::Updates;
 use crate::window::{self, Home};
 use crate::{chrome, size, storage};
 
@@ -44,9 +45,11 @@ fn plugins(builder: Builder<Wry>) -> Builder<Wry> {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(Studio::default())
         .manage(Zoom::default())
         .manage(Home::new())
+        .manage(Updates::default())
 }
 
 fn on_window_event(window: &Window, event: &WindowEvent) {
@@ -72,6 +75,9 @@ pub fn builder() -> Builder<Wry> {
             toolchain::toolchain_status,
             open::open_projects,
             open::last_error,
+            update::check_update,
+            update::install_update,
+            update::restart_app,
         ])
         .setup(on_ready)
 }

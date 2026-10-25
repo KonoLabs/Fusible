@@ -47,3 +47,16 @@ fn bad_settings_are_refused() {
         assert!(settings(bad).is_err());
     }
 }
+
+#[test]
+fn update_preferences_survive_validation() {
+    let input = Settings {
+        projects_dir: "/p".into(),
+        auto_update: false,
+        last_update_check: Some(1_792_800_000),
+        ..Settings::default()
+    };
+    let clean = settings(input).unwrap();
+    assert!(!clean.auto_update);
+    assert_eq!(clean.last_update_check, Some(1_792_800_000));
+}

@@ -12,6 +12,9 @@ const COMMANDS: &[&str] = &[
     "toolchain_status",
     "open_projects",
     "last_error",
+    "check_update",
+    "install_update",
+    "restart_app",
 ];
 
 fn main() {
