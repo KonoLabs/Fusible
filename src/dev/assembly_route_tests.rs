@@ -1,8 +1,9 @@
 use std::io::{Read, Write};
 use std::net::TcpStream;
 
-use tiny_http::Server;
+use tiny_http::{Method, Server};
 
+use super::assembly::{owns, reply};
 use super::server::handle;
 use super::state::State;
 
@@ -39,4 +40,20 @@ fn the_same_origin_guard_covers_the_assembly_routes() {
     for path in ["/api/assembly", "/api/assembly/model?rev=1"] {
         assert!(status(&exchange("GET", path, foreign)).contains("403"));
     }
+}
+
+#[test]
+fn routes_answer_get_only() {
+    let root = std::path::Path::new("");
+    for path in ["/api/assembly", "/api/assembly/model"] {
+        assert!(owns(path));
+        assert_eq!(reply(&Method::Post, path, None, root).0, 405);
+        assert_eq!(reply(&Method::Delete, path, None, root).0, 405);
+    }
+    assert!(!owns("/api/assembly/other"));
+    assert_eq!(reply(&Method::Get, "/api/assembly", None, root).0, 200);
+    assert_eq!(
+        reply(&Method::Get, "/api/assembly/model", None, root).0,
+        404
+    );
 }

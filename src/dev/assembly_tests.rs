@@ -2,9 +2,8 @@ use std::fs;
 use std::path::PathBuf;
 
 use serde_json::Value;
-use tiny_http::Method;
 
-use super::assembly::{model_reply, owns, reply, report_json};
+use super::assembly::{model_reply, report_json};
 use crate::config::FusibleConfig;
 
 fn manifest(assembly: bool) -> FusibleConfig {
@@ -106,24 +105,4 @@ fn a_corrupt_report_is_an_error_not_a_clean_model() {
     assert!(body["model"].is_string());
     let clean = parsed(report_json(Some(&manifest(true)), &project("noreport")));
     assert!(clean["report_error"].is_null());
-}
-
-#[test]
-fn routes_answer_get_only() {
-    let dir = project("methods");
-    let cfg = manifest(true);
-    for path in ["/api/assembly", "/api/assembly/model"] {
-        assert!(owns(path));
-        assert_eq!(reply(&Method::Post, path, Some(&cfg), &dir).0, 405);
-        assert_eq!(reply(&Method::Delete, path, Some(&cfg), &dir).0, 405);
-    }
-    assert!(!owns("/api/assembly/other"));
-    assert_eq!(
-        reply(&Method::Get, "/api/assembly", Some(&cfg), &dir).0,
-        200
-    );
-    assert_eq!(
-        reply(&Method::Get, "/api/assembly/model", Some(&cfg), &dir).0,
-        404
-    );
 }
