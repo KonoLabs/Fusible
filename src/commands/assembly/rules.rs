@@ -227,5 +227,5 @@ pub fn write_report(path: &Path, violations: &[Violation]) -> std::io::Result<()
         violations,
     };
     let text = serde_json::to_string_pretty(&report).map_err(std::io::Error::other)?;
-    std::fs::write(path, text + "\n")
+    super::atomic::write_atomic(path, (text + "\n").as_bytes())
 }

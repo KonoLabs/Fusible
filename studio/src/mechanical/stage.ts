@@ -73,3 +73,11 @@ export function resizeStage(stage: Stage): boolean {
   }
   return true;
 }
+
+/** Releases the controls, the WebGL context and the canvas of `stage`. */
+export function disposeStage(stage: Stage): void {
+  stage.controls.dispose();
+  stage.renderer.dispose();
+  stage.renderer.forceContextLoss();
+  stage.renderer.domElement.remove();
+}

@@ -5,6 +5,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde::Serialize;
 
+use super::atomic::staging_path;
 use super::parts::{Context, Part};
 use super::place::IDENTITY;
 use super::probe::{probes, Probe};
@@ -82,7 +83,17 @@ pub(super) fn clearance(
     }
     let probes = all_probes(ctx)?;
     let preview = parts_dir.map(|dir| dir.join("preview.glb"));
-    let response = run_measure(bodies, &probes, preview.as_deref())?;
+    let staging = preview.as_deref().map(staging_path);
+    let measured = run_measure(bodies, &probes, staging.as_deref());
+    if let (Some(staging), Some(preview), Ok(_)) = (&staging, &preview, &measured) {
+        if staging.exists() {
+            std::fs::rename(staging, preview)?;
+        }
+    }
+    if let Some(staging) = &staging {
+        let _ = std::fs::remove_file(staging);
+    }
+    let response = measured?;
     if let Some(name) = response.invalid.first() {
         return Err(AssemblyError::BodyNotSolid { name: name.clone() });
     }

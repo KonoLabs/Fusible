@@ -53,7 +53,7 @@ pub(super) fn route_path(url: &str) -> &str {
     url.split_once('?').map_or(url, |(path, _)| path)
 }
 
-fn handle(request: Request, state: &State, port: u16) {
+pub(super) fn handle(request: Request, state: &State, port: u16) {
     let host = request.headers().iter().find(|h| h.field.equiv("Host"));
     if !is_allowed_host(host.map(|h| h.value.as_str()), port) {
         let _ = request.respond(Response::from_string("Forbidden").with_status_code(403));

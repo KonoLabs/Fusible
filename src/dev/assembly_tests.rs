@@ -2,8 +2,9 @@ use std::fs;
 use std::path::PathBuf;
 
 use serde_json::Value;
+use tiny_http::Method;
 
-use super::assembly::{model_reply, report_json};
+use super::assembly::{model_reply, owns, reply, report_json};
 use crate::config::FusibleConfig;
 
 fn manifest(assembly: bool) -> FusibleConfig {
@@ -87,4 +88,42 @@ fn custom_out_dir_is_honoured() {
     )
     .unwrap();
     assert_eq!(model_reply(Some(&cfg), &dir).0, 200);
+}
+
+#[test]
+fn a_corrupt_report_is_an_error_not_a_clean_model() {
+    let dir = project("corrupt");
+    let parts = dir.join("dist/assembly");
+    fs::create_dir_all(&parts).unwrap();
+    fs::write(parts.join("check.json"), b"{\"version\":1,\"fuse\":").unwrap();
+    fs::write(parts.join("preview.glb"), b"glTF").unwrap();
+    let body = parsed(report_json(Some(&manifest(true)), &dir));
+    assert!(body["report"].is_null());
+    assert!(body["report_error"]
+        .as_str()
+        .unwrap()
+        .contains("does not parse"));
+    assert!(body["model"].is_string());
+    let clean = parsed(report_json(Some(&manifest(true)), &project("noreport")));
+    assert!(clean["report_error"].is_null());
+}
+
+#[test]
+fn routes_answer_get_only() {
+    let dir = project("methods");
+    let cfg = manifest(true);
+    for path in ["/api/assembly", "/api/assembly/model"] {
+        assert!(owns(path));
+        assert_eq!(reply(&Method::Post, path, Some(&cfg), &dir).0, 405);
+        assert_eq!(reply(&Method::Delete, path, Some(&cfg), &dir).0, 405);
+    }
+    assert!(!owns("/api/assembly/other"));
+    assert_eq!(
+        reply(&Method::Get, "/api/assembly", Some(&cfg), &dir).0,
+        200
+    );
+    assert_eq!(
+        reply(&Method::Get, "/api/assembly/model", Some(&cfg), &dir).0,
+        404
+    );
 }

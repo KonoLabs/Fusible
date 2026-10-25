@@ -1,9 +1,8 @@
 import { Z_UP_PRESETS, type CameraPresetName } from "../cadCamera";
 import { framePreset, frameSphere } from "../mechanical/frame";
 import { errorMessage } from "../mechanical/gltf";
-import { createStage } from "../mechanical/stage";
+import { createStage, disposeStage } from "../mechanical/stage";
 import {
-  disposePreview,
   fetchOverview,
   loadPreview,
   violationSphere,
@@ -11,10 +10,12 @@ import {
   type Preview,
   type Violation,
 } from "./model";
-import { ensureFramed, loop, type View } from "./frameLoop";
+import { disposePreview, recolourCollisions } from "./paint";
+import { clearPreview, ensureFramed, loop, type View } from "./frameLoop";
 import { markPicked, mountPanel, setReport, setStatus } from "./panel";
 
 const MIN_FOCUS_RADIUS = 15;
+const REPORT_UNREADABLE = "REPORT UNREADABLE";
 let view: View | null = null;
 let ticket = 0;
 
@@ -36,15 +37,18 @@ function show(current: View, overview: Overview, preview: Preview | null): void 
     current.preview = preview;
     current.framed = false;
   }
+  if (current.preview) recolourCollisions(current.preview);
   current.overview = overview;
   setReport(current.panel, overview.report, pick);
-  setStatus(current.panel, "");
+  setStatus(current.panel, overview.report ? "" : REPORT_UNREADABLE, !overview.report);
   ensureFramed(current);
 }
 
 function empty(current: View, overview: Overview): void {
+  clearPreview(current);
   current.overview = overview;
   setReport(current.panel, null, pick);
+  if (overview.report_error) return setStatus(current.panel, REPORT_UNREADABLE, true);
   if (!overview.declared) return setStatus(current.panel, "NO ASSEMBLY IN fusible.yml");
   setStatus(current.panel, "NO ASSEMBLY PREVIEW YET", true);
 }
@@ -57,7 +61,10 @@ async function reload(): Promise<void> {
     const overview = await fetchOverview();
     const url = overview.model;
     const preview = url && url === current.preview?.url ? current.preview : url ? await loadPreview(url) : null;
-    if (mine !== ticket) return;
+    if (mine !== ticket) {
+      if (preview && preview !== current.preview) disposePreview(preview);
+      return;
+    }
     if (preview) show(current, overview, preview);
     else empty(current, overview);
   } catch (reason) {
@@ -68,6 +75,10 @@ async function reload(): Promise<void> {
 /** Shows the assembly tab in `container` and loads the latest preview. */
 export function renderAssemblyViewer(container: HTMLElement): void {
   if (!view || view.stage.host !== container) {
+    if (view) {
+      clearPreview(view);
+      disposeStage(view.stage);
+    }
     container.replaceChildren();
     view = {
       stage: createStage(container),

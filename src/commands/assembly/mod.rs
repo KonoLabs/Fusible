@@ -8,6 +8,7 @@
 //! part, placed in Rust, into `assembly.glb` and/or `assembly.step`. Every board involved is
 //! fuse-gated first.
 
+mod atomic;
 mod error;
 mod gate;
 mod measure;
@@ -18,6 +19,8 @@ mod probe_holes;
 mod rules;
 mod shrink;
 
+#[cfg(test)]
+mod atomic_tests;
 #[cfg(test)]
 mod place_tests;
 #[cfg(test)]
