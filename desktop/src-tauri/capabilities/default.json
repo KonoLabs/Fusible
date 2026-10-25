@@ -17,6 +17,10 @@
     "allow-set-settings",
     "allow-toolchain-status",
     "allow-open-projects",
-    "allow-last-error"
+    "allow-last-error",
+    "core:window:allow-start-dragging",
+    "core:window:allow-close",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize"
   ]
 }

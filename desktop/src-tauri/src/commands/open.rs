@@ -44,10 +44,13 @@ pub fn stop_and_show<R: Runtime>(app: &AppHandle<R>, fragment: Option<&str>) -> 
     window::show_projects(app, fragment)
 }
 
-/// Stops the studio and returns to the Projects page.
+/// Stops the studio and returns to the Projects page, optionally at a hash such as `settings`.
 #[tauri::command]
-pub fn open_projects<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
-    stop_and_show(&app, None)
+pub fn open_projects<R: Runtime>(
+    app: AppHandle<R>,
+    fragment: Option<String>,
+) -> Result<(), String> {
+    stop_and_show(&app, fragment.as_deref())
 }
 
 /// The stderr of the last failed open, if any.

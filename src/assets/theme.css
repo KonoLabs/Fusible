@@ -29,6 +29,10 @@
   --light: #FFFFFF;
   --light-fill: #90cdf4;
   --shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  --traffic-close: #FF5F57;
+  --traffic-min: #FEBC2E;
+  --traffic-max: #28C840;
+  --traffic-glyph: rgba(0, 0, 0, 0.65);
 }
 
 :root[data-theme="light"] {
