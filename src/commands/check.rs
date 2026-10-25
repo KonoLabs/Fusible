@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use miette::Diagnostic;
 use thiserror::Error;
 
+use crate::commands::assembly::{self, AssemblyError};
 use crate::commands::check_merge::{label, merge};
 use crate::commands::links::check_links;
 pub use crate::commands::source::{find_fallback_circuit_json, load_circuit_source};
@@ -47,6 +48,10 @@ pub enum CheckError {
     #[error(transparent)]
     #[diagnostic(transparent)]
     FuseBlown(#[from] FuseBlown),
+
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Assembly(Box<AssemblyError>),
 }
 
 /// Loads, parses and lints the circuit at `entry` without writing any file.
@@ -109,18 +114,38 @@ pub fn run_boards(
         failure = merge(failure, next, &mut report);
     }
     failure = merge(failure, check_manifest_links(boards).err(), &mut report);
+    if failure.is_none() {
+        failure = check_manifest_assembly(boards).err();
+    }
     failure.map_or(Ok(()), Err)
+}
+
+fn checked_every_board(cfg: &FusibleConfig, boards: &[BoardTarget]) -> bool {
+    !cfg.boards.is_empty() && cfg.boards.len() == boards.len()
 }
 
 fn check_manifest_links(boards: &[BoardTarget]) -> Result<(), CheckError> {
     let Some((_, cfg)) = FusibleConfig::nearest() else {
         return Ok(());
     };
-    let all = !cfg.boards.is_empty() && cfg.boards.len() == boards.len();
-    if cfg.links.is_empty() || !all {
+    if cfg.links.is_empty() || !checked_every_board(&cfg, boards) {
         return Ok(());
     }
     check_links(&cfg)
+}
+
+fn check_manifest_assembly(boards: &[BoardTarget]) -> Result<(), CheckError> {
+    let Some((manifest, cfg)) = FusibleConfig::nearest() else {
+        return Ok(());
+    };
+    if cfg.assembly.is_none() || !checked_every_board(&cfg, boards) {
+        return Ok(());
+    }
+    let root = manifest.parent().unwrap_or(Path::new("."));
+    assembly::verify(&cfg, root).map_err(|error| match error {
+        AssemblyError::Check(inner) => inner,
+        other => CheckError::Assembly(Box::new(other)),
+    })
 }
 
 fn check_board(

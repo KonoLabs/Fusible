@@ -10,7 +10,7 @@ use crate::gerber::layers::PcbComponentElm;
 
 /// The volume a component occupies: its footprint box from `z0` to `z1` (cad Z, mm).
 #[derive(Debug, Serialize)]
-pub(super) struct KitKeepOut {
+pub(crate) struct KitKeepOut {
     pub component: String,
     pub layer: String,
     pub x: f64,
