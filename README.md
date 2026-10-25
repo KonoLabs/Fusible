@@ -363,10 +363,10 @@ bun, runs `fusible check`, and fails the job when the fuse blows:
 ```yaml
 - uses: actions/checkout@v7
 - id: fuse
-  uses: KonoLabs/Fusible@v0.19.0
+  uses: KonoLabs/Fusible@v0.19.1
   with:
     target: ""        # optional board name or file; empty checks every board
-    version: latest   # or a version such as 0.19.0
+    version: latest   # or a version such as 0.19.1
 ```
 
 Other inputs: `working-directory` (default `.`) and `install-deps` (default

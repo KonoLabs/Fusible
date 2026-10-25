@@ -10,7 +10,7 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    body.desktop-chrome #project { padding-top: calc(var(--gutter) + ${STRIP}px); }
+    body.desktop-chrome #project, body.desktop-chrome #sidebar { padding-top: calc(var(--gutter) + ${STRIP}px); }
     body.desktop-chrome .floating-views { top: calc(var(--gutter) + ${STRIP}px); }
     .desktop-strip { position: fixed; top: 0; left: 0; right: 0; height: ${STRIP}px; z-index: 60; display: flex; align-items: center; padding: 0 16px; }
     .desktop-strip .traffic-group { display: flex; align-items: center; gap: 8px; }

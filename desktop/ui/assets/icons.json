@@ -2,7 +2,7 @@
  "plus": "<path fill=\"currentColor\" d=\"M13 11h7v2h-7v7h-2v-7H4v-2h7V4h2z\"/>",
  "folder": "<path fill=\"currentColor\" d=\"M4 4h6v2H4zm0 14h16v2H4zM20 8h2v10h-2zM2 6h2v12H2zm8 0h10v2H10z\"/>",
  "folder-plus": "<g fill=\"currentColor\"><path d=\"M4 4h6v2H4zm0 14h10v2H4zM20 8h2v6h-2zM2 6h2v12H2zm8 0h10v2H10zm12 12v2h-6v-2z\"/><path d=\"M18 16h2v6h-2z\"/></g>",
- "gear": "<path fill=\"currentColor\" d=\"M18 22h-5v2h-2v-2H6v-2h12zM4 22H2v-2h2zm18 0h-2v-2h2zM6 20H4v-2h2zm14 0h-2v-2h2zM4 18H2v-5H0v-2h2V6h2zm4 0H6v-2h2zm14-7h2v2h-2v5h-2v-5h-4v3H8V8h8v3h4V6h2zm-12-1v4h4v-4zM8 8H6V6h2zM6 6H4V4h2zm14 0h-2V4h2zM4 4H2V2h2zm9-2h5v2H6V2h5V0h2zm9 2h-2V2h2z\"/>",
+ "gear": "<path fill=\"currentColor\" d=\"M4 20h3v-2h4v4h2v-4h4v2h-2v4H9v-4H7v2H2v-5h2zm18 2h-5v-2h3v-3h2zM6 11H2v2h4v4H4v-2H0V9h4V7h2zm14-2h4v6h-4v2h-2v-4h4v-2h-4V7h2zm-6 7h-4v-2h4zm-4-2H8v-4h2zm6 0h-2v-4h2zm-2-4h-4V8h4zM7 4H4v3H2V2h5zm8 0h2V2h5v5h-2V4h-3v2h-4V2h-2v4H7V4h2V0h6z\"/>",
  "more-vertical": "<path fill=\"currentColor\" d=\"M15 3v2h-2V3zm0 8v2h-2v-2zm0 8v2h-2v-2zM13 1v2h-2V1zm0 8v2h-2V9zm0 8v2h-2v-2zM11 3v2H9V3zm0 8v2H9v-2zm0 8v2H9v-2zm2-14v2h-2V5zm0 8v2h-2v-2zm0 8v2h-2v-2z\"/>",
  "copy": "<path fill=\"currentColor\" d=\"M8 6h12v2H8zM4 2h12v2H4zm2 6h2v12H6zM2 4h2v12H2zm6 16h12v2H8zM20 8h2v12h-2zm-4-4h2v2h-2zM4 16h2v2H4z\"/>",
  "close": "<path fill=\"currentColor\" d=\"M7 19H5v-2h2zm12 0h-2v-2h2zM9 15v2H7v-2zm8 2h-2v-2h2zm-6-2H9v-2h2zm4 0h-2v-2h2zm-2-2h-2v-2h2zm-2-2H9V9h2zm4 0h-2V9h2zM9 9H7V7h2zm8 0h-2V7h2zM7 7H5V5h2zm12 0h-2V5h2z\"/>",

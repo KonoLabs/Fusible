@@ -7,6 +7,18 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.19.1] - 2026-10-25
+
+### Changed
+
+- The Settings link uses the Pixelarticons settings-cog icon.
+- The studio Sync panel hides the "What did you change?" box when nothing changed.
+
+### Fixed
+
+- Fusible Studio on macOS and Linux inherits the login shell PATH, so a `tsci` installed through npm or Homebrew is found instead of reported missing, and `tsci build` no longer falls back to the bundled bun.
+- In the desktop app the right sidebar now starts at the same height as the project sidebar, below the window controls.
+
 ## [0.19.0] - 2026-10-25
 
 ### Added

@@ -112,7 +112,7 @@
         <button class="btn" id="sync-refresh" title="Check for updates" ${state.busy ? 'disabled' : ''}>CHECK</button></div>
       <div class="sync-line" id="sync-status">${escapeHtml(summary(s))}</div>${localOnly(s)}${warn}
       ${s.conflicts.map((p) => conflictCard(s, p)).join('')}
-      <textarea class="sync-box" id="sync-message" rows="2" placeholder="What did you change?" aria-label="What did you change?"></textarea>
+      ${s.changes.length ? '<textarea class="sync-box" id="sync-message" rows="2" placeholder="What did you change?" aria-label="What did you change?"></textarea>' : ''}
       <div class="sync-actions">
         <button class="btn primary" id="sync-save" ${off}>${state.busy ? 'WORKING...' : 'SAVE'}</button>
         <button class="btn" id="sync-update" ${noUpdates}>GET UPDATES</button>

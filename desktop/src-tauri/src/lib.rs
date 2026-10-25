@@ -13,6 +13,7 @@ mod project;
 mod ready;
 mod recent;
 mod setup;
+mod shell_path;
 mod sidecar;
 mod size;
 mod storage;
@@ -39,6 +40,8 @@ mod ready_tests;
 #[cfg(test)]
 mod recent_tests;
 #[cfg(test)]
+mod shell_path_tests;
+#[cfg(test)]
 mod timestamp_tests;
 #[cfg(test)]
 mod updates_tests;
@@ -51,6 +54,7 @@ use tauri::{Manager, RunEvent};
 
 /// Runs the desktop shell until the last window closes, then stops the studio sidecar.
 pub fn run() {
+    shell_path::inherit();
     let app = setup::builder()
         .build(tauri::generate_context!())
         .expect("error while building Fusible Studio");
