@@ -9,6 +9,8 @@ use std::time::{Duration, Instant, SystemTime};
 use super::process::{extract_output_details, format_command};
 use super::{command, output, resolve_hardware_context, Runner, RunnerError};
 
+const CACHE_KIND: &str = "build";
+
 /// A spawned build process with its display string and launch time.
 struct SpawnedBuild {
     child: Child,
@@ -19,6 +21,12 @@ struct SpawnedBuild {
 impl Runner {
     /// Runs the tscircuit build command to produce circuit json.
     pub fn build(&self, file: &Path, out_file: Option<&Path>) -> Result<PathBuf, RunnerError> {
+        let cache = self.cache_for(file);
+        if let Some(hit) = cache.as_ref().and_then(|c| c.get(CACHE_KIND)) {
+            let key = cache.as_ref().map_or("", |c| c.short_key());
+            eprintln!("⚡ Sources unchanged ({key}), reusing the cached build");
+            return output::deliver(hit, out_file);
+        }
         let mut spawned = self.spawn_build(file)?;
         let out = collect_output(&mut spawned.child, &spawned.command)?;
         let produced = fresh_circuit_json(file, &out, spawned.started);
@@ -34,13 +42,10 @@ impl Runner {
         }
 
         let produced_path = produced?;
-        match out_file {
-            Some(dest) => {
-                output::copy_output(&produced_path, dest)?;
-                Ok(dest.to_path_buf())
-            }
-            None => Ok(produced_path),
+        if let Some(cache) = &cache {
+            cache.put(CACHE_KIND, &produced_path);
         }
+        output::deliver(produced_path, out_file)
     }
 
     /// Spawns the build command with piped output in the hardware workspace.

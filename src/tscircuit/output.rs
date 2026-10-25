@@ -72,3 +72,14 @@ pub fn extract_circuit_json_path(stdout: &str) -> Option<PathBuf> {
     }
     None
 }
+
+/// Returns `produced`, or a copy of it at `out_file` when one is requested.
+pub fn deliver(produced: PathBuf, out_file: Option<&Path>) -> Result<PathBuf, RunnerError> {
+    match out_file {
+        Some(dest) => {
+            copy_output(&produced, dest)?;
+            Ok(dest.to_path_buf())
+        }
+        None => Ok(produced),
+    }
+}

@@ -7,6 +7,12 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-10-25
+
+### Added
+
+- Build cache. `fusible check`, `export`, `body`, `assembly`, `bom` and the studio no longer rerun `tsci build` or `tsci export` when nothing they read has changed. Entries live in `.fusible/cache` of the project and are keyed on the content of the source files, the tscircuit version and the fusible version. Set `FUSIBLE_NO_CACHE=1` to bypass it.
+
 ### Changed
 
 - The desktop "back to projects" button moved from the bottom toolbar to the top of the project sidebar.

@@ -137,6 +137,8 @@ fusible --input circuit.json        # Circuit JSON directly
 
 Compiling TSX stops after 120 seconds. Set `FUSIBLE_BUILD_TIMEOUT_SECS` to change that.
 
+Fusible caches compiled circuits and exports in `.fusible/cache`. Unchanged sources skip `tsci` and print a `⚡` line. Set `FUSIBLE_NO_CACHE=1` to bypass it.
+
 ```
 the fuse blew: 1 electrical violation(s)
 [unconnected_net] net "I2C_SDA" has only 1 connection(s) (minimum 2): it is floating
@@ -363,10 +365,10 @@ bun, runs `fusible check`, and fails the job when the fuse blows:
 ```yaml
 - uses: actions/checkout@v7
 - id: fuse
-  uses: KonoLabs/Fusible@v0.19.1
+  uses: KonoLabs/Fusible@v0.20.0
   with:
     target: ""        # optional board name or file; empty checks every board
-    version: latest   # or a version such as 0.19.1
+    version: latest   # or a version such as 0.20.0
 ```
 
 Other inputs: `working-directory` (default `.`) and `install-deps` (default

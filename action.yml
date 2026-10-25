@@ -11,7 +11,7 @@ inputs:
     required: false
     default: ""
   version:
-    description: Fusible release to install, such as 0.19.1, or latest.
+    description: Fusible release to install, such as 0.20.0, or latest.
     required: false
     default: latest
   working-directory:

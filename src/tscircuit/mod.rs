@@ -6,9 +6,11 @@
 
 mod build;
 mod bun;
+mod cache;
 pub mod command;
 pub mod detect;
 pub mod error;
+mod export;
 mod interactive;
 pub mod kicad;
 pub mod output;
@@ -76,46 +78,6 @@ impl Runner {
     pub fn kind(&self) -> &RunnerKind {
         &self.kind
     }
-
-    /// Runs the tscircuit export command.
-    pub fn export(
-        &self,
-        file: &Path,
-        format: &str,
-        output: Option<&Path>,
-    ) -> Result<(), RunnerError> {
-        let abs_output = output.map(absolute_output);
-        if let Some(parent) = abs_output.as_deref().and_then(Path::parent) {
-            std::fs::create_dir_all(parent).ok();
-        }
-
-        let mut cmd = export_command(&self.kind, file, format, abs_output.as_deref());
-        let out = cmd.output().map_err(|source| RunnerError::Io {
-            command: process::format_command(&cmd),
-            source,
-        })?;
-
-        if !out.status.success() {
-            let details = process::extract_output_details(&out);
-            return Err(RunnerError::CommandFailed {
-                command: process::format_command(&cmd),
-                code: out.status.code(),
-                stderr: details.clone(),
-                help: details,
-            });
-        }
-        Ok(())
-    }
-}
-
-/// Resolves a relative output path against the current directory.
-fn absolute_output(p: &Path) -> PathBuf {
-    if p.is_absolute() {
-        return p.to_path_buf();
-    }
-    std::env::current_dir()
-        .map(|cd| cd.join(p))
-        .unwrap_or_else(|_| p.to_path_buf())
 }
 
 /// Splits `file` into the hardware workspace to run in and the path relative to it.
