@@ -1,6 +1,6 @@
 [package]
 name = "fusible-studio"
-version = "0.18.0"
+version = "0.19.0"
 edition = "2021"
 description = "Fusible Studio desktop shell"
 license = "MIT"
