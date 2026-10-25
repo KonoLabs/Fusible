@@ -61,11 +61,15 @@ fn export_command_construction_with_output() {
 #[test]
 fn build_command_construction() {
     let kind = RunnerKind::Local(PathBuf::from("./node_modules/.bin/tsci"));
-    let cmd = build_command(&kind, Path::new("circuit.tsx"));
+    let cmd = build_command(&kind, Path::new("circuit.tsx"), true);
 
     assert_eq!(cmd.get_program(), "./node_modules/.bin/tsci");
     let args: Vec<_> = cmd.get_args().collect();
     assert_eq!(args, &["build", "circuit.tsx", "--ignore-errors"]);
+
+    let plain = build_command(&kind, Path::new("circuit.tsx"), false);
+    let args: Vec<_> = plain.get_args().collect();
+    assert_eq!(args, &["build", "circuit.tsx"]);
 }
 
 #[test]
@@ -90,7 +94,7 @@ fn runner_error_diagnostics() {
 #[test]
 fn bun_runner_runs_tsci_through_bun_x() {
     let kind = RunnerKind::Bun(PathBuf::from("/opt/fusible/bun"));
-    let cmd = build_command(&kind, Path::new("circuit.tsx"));
+    let cmd = build_command(&kind, Path::new("circuit.tsx"), true);
 
     assert_eq!(cmd.get_program(), "/opt/fusible/bun");
     let args: Vec<_> = cmd.get_args().collect();

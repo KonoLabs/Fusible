@@ -7,6 +7,12 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While on
 
 ## [Unreleased]
 
+## [0.20.8] - 2026-10-25
+
+### Fixed
+
+- Windows: builds no longer fail with `unknown option '--ignore-errors'` when the `tsci` fetched by `bun x` is too old to know the flag. Fusible retries the build once without it.
+
 ## [0.20.7] - 2026-10-25
 
 ### Changed

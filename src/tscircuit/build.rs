@@ -27,8 +27,13 @@ impl Runner {
             eprintln!("⚡ Sources unchanged ({key}), reusing the cached build");
             return output::deliver(hit, out_file);
         }
-        let mut spawned = self.spawn_build(file)?;
-        let out = collect_output(&mut spawned.child, &spawned.command)?;
+        let mut spawned = self.spawn_build(file, true)?;
+        let mut out = collect_output(&mut spawned.child, &spawned.command)?;
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        if !out.status.success() && stderr.contains("unknown option '--ignore-errors'") {
+            spawned = self.spawn_build(file, false)?;
+            out = collect_output(&mut spawned.child, &spawned.command)?;
+        }
         let produced = fresh_circuit_json(file, &out, spawned.started);
 
         if !out.status.success() && produced.is_err() {
@@ -49,9 +54,9 @@ impl Runner {
     }
 
     /// Spawns the build command with piped output in the hardware workspace.
-    fn spawn_build(&self, file: &Path) -> Result<SpawnedBuild, RunnerError> {
+    fn spawn_build(&self, file: &Path, ignore_errors: bool) -> Result<SpawnedBuild, RunnerError> {
         let (working_dir, target_file) = resolve_hardware_context(file);
-        let mut cmd = command::build_command(&self.kind, &target_file);
+        let mut cmd = command::build_command(&self.kind, &target_file, ignore_errors);
         if let Some(ref dir) = working_dir {
             cmd.current_dir(dir);
         }
